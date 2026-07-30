@@ -5,9 +5,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# GITHUB_TOKEN needs these to publish a Pages artifact.
+# GITHUB_TOKEN needs these to publish a Pages artifact. `actions: read` is
+# required by deploy-pages v4+, which resolves the build artifact by ID.
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -21,16 +23,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: build
+          # v4 stopped bundling dotfiles by default, which would silently drop
+          # the .nojekyll Docusaurus emits.
+          include-hidden-files: true
 
   deploy:
     needs: build
@@ -40,4 +45,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
