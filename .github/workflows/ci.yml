@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      # Broken links and bad MDX fail the build (see onBrokenLinks in
+      # docusaurus.config.ts), so this is the link check too.
+      - run: npm run build
+
+  # The single required status check for branch protection. Its name is frozen
+  # forever: as jobs are added to or removed from this workflow, only the
+  # `needs` list below changes, and the GitHub-side branch protection config is
+  # never touched. That also means old commits stay mergeable, since this check
+  # existed under the same name back then too.
+  #
+  # Add every new job to `needs`. Nothing else.
+  all-checks-pass:
+    needs: [build]
+    runs-on: ubuntu-latest
+    # Without this, a failed dependency would leave this job *skipped* rather
+    # than failed, and GitHub treats a skipped required check as satisfied.
+    if: always()
+    steps:
+      # `needs.*.result` covers whatever is in `needs`, so this step never needs
+      # editing. 'skipped' counts as failure: a job that did not run has not
+      # proven anything. To allow a deliberate skip, give that job its own
+      # always()-guarded pass-through rather than loosening this.
+      - name: Verify every dependency succeeded
+        if: contains(needs.*.result, 'failure')
+          || contains(needs.*.result, 'cancelled')
+          || contains(needs.*.result, 'skipped')
+        run: |
+          echo "One or more required jobs did not succeed:"
+          echo '${{ toJSON(needs) }}'
+          exit 1

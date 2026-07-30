@@ -1,0 +1,59 @@
+---
+slug: /
+sidebar_position: 1
+title: Introduction
+# The docs plugin only recognizes a Markdown `#` heading as the page title, so
+# without this it injects "Introduction" as an <h1> above the splash. The
+# slogan in the splash block is this page's <h1>.
+hide_title: true
+# The splash heading is the only heading on the page; a one-entry TOC is noise.
+hide_table_of_contents: true
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+{/* Referenced as a URL rather than imported as a component: this SVG carries an
+    internal <style> block whose class selectors (.b, .c, ...) would leak into the
+    page's global scope if svgr inlined it. */}
+<div className="hero-splash">
+  <img
+    className="hero-splash__mascot"
+    src={useBaseUrl('/img/Ruckus.svg')}
+    alt="Ruckus, the envy mascot"
+  />
+  <h1 className="hero-splash__name">envy</h1>
+  <p className="hero-splash__tagline">what's yours... is mine.</p>
+</div>
+
+> **Placeholder content.** Written from the envy sources to exercise the site's
+> layout. Replace before publishing.
+
+envy is an unopinionated, serverless, per-project package manager. A project
+pins its entire toolchain — compilers, CMake, Python, vendor SDKs — in one Lua
+manifest (`envy.lua`) checked into the repo, alongside a committed bootstrap
+script that downloads envy itself on first use.
+
+There is no server, no daemon, and no registry. Packages are described by Lua
+*specs* that fetch bits from wherever they already live (HTTP, FTP, SMB, Git,
+SSH, S3), verify them by SHA-256, and install them into a content-addressed
+cache shared by every project on the machine.
+
+Nothing is installed system-wide. A teammate clones the repo, runs
+`./tools/envy sync`, and gets a byte-identical toolchain.
+
+```lua title="envy.lua"
+-- @envy schema "1"
+-- @envy version "0.0.17"
+-- @envy bin "bin"
+
+PACKAGES = {
+  { spec = "local.cmake@r0", source = "local.cmake@r0.lua",
+    options = { version = "4.2.3" } },
+
+  { spec = "local.python@r0", source = "local.python@r0.lua",
+    options = { version = "3.13.11", provide_python3 = true } },
+}
+```
+
+Start with [Getting Started](./getting-started.md), then read
+[Concepts](./concepts.md).

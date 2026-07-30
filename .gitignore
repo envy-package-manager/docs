@@ -104,8 +104,12 @@ dist
 # vitepress cache directory
 **/.vitepress/cache
 
-# Docusaurus cache and generated files
-.docusaurus
+# Docusaurus: generated route/metadata cache
+.docusaurus/
+# Docusaurus: static site output ("npm run build")
+/build/
+# Docusaurus: legacy webpack loader cache, still emitted by some plugins
+.cache-loader/
 
 # Serverless directories
 .serverless/
