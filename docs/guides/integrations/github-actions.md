@@ -158,9 +158,12 @@ so gate the ones that mutate a machine:
 local ci = os.getenv("CI")
 
 PACKAGES = {
-  { spec = "acme.jlink@r1", source = specs .. "acme.jlink.lua",
-    options = { version = "9.30" },
-    setup = not ci and { "udev_rules" } or nil },
+  -- Installs OS packages with apt. The runner image already has these, and a
+  -- CI job has no business running apt-get.
+  { spec = "acme.apt@r0", source = specs .. "acme.apt.lua",
+    platforms = { "linux" },
+    options = { packages = { "libusb-1.0-0-dev" } },
+    setup = not ci and { "packages" } or nil },
 }
 ```
 
