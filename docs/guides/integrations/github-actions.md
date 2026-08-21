@@ -84,9 +84,8 @@ The first to finish saves, and the others log `Unable to reserve cache` and carr
 on. That warning is not a failure.
 
 **Watch the size.** GitHub keeps 10 GB per repository and evicts entries unused
-for 7 days, so a wide toolchain can push older entries out. Two habits help. Run
-`jlumbroso/free-disk-space` before large installs on Linux runners, and keep an
-eye on what the cache holds with [`envy cache`](/reference/cli/cache).
+for 7 days, so a wide toolchain can push older entries out.
+[`envy cache`](/reference/cli/cache) shows what the directory holds.
 
 ## A real multi-platform workflow
 
@@ -118,10 +117,6 @@ jobs:
           - { name: mac-arm64,   runner: macos-latest,   envy: ./bin/envy }
           - { name: win-x64,     runner: windows-latest, envy: bin\envy.bat }
     steps:
-      - name: Free disk space
-        if: runner.os == 'Linux'
-        uses: jlumbroso/free-disk-space@v1.3.1
-
       - uses: actions/checkout@v6
 
       - uses: actions/cache@v5
