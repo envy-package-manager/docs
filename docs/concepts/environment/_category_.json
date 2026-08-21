@@ -1,0 +1,9 @@
+{
+  "label": "Environment & Activation",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "slug": "/concepts/environment",
+    "description": "How installed packages reach your PATH: product scripts, shell hooks, and envy run."
+  }
+}

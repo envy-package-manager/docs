@@ -1,0 +1,9 @@
+{
+  "label": "Guides",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "slug": "/guides",
+    "description": "Task-oriented recipes for working with envy."
+  }
+}

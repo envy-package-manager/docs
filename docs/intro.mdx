@@ -25,35 +25,57 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
   <p className="hero-splash__tagline">what's yours... is mine.</p>
 </div>
 
-> **Placeholder content.** Written from the envy sources to exercise the site's
-> layout. Replace before publishing.
+> **Placeholder content.** Skeleton page — the shape is right, the prose is a
+> draft. Verify every claim against the envy sources before publishing.
 
-envy is an unopinionated, serverless, per-project package manager. A project
-pins its entire toolchain — compilers, CMake, Python, vendor SDKs — in one Lua
-manifest (`envy.lua`) checked into the repo, alongside a committed bootstrap
-script that downloads envy itself on first use.
+{/* Hermit-style animated terminal capture (see cashapp/hermit's
+    static/screencasts/using.svg). The current SVG is a hand-drawn placeholder;
+    regenerate with asciinema + svg-term per the comment inside the file. */}
+<p align="center">
+  <img
+    src={useBaseUrl('/screencasts/envy-sync.svg')}
+    alt="Animated terminal capture of envy sync"
+    width="720"
+  />
+</p>
 
-There is no server, no daemon, and no registry. Packages are described by Lua
-*specs* that fetch bits from wherever they already live (HTTP, FTP, SMB, Git,
-SSH, S3), verify them by SHA-256, and install them into a content-addressed
-cache shared by every project on the machine.
+envy is an **unopinionated**, **hermetic**, **per-project**, **serverless**
+package manager — unless you want it to be otherwise.
 
-Nothing is installed system-wide. A teammate clones the repo, runs
-`./tools/envy sync`, and gets a byte-identical toolchain.
+- **Unopinionated.** envy has zero opinion about what a package *is*. A
+  compiler toolchain, a vendor SDK, a Python interpreter, a Homebrew formula, a
+  udev rule — anything you can describe with a handful of Lua verbs is a
+  package.
+- **Hermetic.** A project pins its entire toolchain — including envy itself, by
+  version and checksum — in one `envy.lua` manifest checked into the repo. Clone
+  the repo, run the committed bootstrap script, and you have the exact tools the
+  project expects. No Homebrew, no apt, no "install these ten things first."
+- **Per-project.** Every project declares its own world. Installed packages
+  live in a user-wide content-addressed cache shared across projects, so ten
+  projects pinning the same compiler store it once.
+- **Serverless.** There is no registry, no daemon, no central server. Package
+  specs fetch bits from wherever they already live — HTTPS, git, S3, local
+  files — verify them, and install them.
 
-```lua title="envy.lua"
--- @envy schema "1"
--- @envy version "0.0.17"
--- @envy bin "bin"
+…*unless you want it to be otherwise*: an optional [package
+depot](/concepts/depots) lets your CI publish prebuilt package artifacts that
+everyone else's `envy sync` pulls instead of building from source. It's an
+accelerator you can bolt on, never a requirement.
 
-PACKAGES = {
-  { spec = "local.cmake@r0", source = "local.cmake@r0.lua",
-    options = { version = "4.2.3" } },
+:::tip Are you an AI coding agent?
 
-  { spec = "local.python@r0", source = "local.python@r0.lua",
-    options = { version = "3.13.11", provide_python3 = true } },
-}
-```
+Read **[envy for agents](/agents)** — a one-page, maximally dense summary of
+everything on this site.
 
-Start with [Getting Started](./getting-started.md), then read
-[Concepts](./concepts.md).
+:::
+
+## Where to go
+
+- **[Getting started](/getting-started)** — bootstrap a project and run your
+  first `envy sync`.
+- **[Guides](/guides)** — task-oriented recipes: adding packages, writing
+  specs, monorepos, depots, CI.
+- **[Concepts](/concepts)** — how envy thinks: manifests, specs, the verb
+  system, and a deep section on [dependency behavior](/concepts/dependencies).
+- **[Reference](/reference)** — the CLI, the manifest format, spec globals, and
+  the `envy.*` Lua API.

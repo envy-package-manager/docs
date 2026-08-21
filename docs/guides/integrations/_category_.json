@@ -1,0 +1,9 @@
+{
+  "label": "Integrations",
+  "position": 8,
+  "link": {
+    "type": "generated-index",
+    "slug": "/guides/integrations",
+    "description": "Using envy with CI systems, build systems, and editors."
+  }
+}
