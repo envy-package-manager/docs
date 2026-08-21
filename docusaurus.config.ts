@@ -98,7 +98,8 @@ const config: Config = {
           items: [
             {label: 'Introduction', to: '/'},
             {label: 'Getting Started', to: '/getting-started'},
-            {label: 'CLI Reference', to: '/cli'},
+            {label: 'Concepts', to: '/concepts'},
+            {label: 'CLI Reference', to: '/reference/cli'},
           ],
         },
         {
