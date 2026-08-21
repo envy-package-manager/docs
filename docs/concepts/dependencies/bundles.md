@@ -5,9 +5,9 @@ title: Bundles
 
 # Bundles
 
-> **Placeholder content.** Outline for review; verify against sources.
+> **Placeholder content.** Outline for review. Verify against sources.
 
-A bundle is a versioned container of specs — one pin that delivers a whole
+A bundle is a versioned container of specs: one pin that delivers a whole
 toolbox of package definitions.
 
 Will cover:
@@ -17,28 +17,29 @@ Will cover:
 ```lua
 BUNDLES = {
   envy = {
-    identity = "envy.package-specs@r1",
+    identity = "envy.package-specs@r3",
     source = "https://github.com/envy-package-manager/package-specs.git",
     -- envy git-resolve https://github.com/envy-package-manager/package-specs main
-    ref = "9bdb0a11cefa3e83418cff37dc68ea755c07a237",
+    ref = "ded36a39bbf13744f5a0e539f2f4741fecb61dd0",
   },
 }
 
 PACKAGES = {
   { spec = "envy.uv@r0", bundle = "envy", options = { version = "0.11.30" } },
-  { spec = "envy.python@r0", bundle = "envy", options = { version = "3.13.14" } },
+  { spec = "envy.python@r1", bundle = "envy",
+    options = { version = "3.13.14", release = "20260623" } },
 }
 ```
 
-- One `ref` pin covers every spec taken from the bundle — upgrade the whole
-  toolbox atomically.
-- The producer side (`envy-bundle.lua`, `BUNDLE`, `SPECS`) — pointer to the
-  [Creating a Bundle](/guides/creating-bundles) guide.
-- How bundles arrive: the bundle itself is materialized through the
-  [fetch-dependency](./fetch-dependencies.md) machinery before any spec is
-  read out of it — bundles can live behind the same bootstrap tooling as
+- One `ref` pin covers every spec taken from the bundle, so the whole toolbox
+  upgrades atomically.
+- The producer side, meaning `envy-bundle.lua` with its `BUNDLE` and `SPECS`
+  globals. See [Creating a Bundle](/guides/creating-bundles).
+- How bundles arrive. envy materializes the bundle through the
+  [fetch-dependency](./fetch-dependencies.md) machinery before reading any spec
+  out of it. A bundle can therefore live behind the same bootstrap tooling as
   anything else.
-- Inline bundle references on a single entry (`bundle = { ... }` in place of
-  an alias).
-- Identity integrity: a spec fetched from a bundle must declare the identity
+- Inline bundle references on a single entry, using `bundle = { ... }` in place
+  of an alias.
+- Identity integrity. A spec fetched from a bundle has to declare the identity
   the bundle promised for it.

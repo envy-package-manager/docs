@@ -5,54 +5,58 @@ title: Lua API
 
 # Lua API
 
-> **Placeholder content.** Function list verified at skeleton time; each entry
-> needs full signature, semantics, and an example.
+> **Placeholder content.** Function list verified at skeleton time. Each entry
+> needs a full signature, semantics, and an example.
 
 The `envy` table available in manifests and specs.
 
 ## Constants
 
-`envy.PLATFORM` (`"darwin" | "linux" | "windows"`), `envy.ARCH`
-(`"arm64" | "x86_64"`), `envy.PLATFORM_ARCH`, `envy.EXE_EXT` (`".exe"` or
-`""`). Shell constants: `ENVY_SHELL.BASH`, `ENVY_SHELL.SH`, `ENVY_SHELL.CMD`,
+`envy.PLATFORM` is `"darwin"`, `"linux"`, or `"windows"`. `envy.ARCH` is
+`"arm64"` or `"x86_64"`. `envy.PLATFORM_ARCH` joins them. `envy.EXE_EXT` is
+`".exe"` on Windows and `""` elsewhere. The shell constants are
+`ENVY_SHELL.BASH`, `ENVY_SHELL.SH`, `ENVY_SHELL.CMD`, and
 `ENVY_SHELL.POWERSHELL`.
 
 ## Processes
 
-- `envy.run(cmd | {cmds}, opts?)` — run command(s); opts: `quiet`, `check`,
-  `capture`, `interactive`, `env`. Documented in detail: `interactive` for
-  sudo/license prompts; `check = false` to inspect exit codes.
+- `envy.run(script | {lines}, opts?)` runs shell script text. Options:
+  `capture`, `check`, `quiet`, `interactive`, `cwd`, `env`, `shell`. Returns
+  `{exit_code, stdout, stderr}`. Use `interactive` for sudo and license
+  prompts, and `check = false` to inspect exit codes yourself.
 
-## Fetching (FETCH-phase)
+## Fetching, during the FETCH phase
 
-- `envy.fetch(...)` — imperative download.
-- `envy.commit_fetch(...)` — commit an imperatively fetched file.
-- `envy.verify_hash(...)` — explicit hash check.
+- `envy.fetch(source | {sources}, { dest = <dir> })` downloads into a directory
+  and returns the basename it wrote.
+- `envy.commit_fetch(name | {names} | {filename, sha256})` moves files from
+  `tmp_dir` into the durable fetch directory, verifying hashes.
+- `envy.verify_hash(path, sha256)` checks a file without committing it.
 
-## Archives & files
+## Archives and files
 
-- `envy.extract(archive, dest, { strip })`
+- `envy.extract(archive, dest, { strip, only })`
 - `envy.extract_all(src_dir, dest, { strip, only })`
 - `envy.copy`, `envy.move`, `envy.remove`, `envy.exists`, `envy.is_file`,
   `envy.is_dir`
-- `envy.path.join`, `.basename`, `.dirname`, `.stem`, `.extension`,
-  `.abspath`
+- `envy.path.join`, `.basename`, `.dirname`, `.stem`, `.extension`, and
+  `envy.abspath`
 
-## Packages & products
+## Packages and products
 
-- `envy.product(name)` — resolve a declared product dependency.
-- `envy.package(identity)` — resolve a declared package dependency's
-  directory.
-- `envy.loadenv(module)`, `envy.loadenv_spec(identity, module)` — load
-  manifest/spec Lua modules (composition).
+- `envy.product(name)` resolves a declared product dependency.
+- `envy.package(identity)` resolves a declared package dependency's directory.
+- `envy.loadenv(module)` and `envy.loadenv_spec(identity, module)` load manifest
+  and spec Lua modules for composition.
 
-## Misc
+## Other
 
-- `envy.template(str, vars)` — `{{var}}` interpolation for scripts.
-- `envy.extend(dst, src)` — append array entries.
-- `envy.options(schema)` — validate options from an `OPTIONS` function.
-- `envy.debug/info/warn/error/stdout` — logging; `print` routes to the log.
+- `envy.template(str, vars)` interpolates `{{var}}` for scripts.
+- `envy.extend(dst, src)` appends array entries.
+- `envy.options(schema)` validates options from an `OPTIONS` function.
+- `envy.debug`, `.info`, `.warn`, `.error`, and `.stdout` handle output.
+  `print` routes to the log.
 
-Access rules worth documenting: `envy.product` / `envy.package` only resolve
-*declared* dependencies, and only once the dependency is guaranteed ready for
-your current phase — undeclared or too-early access is an error, not a race.
+Access rules worth documenting: `envy.product` and `envy.package` resolve
+declared dependencies only, and only once the dependency is ready for your
+current phase. Undeclared or too-early access is an error rather than a race.

@@ -5,15 +5,15 @@ title: Spec Reference
 
 # Spec Reference
 
-> **Placeholder content.** Skeleton tables; fill and verify against sources.
+> **Placeholder content.** Skeleton tables. Fill in and verify against sources.
 
-Terse companion to [Concepts → Specs](/concepts/specs).
+Terse companion to [Anatomy of a Spec](/concepts/specs).
 
 ## Globals
 
 | Global | Allowed forms | Default when omitted |
 | --- | --- | --- |
-| `IDENTITY` | string `"ns.name@ver"` | — required, always |
+| `IDENTITY` | string `"ns.name@rev"` | required, always |
 | `FETCH` | string \| table \| function | error unless `USER_MANAGED` |
 | `STAGE` | string \| table \| function | extract all fetched archives |
 | `BUILD` | string \| function | no-op |
@@ -24,7 +24,7 @@ Terse companion to [Concepts → Specs](/concepts/specs).
 | `DEPENDENCIES` | array of dependency tables | none |
 | `PLATFORMS` | array of platform strings | all platforms |
 | `USER_MANAGED` | boolean \| function | false |
-| `EXPORTABLE` | boolean | false (fetched bytes preserved for export) |
+| `EXPORTABLE` | boolean | false, and the fetched bytes are preserved for export |
 
 ## Verb signatures
 
@@ -46,8 +46,8 @@ All directory arguments arrive with a trailing path separator.
 
 | Field | Required | Forms |
 | --- | --- | --- |
-| `CHECK` | yes | string (exit 0 = satisfied) \| function → boolean or script string |
-| `INSTALL` | yes | string \| function → nil or script string |
+| `CHECK` | yes | string, where exit 0 means satisfied, or a function returning a boolean or a script string |
+| `INSTALL` | yes | string, or a function returning nil or a script string |
 | `PLATFORMS` | no | per-pair platform filter |
 | `DEPENDS` | no | names of sibling pairs to run first |
 
@@ -56,10 +56,10 @@ All directory arguments arrive with a trailing path separator.
 | Field | Meaning |
 | --- | --- |
 | `source` | URL (required). |
-| `sha256` | Verify + enable cached reuse. |
-| `ref` | Commit hash; required for git sources. |
+| `sha256` | Verify the download and enable cached reuse. |
+| `ref` | Commit hash. Required for git sources. |
 | `dest` | Rename the downloaded file. |
-| `post_data` | HTTP POST body (https only). |
+| `post_data` | HTTP POST body. HTTP and HTTPS only. |
 
 ## OPTIONS schema fields
 

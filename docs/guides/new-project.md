@@ -5,22 +5,22 @@ title: Starting a Project
 
 # Starting a Project
 
-> **Placeholder content.** Outline for review; verify against sources.
+> **Placeholder content.** Outline for review. Verify against sources.
 
-End-to-end walkthrough: empty repo → committed, self-bootstrapping toolchain.
+An end-to-end walkthrough from an empty repo to a committed, self-bootstrapping
+toolchain.
 
 Will cover:
 
 - Getting a throwaway envy binary and running
   `envy init <project-dir> <bin-dir>`.
-- Choosing init options: `--mirror` (private release mirror), `--pin-sums`
-  (checksum-pin the envy release), `--deploy` (product script deployment
-  on/off), `--root` (subproject manifests), `--platform` (which script
-  flavors to write for cross-platform repos).
-- Anatomy of the freshly-written `envy.lua` and its `-- @envy` header.
+- Choosing init options. `--mirror` for a private release mirror. `--pin-sums`
+  to checksum-pin the envy release. `--deploy` for product script deployment.
+  `--root` for subproject manifests. `--platform` for which script flavors to
+  write in a cross-platform repo.
+- Anatomy of the freshly written `envy.lua` and its `-- @envy` header.
 - Adding your first package and running the first `sync`.
-- What to commit: manifest, both bootstrap scripts, `.luarc.json`, deployed
-  wrappers (and what to `.gitignore`).
-- Recommended repo conventions: recording `envy git-resolve` commands as
-  comments next to pinned refs; a `local.` spec directory for project-local
-  specs.
+- What to commit: the manifest, both bootstrap scripts, `.luarc.json`, and the
+  deployed wrappers. Also what to put in `.gitignore`.
+- Repo conventions: record `envy git-resolve` commands as comments next to
+  pinned refs, and keep project-local specs in one directory.

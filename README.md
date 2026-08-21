@@ -83,7 +83,7 @@ with an explicit list.
   ```lua title="envy.lua"
   ````
   Languages beyond the defaults must be listed in `themeConfig.prism.additionalLanguages`.
-  `lua`, `bash`, `powershell`, and `json` are already registered.
+  `lua`, `bash`, `powershell`, `json`, and `makefile` are already registered.
 - **Cross-link with relative file paths** (`./concepts.md`), not URLs. The build
   validates them.
 - **Artwork lives in `static/img/`.** `Ruckus.svg` (navbar logo) and `Ruckus.png`

@@ -5,25 +5,25 @@ title: Writing a Spec
 
 # Writing a Spec
 
-> **Placeholder content.** Outline for review; verify against sources.
+> **Placeholder content.** Outline for review. Verify against sources.
 
-Tutorial: author a spec that fetches, verifies, and installs a prebuilt tool,
-then grow it into something smarter. (The [Concepts → Specs](/concepts/specs)
-section is the reference companion to this guide.)
+A tutorial. Author a spec that fetches, verifies, and installs a prebuilt tool,
+then grow it into something smarter. [Concepts: Specs](/concepts/specs) is the
+reference companion to this guide.
 
 Will cover:
 
-- Minimal viable spec: `IDENTITY` plus a string `FETCH` — done. envy's
-  defaults extract and install it.
+- The minimal spec: `IDENTITY` plus a string `FETCH`. envy's defaults extract
+  and install it.
 - Adding integrity: per-platform download tables with `sha256` fingerprints.
 - Adding `OPTIONS` so consumers can pick versions.
 - Advertising `PRODUCTS` so consumers get wrapper scripts and
   `envy product` resolution.
-- Platform-dependent behavior with `envy.PLATFORM` / `envy.ARCH`.
+- Platform-dependent behavior with `envy.PLATFORM` and `envy.ARCH`.
 - Building from source: a `BUILD` verb returning a shell script via
   `envy.template`.
 - Iterating locally with a `local.*` spec, then promoting it to a shared
-  location or bundle ([Creating a Bundle](./creating-bundles.md)).
+  location or a bundle. See [Creating a Bundle](./creating-bundles.md).
 - Worked example (draft below, carried over from the earlier skeleton):
 
 ```lua title="local.cmake@r0.lua"

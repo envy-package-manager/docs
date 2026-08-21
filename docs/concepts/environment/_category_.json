@@ -4,6 +4,6 @@
   "link": {
     "type": "generated-index",
     "slug": "/concepts/environment",
-    "description": "How installed packages reach your PATH: product scripts, shell hooks, and envy run."
+    "description": "How installed packages reach your PATH, with product scripts, shell hooks, and envy run."
   }
 }

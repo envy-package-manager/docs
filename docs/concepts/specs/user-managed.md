@@ -5,26 +5,154 @@ title: User-Managed Packages
 
 # User-Managed Packages
 
-> **Placeholder content.** Outline for review; verify against sources.
+Some things a project depends on are not files envy can own: Homebrew itself, an
+apt package, a udev rule, a system daemon. They live in host state, are
+installed once per machine, and sit in locations envy should not manage.
+`USER_MANAGED` tells envy to orchestrate them without owning them.
 
-Some "packages" aren't files envy can own — they're host state: Homebrew
-itself, apt packages, kernel rules. `USER_MANAGED = true` tells envy to
-orchestrate without owning.
+The contract flips:
 
-Will cover:
+| | Cache-managed (normal) | User-managed |
+| --- | --- | --- |
+| Must define | `FETCH` | at least one [`SETUP`](./setup.md) pair |
+| Must not define | nothing | `FETCH`, `STAGE`, `BUILD`, `INSTALL` |
+| Where the result lives | the cache, immutably | the host machine |
+| Cached | yes | no, `CHECK` is the only gate |
+| Exportable to a [depot](../depots.md) | yes, if `EXPORTABLE` | no |
+| `pkg_dir` in `SETUP` verbs | the package directory | `nil` |
 
-- The contract flip: cache-managed packages install into the cache and must
-  define `FETCH`; user-managed packages mutate the host, must define at least
-  one [SETUP](./setup.md) pair, and must *not* define
-  `FETCH`/`STAGE`/`BUILD`/`INSTALL`.
-- `USER_MANAGED` as a boolean or a function (decide at load time).
-- What envy still provides: dependency ordering, platform filtering,
-  CHECK-before-INSTALL idempotence, products (as raw values), parallel
-  execution.
-- What envy can't provide: caching, export to depots, uninstall/rollback —
-  the host owns the state.
-- Real examples: `brew` (CHECK: `brew --version`; INSTALL: run the Homebrew
-  installer), `apt` packages (CHECK parses `dpkg-query`; INSTALL builds one
-  `apt install` command), udev rules.
-- Using a user-managed package as a dependency: "make sure Homebrew exists
-  before this spec installs its formula."
+Declaring a phase verb alongside `USER_MANAGED = true` is an error that names
+the verb. The two models cannot be mixed in one spec.
+
+## A complete example
+
+```lua title="acme.brew.lua"
+-- @envy schema "1"
+IDENTITY = "acme.brew@r0"
+PLATFORMS = { "darwin" }
+USER_MANAGED = true
+
+SETUP = {
+  brew = {
+    CHECK = "brew --version",
+
+    INSTALL = function(pkg_dir, opts)
+      envy.run({
+        "sudo -v",
+        'curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash',
+      }, {
+        env = { NONINTERACTIVE = "1" },
+        interactive = true,
+      })
+    end,
+  },
+}
+```
+
+```lua title="envy.lua"
+{ spec = "acme.brew@r0", source = envy.abspath("envy/acme.brew.lua"),
+  platforms = { "darwin" },
+  setup = { "brew" } },
+```
+
+macOS only. Nothing is cached. One pair named `brew`. Its `CHECK` is a bare
+command whose exit status is the answer. Its `INSTALL` runs the official installer
+interactively, because the installer wants a `sudo` password. Without
+`setup = { "brew" }` in the manifest, nothing happens.
+
+## What envy still provides
+
+- **Dependency ordering.** Another spec declares
+  `{ spec = "acme.brew@r0", source = "acme.brew.lua", setup = { "brew" } }`, and
+  can then rely on Homebrew existing before its own install runs.
+- **Idempotence.** `CHECK` runs, envy takes a cross-process lock, `CHECK` runs
+  again, then `INSTALL`. Two concurrent syncs do not both install.
+- **Platform filtering.** On the spec, the entry, or the pair.
+- **Parallelism.** Unrelated pairs run concurrently with everything else.
+- **Products.** Values are used verbatim rather than resolved against a cache
+  path.
+
+What it does not provide: caching, depot export, uninstall, and rollback. The
+host owns that state.
+
+## Products from host state
+
+Values pass through as-is, which for a host package manager usually means the
+name of the thing you asked for:
+
+```lua
+PRODUCTS = function(opts)
+  local result = {}
+  for _, pkg in ipairs(opts.packages) do
+    result[pkg] = { value = pkg, script = false }
+  end
+  return result
+end
+```
+
+`script = false` matters, because there is no cache path to wrap and no wrapper
+script to deploy. `envy product libusb` answers `libusb`, which is what a build
+system passing `-l` flags needs.
+
+## A package-manager spec
+
+Driving apt or brew for a list of packages follows one shape. `CHECK` asks the
+host what is already installed and records what is not. `INSTALL` installs the
+difference.
+
+```lua
+OPTIONS = { packages = { required = true, type = "list" } }
+
+local missing = {}
+
+SETUP = {
+  packages = {
+    CHECK = function(pkg_dir, opts)
+      local res = envy.run("brew list", { capture = true, quiet = true, check = false })
+      if res.exit_code ~= 0 then return false end
+
+      local installed = {}
+      for name in res.stdout:gmatch("%S+") do installed[name] = true end
+
+      missing = {}
+      for _, name in ipairs(opts.packages) do
+        if not installed[name] then table.insert(missing, name) end
+      end
+      return #missing == 0
+    end,
+
+    INSTALL = function(pkg_dir, opts)
+      return "brew install " .. table.concat(missing, " ")
+    end,
+  },
+}
+```
+
+Two details. `missing` is a file-local variable written by `CHECK` and read by
+`INSTALL`. That is legal, and it is why `CHECK` should decide what work remains
+rather than only whether there is any. `INSTALL` also returns a string instead of
+calling `envy.run`, which is the shortest form when no interactivity is needed.
+
+For apt, the same skeleton with `dpkg-query -W -f='${Status} ${Package}\n' ...`
+in `CHECK` and `sudo apt-get install -y` in `INSTALL`.
+
+## `USER_MANAGED` as a function
+
+A boolean is usual. A function, which must return a boolean, decides at load
+time. Use it for a spec that owns files on one platform and drives host state on
+another:
+
+```lua
+USER_MANAGED = function()
+  return envy.PLATFORM == "linux"     -- apt on Linux, a real download elsewhere
+end
+```
+
+Use it sparingly. The two halves of such a spec share nothing but a name, and
+two specs are usually clearer.
+
+## See also
+
+- [SETUP](./setup.md) for pair semantics, selection, and the lock protocol.
+- [Products](./products.md) for `script = false` and raw values.
+- [Declaring Dependencies](../dependencies/declaring.md) for demanding a pair from a dependency.
