@@ -39,6 +39,17 @@ pinned envy binary on first run. Everyday command: `./bin/envy sync`.
   Consumers use the product name rather than the identity: CLI
   `envy product cmake`, Lua `envy.product("cmake")`, or deployed wrapper script
   `./bin/cmake`.
+- **commit the whole bin dir**: `<bin>/envy` and `envy.bat` plus every deployed
+  product script (and `.bat` twin under `--platform all`). A fresh clone then
+  runs `./bin/cmake` with nothing installed: the wrapper calls `bin/envy`, which
+  downloads pinned envy, which installs the package. Wrappers resolve at call
+  time (`exec "$(envy product cmake)" "$@"`), so they never go stale.
+- **ownership**: envy creates, updates, and prunes only bin-dir files containing
+  the `envy-managed` marker (substring match). An unmarked file is skipped, or an
+  error under `--strict`. Writing your own `bin/gn` therefore takes that name
+  permanently, which is the supported way to wrap several products or run a
+  pre-step. `envy`/`envy.bat` are always restamped, never pruned. A filtered
+  `sync` prunes marked wrappers outside the filtered subgraph.
 - cache: user-wide, content-addressed, shared across projects, safe to delete.
   Root precedence: `--cache-root`, then `$ENVY_CACHE_ROOT`, then `@envy cache-*`,
   then platform default (`~/Library/Caches/envy`, `$XDG_CACHE_HOME/envy`,

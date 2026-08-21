@@ -22,6 +22,9 @@ Will cover:
   - `envy sync` does both.
 - What just happened: a look at the bin directory, which holds one wrapper per
   product, and at the one-line-per-package output.
+- Why the bin directory is committed. The bootstrap scripts and every product
+  wrapper live in git, so a clone runs `./bin/cmake` before envy exists on the
+  machine. See [Product Scripts](/concepts/environment/product-scripts).
 - Three ways to run project tools:
   1. `./bin/<tool>`, the deployed product wrappers, with no setup.
   2. `envy run <command...>`, one-shot activation.

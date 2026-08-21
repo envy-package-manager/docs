@@ -15,8 +15,12 @@ behind it installs on first use. That makes `deploy` cheap, and makes a
 committed bin directory enough to bootstrap a machine.
 
 Only files carrying envy's `envy-managed` marker are created, updated, or
-removed. A wrapper whose product no longer exists is pruned. A hand-written file
-of the same name is left alone, or reported with `--strict`.
+removed. A wrapper whose product no longer exists is pruned. A file without the
+marker belongs to you: envy will not update it, prune it, or overwrite it. That
+makes a hand-written `bin/gn` that wraps several products a supported pattern.
+See [Product Scripts](/concepts/environment/product-scripts). Note `--strict`
+reports such a file as a collision, so a project that owns a product's name
+should use a plain `deploy`.
 
 ## Usage
 

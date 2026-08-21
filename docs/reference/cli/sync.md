@@ -74,7 +74,9 @@ Dependencies come along. Unrelated packages are left alone.
 A filtered `sync` only knows about the filtered subgraph, and the deploy step
 prunes envy-managed wrappers it does not recognize. In a project with ten
 products, `sync envy.cmake@r0` leaves cmake's wrappers and removes the others.
-Run a bare `./bin/envy sync` to restore them.
+Run a bare `./bin/envy sync` to restore them. Wrappers you
+[own](/concepts/environment/product-scripts) are never pruned, because they carry
+no marker.
 :::
 
 ### To commit wrappers for a platform you are not on

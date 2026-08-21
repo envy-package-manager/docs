@@ -5,34 +5,116 @@ title: Product Scripts
 
 # Product Scripts
 
-> **Placeholder content.** Outline for review. Verify against sources.
+The default way to reach a project's tools. `envy sync` deploys one small
+wrapper script per executable [product](/concepts/specs/products) into the
+project's bin directory, so `./bin/cmake` runs the cmake the manifest pins.
 
-The default activation story. `envy sync` deploys one small wrapper script per
-executable product into the project's bin directory. Commit the bin directory
-once, and everything in it stays correct.
+A wrapper is four lines, and it resolves the product when called rather than
+when it was written:
 
-Will cover:
-
-- What a wrapper is: four lines that resolve the product when called.
-
-```bash
+```bash title="bin/cmake"
 #!/usr/bin/env bash
 # envy-managed schema "1"
 SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 exec "$("$SCRIPT_DIR/envy" product "cmake")" "$@"
 ```
 
-  Because resolution happens at call time, wrappers never go stale. Change a
-  version in the manifest, run `sync`, and the same wrapper runs the new tool.
-- The switches. `@envy bin` names the directory, `@envy deploy "true"` enables
-  deployment, and `--platform` picks POSIX, Windows, or both script flavors.
-- The command triangle: `envy install` for packages only, `envy deploy` for
-  scripts only, `envy sync` for both.
-- Ownership. envy creates, updates, and prunes only files carrying the
-  `envy-managed` marker. Hand-written scripts in the same directory are never
-  touched, and name collisions are skipped, or reported as errors under
-  `--strict`.
-- The hand-written wrapper pattern that coexists with deployment: a committed
-  `bin/gn` that runs `envy sync` and then dispatches to resolved products.
-- What does not get a script: `script = false` products. See
-  [Products](/concepts/specs/products).
+Because resolution happens at call time, wrappers never go stale. Change a
+version in the manifest, run `sync`, and the same wrapper runs the new tool. The
+first call on a fresh machine installs the package.
+
+Deployment needs `@envy deploy "true"` in the manifest header, and `@envy bin`
+names the directory. `--platform posix|windows|all` picks which flavors get
+written.
+
+## Commit the bin directory
+
+The expected workflow is to check the whole bin directory into the repo:
+
+| File | Written by | Commit |
+| --- | --- | --- |
+| `bin/envy` | `envy init`, restamped by `sync` and `deploy` | yes |
+| `bin/envy.bat` | same, for Windows | yes |
+| `bin/cmake`, `bin/ctest`, `bin/python3`, ... | `sync` and `deploy`, one per `script` product | yes |
+| `bin/cmake.bat`, ... | same, under `--platform windows` or `all` | yes |
+
+That is the whole point of the design. Someone clones the repo and runs
+`./bin/cmake --version` with nothing installed. The wrapper calls `bin/envy`.
+That downloads the pinned envy, which installs cmake, which runs. There is no
+bootstrap sequence to document and no setup step to forget.
+
+A wide toolchain produces a lot of these files. A firmware project with a
+compiler, a debugger suite, Python, and a formatter set can commit a hundred
+wrappers. They are small and they are stable text. A diff over them reads as a
+summary of what the project's tool surface gained or lost.
+
+## What envy owns
+
+envy touches only files that contain the `envy-managed` marker. On every `sync`
+or `deploy`:
+
+| File in the bin directory | What happens |
+| --- | --- |
+| Marked, and still backed by a product | Rewritten if its content changed, otherwise left alone |
+| Marked, and no longer backed by a product | Removed |
+| Not marked | Skipped, or an error under `--strict` |
+| `envy` and `envy.bat` | Always restamped, never pruned |
+
+Pruning is why a filtered `sync` needs care. `sync envy.cmake@r0` resolves only
+that subgraph, so every other marked wrapper looks unbacked and is removed. A
+bare `sync` puts them back.
+
+## Taking ownership of a name
+
+A file with no marker belongs to you, permanently. envy will not update it, will
+not prune it, and will not overwrite it. That makes hand-written wrappers a
+supported pattern rather than a hack.
+
+The usual reason is that one command needs several products, or a step before
+the tool runs. This is a real `bin/gn` from a firmware repo, replacing the
+generated one:
+
+```bash title="bin/gn"
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+
+"${SCRIPT_DIR}/envy" sync --platform all
+PYTHON3="$($SCRIPT_DIR/envy product python3)"
+NINJA="$($SCRIPT_DIR/envy product ninja)"
+GN="$($SCRIPT_DIR/envy product gn)"
+
+"${PYTHON3}" "${SCRIPT_DIR}/../src/gntools/run_gn.py" \
+  --gn="$GN" --ninja="$NINJA" -- "$@"
+```
+
+It syncs first, so a stale checkout repairs itself before the build runs. It
+resolves three products instead of one. And it dispatches through a project
+script rather than exec'ing the tool directly. None of that fits a generated
+four-line wrapper, and none of it has to.
+
+To take a name over, write the file. Either start from scratch or delete the
+marker line from the deployed wrapper. Commit it like any other script.
+
+Two things to know:
+
+- **`--strict` will fail on it.** A name you own that a product also provides is
+  exactly the collision `--strict` reports. Use a plain `sync`, or give the
+  product a different name in its spec.
+- **The marker is a substring match.** Any file containing `envy-managed`
+  anywhere counts as envy's. Do not mention the marker in a comment in a script
+  you intend to own.
+
+## What gets no script
+
+Products declared `script = false` deploy nothing. A header path, a library
+file, and a data directory are not things to execute. Consumers ask
+[`envy product <name>`](/reference/cli/product) or `envy.product(name)` for the
+value instead. See [Products](/concepts/specs/products).
+
+## See also
+
+- [`envy deploy`](/reference/cli/deploy) and [`envy sync`](/reference/cli/sync)
+- [Shell Hooks](./shell-hooks.md) and [`envy run`](./envy-run.md), the two alternatives to wrappers
+- [Starting a Project](/guides/new-project) for what else to commit
