@@ -57,27 +57,21 @@ An inline interpreter, where the script is passed as an argument:
 DEFAULT_SHELL = { inline = { "/usr/bin/python3", "-c" } }
 ```
 
-A function, to decide at load time:
+A function, so the interpreter can itself be an envy-managed package:
 
 ```lua
 DEFAULT_SHELL = function()
-  if envy.PLATFORM == "windows" then return ENVY_SHELL.POWERSHELL end
-  return os.getenv("CI") and ENVY_SHELL.SH or ENVY_SHELL.BASH
+  return { file = { envy.product("python3") }, ext = ".py" }
 end
 ```
 
-envy calls the function once, while loading the manifest, before any package
-runs.
+That form lets every build script in the project be written in Python,
+specifically the Python the manifest pins. Nothing assumes a Python on the
+machine. envy calls the function once, and the function resolves the interpreter
+with `envy.product` or `envy.package`.
 
-:::caution `DEFAULT_SHELL` cannot name an envy-managed interpreter
-The function runs with no phase context, so `envy.product` and `envy.package`
-are unavailable inside it and report `not in phase context (missing pkg)`. A
-`file` or `inline` interpreter therefore has to be a path that already exists on
-the machine, or one the environment supplies.
-
-To run a verb under an interpreter envy installs, override the shell for that
-call instead. `envy.run` takes the same shapes, and inside a phase verb the
-product is resolvable:
+A single verb can override the shell instead of changing it project-wide.
+`envy.run` takes the same shapes:
 
 ```lua
 DEPENDENCIES = { { product = "python3" } }
@@ -88,6 +82,13 @@ BUILD = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
   })
 end
 ```
+
+:::caution The bootstrap exception
+A spec that provides the interpreter cannot use it. If `DEFAULT_SHELL` resolves
+to a Python that envy is still installing, that spec's string verbs would need
+Python in order to install Python. Specs in that position have to use the
+built-in shells, or use function verbs and `envy.run` with an explicit `shell`
+option.
 :::
 
 ## `envy.run`
