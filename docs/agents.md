@@ -6,10 +6,8 @@ slug: /agents
 
 # envy for agents
 
-> **Placeholder content.** This page is intentionally not prose. It is a low-token,
-> maximal-density summary for AI coding agents. Humans should read the rest of
-> the manual. Verify facts against the envy sources before publishing, and keep
-> this page current with every behavior change.
+> This page is intentionally not prose. It is a low-token, maximal-density
+> summary for AI coding agents. Humans should read the rest of the manual.
 
 envy: per-project package manager. Lua manifest `envy.lua` at project root pins
 everything including envy itself. No install step, no server, no registry, no
@@ -130,7 +128,9 @@ stderr.
 - `sync [queries]`: install plus deploy product scripts. The main command.
 - `install [queries]`: install only.
 - `init <project-dir> <bin-dir>`: new project, manifest plus bootstrap scripts.
-- `product [name] [--json]`: resolve a product path. No name lists all.
+- `product [name] [--json]`: resolve a product path. Naming one installs its
+  provider; no name lists all; `--json` dumps every product as one object and
+  computes paths WITHOUT installing, so `sync` first if the files must exist.
 - `package <identity>`: install and print the package dir path.
 - `run <cmd...>`: exec cmd with project bin on PATH and `ENVY_PROJECT_ROOT` set.
 - `shell <bash|zsh|fish|powershell>`: print the shell-hook source line.
@@ -145,6 +145,10 @@ stderr.
   libarchive (tar/gz/xz/bz2/zst/zip/7z/rar/iso). Package the AWS CLI only when a
   project wants the CLI itself.
 - `cache`: show cache location and disk usage. Also `version`, `mirror-envy`.
+- editor support: `init` writes `.luarc.json` with three platform cache paths and
+  envy's LuaCATS type definitions on `workspace.library`; `sync`/`deploy` rewrite
+  stale `envy/<semver>` entries and preserve everything else. Delete the file to
+  opt out. `BUNDLES` is not in the default `diagnostics.globals` list.
 
 Superprojects: nested `envy.lua` manifests compose. A sub-manifest sets `@envy
 root "false"`, and the superproject imports it via
@@ -159,5 +163,6 @@ env, cwd, shell})`, `envy.fetch(src, {dest})`, `envy.commit_fetch`,
 `envy.verify_hash`, `envy.extract`, `envy.extract_all(src, dst, {strip, only})`,
 `envy.copy/move/remove/exists`, `envy.path.*`, `envy.abspath`,
 `envy.template(str, vars)`, `envy.product(name)`, `envy.package(identity)`,
-`envy.options(schema)`, `envy.loadenv`, and constants `envy.PLATFORM`
+`envy.options(schema)`, `envy.loadenv`, `envy.loadenv_spec(identity, module)`
+(returns a module's globals out of a declared dependency), and constants `envy.PLATFORM`
 (`darwin|linux|windows`), `envy.ARCH`, `envy.PLATFORM_ARCH`, `envy.EXE_EXT`.

@@ -5,8 +5,15 @@ static HTML and published to GitHub Pages by CI.
 
 Live at <https://envy-package-manager.github.io/docs/>.
 
-> The pages in `docs/` are **placeholder content** derived from the envy
-> sources. Replace them with real docs before announcing the site.
+> Page content is written against the envy sources, the Python functional tests,
+> and output captured from a real binary. Verify behavior claims the same way
+> before changing them.
+>
+> Two assets are still stand-ins: `static/screencasts/envy-sync.svg` and the
+> Open Graph card.
+>
+> `docs/agents.md` is a maximal-density summary of the whole site. Update it
+> whenever behavior changes.
 
 ## Requirements
 
