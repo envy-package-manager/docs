@@ -66,7 +66,7 @@ end
 ```
 
 A function verb that returns a string has that string run as a shell script.
-See [Shells & Scripts](./shells.md). Computing a script and returning it is a
+See [Shells & Scripts](../shells.md). Computing a script and returning it is a
 normal pattern:
 
 ```lua
@@ -208,5 +208,6 @@ for another.
 ## See also
 
 - [The Package Lifecycle](./lifecycle.md) for the order verbs run in and the directories they see.
+- [Shells & Scripts](../shells.md) for which interpreter runs a string verb, and for pinning that interpreter.
 - [Writing a Spec](../../guides/writing-a-spec.md) for the authoring workflow.
 - [Spec Reference](../../reference/spec-globals.md) for the same roster, terser.

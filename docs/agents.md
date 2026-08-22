@@ -22,6 +22,16 @@ pinned envy binary on first run. Everyday command: `./bin/envy sync`.
   the first code line, plus globals `PACKAGES` (required), `BUNDLES`,
   `PACKAGE_DEPOTS`, `DEFAULT_SHELL`. Manifest is real Lua: conditionals,
   `envy.loadenv()`, `envy.extend()` all legal.
+- shells: string verbs, and strings returned from function verbs, run under
+  `DEFAULT_SHELL`. Default bash on POSIX, PowerShell on Windows. Built-ins
+  `ENVY_SHELL.BASH|SH|CMD|POWERSHELL`, platform-validated, wrong platform is an
+  error not a fallback. Custom: `{ file = <path|argv>, ext = ".py" }` runs
+  `argv <tempfile>`; `{ inline = argv }` runs `argv <script text>`. The function
+  form can resolve an envy-installed interpreter,
+  `DEFAULT_SHELL = function() return { file = { envy.product("python3") }, ext = ".py" } end`,
+  so every project script runs under a pinned interpreter. The spec that
+  provides that interpreter must use built-ins. Per-call override:
+  `envy.run(script, { shell = ... })`.
 - directives: `version` pins envy. `sha256sums` pins release checksums and
   requires `version`. `bin` is REQUIRED and names the project bin dir. `mirror`
   sets the release mirror. `deploy "true"` enables product scripts. `root

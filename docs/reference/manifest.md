@@ -32,7 +32,7 @@ the last occurrence of a key wins.
 | `PACKAGES` | table (required) | Package entries. |
 | `BUNDLES` | table | Bundle alias to `{ identity, source, ref }`. |
 | `PACKAGE_DEPOTS` | table | Depot index URIs, or `{ DEPENDS, FETCH }` tables. |
-| `DEFAULT_SHELL` | constant \| table \| function | Shell for string verbs. See [Shells & Scripts](/concepts/specs/shells). |
+| `DEFAULT_SHELL` | constant \| table \| function | Shell for string verbs. See [Shells & Scripts](/concepts/shells). |
 
 ## Package entry fields
 

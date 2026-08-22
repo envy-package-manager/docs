@@ -143,5 +143,5 @@ packages, a kernel module.
 ## See also
 
 - [User-Managed Packages](./user-managed.md) for specs that are only `SETUP`.
-- [Shells & Scripts](./shells.md) for `envy.run` options, including `interactive`.
+- [Shells & Scripts](../shells.md) for `envy.run` options, including `interactive`.
 - [Package Entries](../projects#package-entries) for the `setup = { ... }` field.

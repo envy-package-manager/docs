@@ -99,7 +99,7 @@ BUILD = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
 end
 ```
 
-See [Shells & Scripts](./shells.md) for `envy.run`'s options and for choosing
+See [Shells & Scripts](../shells.md) for `envy.run`'s options and for choosing
 the interpreter that runs your strings.
 
 ### defined conditionally
