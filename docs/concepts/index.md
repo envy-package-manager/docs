@@ -6,9 +6,8 @@ slug: /concepts
 
 # Concepts
 
-> **Placeholder content.** Outline for review. Verify against sources.
-
-The vocabulary, one term at a time. Each entry links to its full page.
+The vocabulary, one term at a time. Each entry links to its full page. If you
+read them in order, this page is also a reasonable tour of the model.
 
 - **[Manifest](/concepts/projects)**: `envy.lua`, checked into the project. It
   pins envy itself through header directives and declares every package the
@@ -39,3 +38,7 @@ The vocabulary, one term at a time. Each entry links to its full page.
 - **[Depot](/concepts/depots)**: the optional prebuilt-artifact layer.
 - **[Superproject and subproject](/concepts/projects#manifest-discovery)**:
   nested manifests composing into one project.
+- **[Shells & Scripts](/concepts/shells)**: which interpreter runs a string verb,
+  and how to make that interpreter a package the project pins.
+- **[Reproducibility](/concepts/reproducibility)**: the pin inventory, the trust
+  chain, and the honest limits.
