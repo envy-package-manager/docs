@@ -53,6 +53,12 @@ package manager.
   fetch bits from wherever they already live (HTTPS, git, S3, local files),
   verify them, and install them.
 
+envy is one batteries-included executable per platform: macOS, Linux, and
+Windows, on arm64 and x86_64. Lua, the archive formats, git, and S3 are compiled
+in, so there is nothing to install beside it and no daemon to run. The committed
+bootstrap script downloads the build your project pins, which is why "install
+envy" is not a step.
+
 An optional [package depot](/concepts/depots) lets CI publish prebuilt package
 artifacts that everyone else's `envy sync` downloads instead of building. It is
 an accelerator you can add, never a requirement.
