@@ -8,13 +8,27 @@ title: First Steps
 A tour from a fresh clone to running project tools, and then the three commands
 worth knowing.
 
+:::note How examples are written
+
+Examples throughout this manual call tools by bare name, `envy sync` and
+`cmake --version`, which assumes the [shell hook](./shell-integration.md) is
+installed. The hook puts the project's bin directory on `PATH` while you are
+inside the project.
+
+Without the hook, every one of those commands still works with the bin directory
+in front: `./bin/envy sync` and `./bin/cmake --version` on macOS and Linux,
+`bin\envy.bat sync` and `bin\cmake.bat --version` on Windows. That is the form
+CI jobs use, since no interactive shell is involved.
+
+:::
+
 ## Run a tool
 
 In a project that is already set up, there is nothing to do first:
 
 ```console
 $ git clone https://github.com/acme/firmware && cd firmware
-$ ./bin/cmake --version
+$ cmake --version
 [envy.cmake@r0] installed (8.2s)
 cmake version 4.4.0
 ```
@@ -31,7 +45,7 @@ Only what that tool needed was installed, not the whole manifest. See
 `sync` is the command for when on-demand is not what you want:
 
 ```console
-$ ./bin/envy sync
+$ envy sync
 [envy.cmake@r0] installed (8.2s)
 [envy.ninja@r0] installed (1.1s)
 [envy.python@r1] installed (31.4s)
@@ -62,7 +76,7 @@ reinstalling anything.
 
 ## Three ways to run project tools
 
-1. **The wrappers.** `./bin/cmake`. Committed, zero setup, works in any shell and
+1. **The wrappers.** `cmake`. Committed, zero setup, works in any shell and
    in CI. See [Product Scripts](/concepts/environment/product-scripts).
 2. **[`envy run`](../reference/cli/run.md).** `envy run make -j` puts the bin
    directory on `PATH` for one command and sets `ENVY_PROJECT_ROOT`. Good for
@@ -77,18 +91,18 @@ work.
 ## Asking envy questions
 
 ```console
-$ ./bin/envy product                      # every product, and who provides it
+$ envy product                      # every product, and who provides it
 cmake          bin/cmake     envy.cmake@r0{version="4.4.0"}
 ctest          bin/ctest     envy.cmake@r0{version="4.4.0"}
 python3        bin/python3   envy.python@r1{version="3.13.14"}
 
-$ ./bin/envy product cmake                # one product, resolved
+$ envy product cmake                # one product, resolved
 /Users/you/Library/Caches/envy/packages/envy.cmake@r0/darwin-arm64-blake3-49a9b2620de8c380/pkg/bin/cmake
 
-$ ./bin/envy package envy.cmake@r0        # the package's whole tree
+$ envy package envy.cmake@r0        # the package's whole tree
 /Users/you/Library/Caches/envy/packages/envy.cmake@r0/darwin-arm64-blake3-49a9b2620de8c380/pkg
 
-$ ./bin/envy cache                        # what is on disk, largest first
+$ envy cache                        # what is on disk, largest first
 Cache: /Users/you/Library/Caches/envy
 ...
 ```
@@ -101,8 +115,8 @@ Cache: /Users/you/Library/Caches/envy
 Queries select manifest entries by identity:
 
 ```bash
-./bin/envy sync envy.cmake@r0     # this entry and its dependencies
-./bin/envy install python         # matches any namespace and revision
+envy sync envy.cmake@r0     # this entry and its dependencies
+envy install python         # matches any namespace and revision
 ```
 
 See [query forms](../reference/cli/index.md#package-queries). One caveat worth

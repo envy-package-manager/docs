@@ -48,7 +48,7 @@ expects in a directory.
 ### To publish a platform's artifacts from CI
 
 ```bash
-ENVY_IGNORE_DEPOT=1 ./bin/envy export -o exports \
+ENVY_IGNORE_DEPOT=1 envy export -o exports \
   --depot-prefix s3://acme-envy-packages/ > exports/macos-packages.txt
 aws s3 cp --recursive exports/ s3://acme-envy-packages/
 ```
@@ -61,7 +61,7 @@ storage CLI you already have.
 ### To export one package you just fixed
 
 ```bash
-./bin/envy export envy.cmake@r0 -o exports --depot-prefix s3://acme-envy-packages/
+envy export envy.cmake@r0 -o exports --depot-prefix s3://acme-envy-packages/
 ```
 
 Dependencies install as needed, but only the queried entry is archived.
@@ -69,7 +69,7 @@ Dependencies install as needed, but only the queried entry is archived.
 ### To seed a machine that has no network
 
 ```bash
-./bin/envy export -o /media/usb/envy-artifacts
+envy export -o /media/usb/envy-artifacts
 ```
 
 With no `--depot-prefix`, index lines carry local paths, the form
@@ -78,7 +78,7 @@ With no `--depot-prefix`, index lines carry local paths, the form
 ### To check what an export would produce
 
 ```bash
-./bin/envy export -o /tmp/exports | tee /tmp/index.txt
+envy export -o /tmp/exports | tee /tmp/index.txt
 ```
 
 Every line is `sha256  path`, so a missing package is a missing line and `wc -l`

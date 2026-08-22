@@ -108,6 +108,26 @@ that setup, including what to key the cache on.
 - **A finished entry is never re-validated.** No timestamp checks and no
   re-hashing. A package is done until its identity changes or you delete it.
 
+## Windows specifics
+
+The cache works the same way, with three details that only exist there:
+
+- **Long paths.** Cache trees nest deeply, and a content-addressed entry
+  directory name is long. envy opts out of `MAX_PATH` at the cache root by
+  prefixing its own scans, so a deep entry is not a problem even without the
+  system-wide long-path policy enabled. The prefixed form is internal and never
+  printed.
+- **Antivirus.** Defender and the Search indexer hold handles on freshly written
+  files, which makes a delete fail for a moment. envy retries deletions with
+  backoff rather than failing the run. A directory that will not go away after
+  the retries is usually an open handle in another process.
+- **Paths in output.** Everything envy prints or hands to a Lua phase uses the
+  platform separator, so cache paths look like
+  `C:\Users\you\AppData\Local\envy\packages\envy.cmake@r0\windows-x86_64-blake3-...\pkg`.
+  Build `.bat` and PowerShell strings with
+  [`envy.path.join`](../reference/lua-api.md#paths) rather than hardcoding a
+  separator.
+
 ## Reclaiming space
 
 There is no `envy cache clean`. Everything is reconstructible from the manifest,
@@ -115,7 +135,7 @@ so deletion is the cleanup tool. [`envy cache`](../reference/cli/cache.md) shows
 what is worth deleting:
 
 ```console
-$ ./bin/envy cache
+$ envy cache
 Cache: /Users/you/Library/Caches/envy
 
 Packages:

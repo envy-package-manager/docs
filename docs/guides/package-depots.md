@@ -16,7 +16,7 @@ A depot only pays for itself where source builds or slow downloads hurt. Measure
 before committing:
 
 ```bash
-ENVY_CACHE_ROOT=/tmp/cold-cache ENVY_IGNORE_DEPOT=1 time ./bin/envy sync
+ENVY_CACHE_ROOT=/tmp/cold-cache ENVY_IGNORE_DEPOT=1 time envy sync
 ```
 
 That is the worst case every new checkout and every CI runner pays. If it is
@@ -56,7 +56,7 @@ holds.
 
 ```console
 $ mkdir -p /tmp/depot
-$ ./bin/envy export -o /tmp/depot > /tmp/depot/packages.txt
+$ envy export -o /tmp/depot > /tmp/depot/packages.txt
 [envy.doctest-cpp@r0] cache hit
 [envy.ninja@r0] cache hit
 [[envy.cmake@r0]] 2/8845 files 1.48MB/309.73MB: 0.5%
@@ -80,7 +80,7 @@ For a real depot, `--depot-prefix` rewrites the second column to the URL
 consumers will see:
 
 ```bash
-./bin/envy export -o envy-export --depot-prefix s3://acme-envy-packages/
+envy export -o envy-export --depot-prefix s3://acme-envy-packages/
 ```
 
 The prefix is prepended literally, so keep the trailing slash.
@@ -103,7 +103,7 @@ PACKAGE_DEPOTS = { "s3://acme-envy-packages/packages.txt" }
 Then prove it works from a cache that cannot possibly have the packages:
 
 ```console
-$ ENVY_CACHE_ROOT=/tmp/verify-cache ./bin/envy sync
+$ ENVY_CACHE_ROOT=/tmp/verify-cache envy sync
 [envy.doctest-cpp@r0] imported from depot (0.0s)
 [envy.ninja@r0] imported from depot (0.0s)
 [[envy.cmake@r0]] verifying SHA256....
@@ -208,7 +208,7 @@ Four ways to answer "why did that not hit":
 **Compare the key.** The cache entry directory name is the archive name:
 
 ```console
-$ ./bin/envy -q package cmake
+$ envy -q package cmake
 /Users/you/Library/Caches/envy/packages/envy.cmake@r0/darwin-arm64-blake3-49a9b2620de8c380/pkg
 ```
 
@@ -219,7 +219,7 @@ revision, or a weak dependency changed since the export.
 **Read the trace.** Every lookup is recorded:
 
 ```console
-$ ./bin/envy --trace=file:trace.jsonl sync
+$ envy --trace=file:trace.jsonl sync
 $ grep depot_check trace.jsonl
 {"seq":12,"ts":"...","tid":1,"event":"depot_check","spec":"local.demo@r1","sha":"4b80ccd91d719bdb","result":"miss"}
 ```
@@ -229,7 +229,7 @@ $ grep depot_check trace.jsonl
 **Expect silence on a miss.** A miss just builds:
 
 ```console
-$ ENVY_CACHE_ROOT=/tmp/c3 ./bin/envy sync
+$ ENVY_CACHE_ROOT=/tmp/c3 envy sync
 [local.demo@r1] installed (0.0s)
 ```
 
@@ -237,7 +237,7 @@ $ ENVY_CACHE_ROOT=/tmp/c3 ./bin/envy sync
 or a hash mismatch all warn and fall back:
 
 ```console
-$ ./bin/envy sync
+$ envy sync
 warning: depot: failed to fetch manifest https://depot.invalid/packages.txt: curl_easy_perform failed: Couldn't resolve host name
 [local.demo@r1] installed (0.1s)
 ```
@@ -256,7 +256,7 @@ place to enforce policy, and
 
 ```bash
 aws s3 ls s3://acme-envy-packages/ > retain.txt
-./bin/envy merge-depot envy-export/*-packages.txt \
+envy merge-depot envy-export/*-packages.txt \
   --existing existing.txt \
   --retain-s3-ls retain.txt \
   --retain-prefix s3://acme-envy-packages/ \

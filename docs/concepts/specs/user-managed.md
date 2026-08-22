@@ -50,15 +50,52 @@ SETUP = {
 ```
 
 ```lua title="envy.lua"
-{ spec = "acme.brew@r0", source = envy.abspath("envy/acme.brew.lua"),
-  platforms = { "darwin" },
-  setup = { "brew" } },
+PACKAGES = {
+  { spec = "acme.brew@r0", source = envy.abspath("envy/acme.brew.lua"),
+    platforms = { "darwin" },
+    setup = { "brew" } },
+}
 ```
 
 macOS only. Nothing is cached. One pair named `brew`. Its `CHECK` is a bare
 command whose exit status is the answer. Its `INSTALL` runs the official installer
 interactively, because the installer wants a `sudo` password. Without
 `setup = { "brew" }` in the manifest, nothing happens.
+
+### The same shape on Windows
+
+Host mutation on Windows goes through a package manager the same way, and the
+`CHECK` is still a command whose exit status answers the question:
+
+```lua title="acme.winget-cmake.lua"
+-- @envy schema "1"
+IDENTITY = "acme.winget-cmake@r0"
+PLATFORMS = { "windows" }
+USER_MANAGED = true
+
+SETUP = {
+  cmake = {
+    CHECK = "winget list --exact --id Kitware.CMake",
+    INSTALL = "winget install --exact --id Kitware.CMake --accept-package-agreements",
+  },
+}
+```
+
+Those strings run under PowerShell, the Windows default. `winget list` exits
+non-zero when the package is absent, which is exactly the contract `CHECK` wants.
+A pair that needs administrator rights should set `interactive = true` through the
+function form, since an elevation prompt in a non-interactive PowerShell fails
+instead of asking:
+
+```lua
+INSTALL = function(pkg_dir, opts)
+  envy.run("winget install --exact --id Kitware.CMake", { interactive = true })
+end
+```
+
+Most projects want the cache-managed version of a tool instead. Reach for a
+user-managed spec when the thing genuinely belongs to the machine, such as a
+driver, a service, or a system SDK.
 
 ## What envy still provides
 

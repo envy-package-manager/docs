@@ -33,9 +33,11 @@ SETUP = {
 ```
 
 ```lua title="envy.lua: the pair runs only because the entry selects it"
-{ spec = "acme.jlink@r1", source = specs .. "acme.jlink.lua",
-  options = { version = "9.30" },
-  setup = { "udev_rules" } },
+PACKAGES = {
+  { spec = "acme.jlink@r1", source = specs .. "acme.jlink.lua",
+    options = { version = "9.30" },
+    setup = { "udev_rules" } },
+}
 ```
 
 ## Pair fields
@@ -101,13 +103,19 @@ about a pair is cached: its lock entry is ephemeral and always purged, so every
 
 Pairs are opt-in per project, by name:
 
-```lua
--- Nothing runs: the spec's pairs are available but unselected.
-{ spec = "acme.jlink@r1", source = specs .. "acme.jlink.lua", options = { version = "9.30" } },
+```lua title="nothing runs: the pairs are available but unselected"
+PACKAGES = {
+  { spec = "acme.jlink@r1", source = specs .. "acme.jlink.lua",
+    options = { version = "9.30" } },
+}
+```
 
--- Install udev rules on a developer machine, but not on a CI runner.
-{ spec = "acme.jlink@r1", source = specs .. "acme.jlink.lua", options = { version = "9.30" },
-  setup = not os.getenv("CI") and { "udev_rules" } or nil },
+```lua title="udev rules on a developer machine, but not on a CI runner"
+PACKAGES = {
+  { spec = "acme.jlink@r1", source = specs .. "acme.jlink.lua",
+    options = { version = "9.30" },
+    setup = not os.getenv("CI") and { "udev_rules" } or nil },
+}
 ```
 
 Selections union across everyone who asks. A spec can demand a pair from one of
@@ -122,6 +130,36 @@ DEPENDENCIES = {
 So a spec that installs a Homebrew formula can insist Homebrew exists first,
 without the project needing to know. Selecting a pair also selects everything it
 `DEPENDS` on.
+
+## Per-platform pairs
+
+One spec can carry a pair per platform and let the filter decide. `PLATFORMS` on
+the pair is independent of the spec's own:
+
+```lua
+SETUP = {
+  udev_rules = {
+    PLATFORMS = { "linux" },
+    CHECK = "test -f /etc/udev/rules.d/99-acme.rules",
+    INSTALL = "sudo cp packaging/99-acme.rules /etc/udev/rules.d/",
+  },
+
+  driver = {
+    PLATFORMS = { "windows" },
+    CHECK = 'pnputil /enum-drivers | Select-String -Quiet "acme.inf"',
+    INSTALL = function(pkg_dir, opts)
+      envy.run('pnputil /add-driver "' .. envy.path.join(pkg_dir, "driver", "acme.inf") .. '" /install',
+               { interactive = true })
+    end,
+  },
+}
+```
+
+A manifest can then select `{ "udev_rules", "driver" }` unconditionally, and each
+runs only where it applies. Remember that the strings run under the platform
+default interpreter, bash on POSIX and PowerShell on Windows, so
+`Select-String` and `test -f` never meet each other. Anything needing elevation,
+`sudo` or a UAC prompt, wants `interactive = true`.
 
 ## Selection does not change identity
 

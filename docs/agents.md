@@ -17,7 +17,10 @@ pinned envy binary on first run.
 Using an already-set-up project needs NO setup step: run `./bin/<tool>` (a
 committed wrapper) or `./bin/envy run <cmd>`, and the wrapper bootstraps envy and
 installs that tool's subgraph on demand. `./bin/envy sync` is for after a
-manifest edit, or to install everything up front.
+manifest edit, or to install everything up front. Windows: `bin\envy.bat`,
+`bin\<tool>.bat`. With the shell hook installed the bin dir is on PATH, so bare
+`envy sync` and `cmake` work, which is the form the rest of the docs use; in CI
+and scripts use the explicit path.
 
 ## model
 

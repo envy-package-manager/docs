@@ -48,7 +48,7 @@ Merge rules:
 ### To publish one index from per-platform CI jobs
 
 ```bash
-./bin/envy merge-depot exports/macos-packages.txt \
+envy merge-depot exports/macos-packages.txt \
                        exports/linux-packages.txt \
                        exports/windows-packages.txt \
   --existing https://packages.acme.example/envy/packages.txt \
@@ -62,7 +62,7 @@ rebuilt.
 
 ```bash
 aws s3 ls --recursive s3://acme-envy-packages/ > retain.txt
-./bin/envy merge-depot exports/*-packages.txt \
+envy merge-depot exports/*-packages.txt \
   --existing s3://acme-envy-packages/packages.txt \
   --retain-s3-ls retain.txt \
   --retain-prefix s3://acme-envy-packages/ \
@@ -76,7 +76,7 @@ bridges the two namings: keys in the listing, full `s3://` URLs in the index.
 ### To fail the pipeline when a rebuild is not reproducible
 
 ```bash
-./bin/envy merge-depot exports/*-packages.txt --existing packages.txt --strict
+envy merge-depot exports/*-packages.txt --existing packages.txt --strict
 ```
 
 Without `--strict` a changed hash is a warning and the new hash wins. With it,
@@ -86,7 +86,7 @@ spec revision bump, or a reproducibility bug.
 ### To merge from a plain keep-list
 
 ```bash
-./bin/envy merge-depot exports/*-packages.txt \
+envy merge-depot exports/*-packages.txt \
   --existing packages.txt --retain live-paths.txt > merged.txt
 ```
 
@@ -96,7 +96,7 @@ your storage is not S3, or when a script already produced the list.
 ### To inspect a merge before publishing
 
 ```bash
-./bin/envy merge-depot exports/*-packages.txt --existing packages.txt \
+envy merge-depot exports/*-packages.txt --existing packages.txt \
   | diff packages.txt - | head
 ```
 

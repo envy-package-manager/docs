@@ -122,6 +122,40 @@ A function `BUILD` also changes where staging writes. Extraction goes to
 `work/stage/` rather than straight into `pkg/`, because a build needs a scratch
 tree. See [The Package Lifecycle](./lifecycle.md#where-extraction-lands).
 
+### On Windows
+
+A string `BUILD` runs under PowerShell, not bash, so a script written for one
+platform is not portable by accident. Three ways out, in increasing order of
+commitment:
+
+```lua
+-- 1. Branch, and write both dialects.
+BUILD = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
+  if envy.PLATFORM == "windows" then
+    return envy.template([[cmake --build . --config Release --target install]],
+                         {})
+  end
+  return "make -j && make install"
+end
+
+-- 2. Pick the interpreter per call.
+BUILD = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
+  envy.run("nmake install", { shell = ENVY_SHELL.CMD })
+end
+
+-- 3. Do the work in Lua, which is the same everywhere.
+BUILD = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
+  envy.copy(envy.path.join(stage_dir, "bin"), envy.path.join(install_dir, "bin"))
+end
+```
+
+A project that wants one dialect everywhere sets
+[`DEFAULT_SHELL`](../shells.md#default_shell), which is the manifest-wide version
+of option 2. Note that `check`, on by default, is arranged differently per
+platform: bash gets `-e`, while envy injects fail-fast into generated PowerShell
+and cmd scripts. See
+[How each built-in is invoked](../shells.md#how-each-built-in-is-invoked).
+
 ## Failure
 
 A non-zero exit fails the verb, which fails the package. envy leaves the entry

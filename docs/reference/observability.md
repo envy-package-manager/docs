@@ -30,7 +30,7 @@ before the subcommand.
 Default output is one line per package:
 
 ```console
-$ ./bin/envy sync
+$ envy sync
 [envy.cmake@r0] cache hit
 [envy.ninja@r0] imported from depot (0.4s)
 [local.mytool@r1] installed (3.2s)
@@ -40,7 +40,7 @@ deploy: 4 product script(s) (4 created, 0 updated, 0 unchanged, 0 removed)
 `--verbose` adds the reasoning behind each of those lines:
 
 ```console
-$ ./bin/envy --verbose sync
+$ envy --verbose sync
 [2026-08-22 14:58:45.135] [DBG] Loading manifest (123 bytes)
 [2026-08-22 14:58:45.135] [DBG] [local.fstr@r1] spec: cache-managed
 [2026-08-22 14:58:45.135] [DBG] [local.fstr@r1] check: miss — building
@@ -78,9 +78,9 @@ terminal.
 ## Traces
 
 ```bash
-./bin/envy --trace sync                          # human-readable, to stderr
-./bin/envy --trace=file:trace.jsonl sync         # JSONL, to a file
-./bin/envy --trace=stderr,file:trace.jsonl sync  # both
+envy --trace sync                          # human-readable, to stderr
+envy --trace=file:trace.jsonl sync         # JSONL, to a file
+envy --trace=stderr,file:trace.jsonl sync  # both
 ```
 
 Bare `--trace` means `stderr`. Tracing does not change the log level, so pair it
@@ -89,7 +89,7 @@ with `-q` when you want events without the narrative.
 The stderr form is one event per line:
 
 ```console
-$ ./bin/envy --trace sync
+$ envy --trace sync
 trace_start schema=2
 spec_registered spec=local.fstr@r1 key=local.fstr@r1
 phase_start spec=local.fstr@r1 phase=check
@@ -171,7 +171,7 @@ version.
 **Why did this rebuild?**
 
 ```bash
-./bin/envy --trace=file:t.jsonl sync && grep -E 'cache_(hit|miss)' t.jsonl
+envy --trace=file:t.jsonl sync && grep -E 'cache_(hit|miss)' t.jsonl
 ```
 
 A `cache_miss` names the key that was not found. Compare it to the key in a
@@ -207,7 +207,7 @@ when it is `false`. A denial is also a hard error, so you will see it without th
 trace:
 
 ```console
-$ ./bin/envy sync
+$ envy sync
 error: Lua error in local.user@r1:
   envy.product: pkg 'local.user@r1' does not declare product dependency on 'nope_txt'
 Stack traceback:
@@ -232,9 +232,9 @@ produced.
 Attach these:
 
 1. The manifest, and the spec if you wrote it.
-2. `./bin/envy version`.
-3. `./bin/envy --verbose <command>` output.
-4. `./bin/envy --trace=file:trace.jsonl <command>` and the file.
+2. `envy version`.
+3. `envy --verbose <command>` output.
+4. `envy --trace=file:trace.jsonl <command>` and the file.
 
 The trace has paths and URLs in it. Nothing else, but read it before pasting it
 into a public issue.

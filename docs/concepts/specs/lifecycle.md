@@ -45,8 +45,12 @@ envy creates one cache entry per package, at
 | `work/tmp/` | `tmp_dir` | Scratch space for anything a verb writes and does not keep. Deleted with `work/`. |
 | `pkg/` | `install_dir` | The package. Products resolve into it, other projects share it, and a depot ships it. |
 
-Paths arrive with a trailing separator applied, so `fetch_dir .. "JLink.pkg"` is
-correct. `envy.path.join` is available when you prefer it.
+Paths arrive with a trailing separator applied, so `fetch_dir .. "tool.tar.gz"` is
+correct. The separator is the platform's, so that concatenation produces
+`.../fetch/tool.tar.gz` on macOS and Linux and
+`C:\...\fetch\tool.tar.gz` on Windows. Prefer
+[`envy.path.join`](../../reference/lua-api.md#paths) when the result goes into a
+script, and never hardcode `/`.
 
 ### Where extraction lands
 

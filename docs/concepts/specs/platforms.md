@@ -123,7 +123,7 @@ which script flavors get written into the bin directory: POSIX shell scripts,
 Windows `.bat` files, or both.
 
 ```bash
-./bin/envy sync --platform all      # commit wrappers for POSIX and Windows
+envy sync --platform all      # commit wrappers for POSIX and Windows
 ```
 
 It says nothing about which packages install. A macOS machine still installs

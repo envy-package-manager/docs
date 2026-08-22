@@ -61,11 +61,11 @@ away. `use` prints the reminder.
 ### To change the version of envy a project uses
 
 ```bash
-./bin/envy use 0.2.0
+envy use 0.2.0
 # envy.lua: @envy version "0.1.9" -> "0.2.0"
 # envy.lua: @envy sha256sums "3f9c..." -> "a17e..."
 # run 'envy sync' to restamp the bootstrap scripts and .luarc.json for 0.2.0
-./bin/envy sync
+envy sync
 ```
 
 The `sync` is not optional bookkeeping. It re-execs into 0.2.0, which rewrites
@@ -75,7 +75,7 @@ and the scripts together.
 ### To roll back after a bad upgrade
 
 ```bash
-./bin/envy use 0.1.9 && ./bin/envy sync
+envy use 0.1.9 && envy sync
 ```
 
 Identical mechanics. A downgrade is not a special case.
@@ -83,7 +83,7 @@ Identical mechanics. A downgrade is not a special case.
 ### To repair a stale or wrong checksum pin
 
 ```bash
-./bin/envy use 0.1.9
+envy use 0.1.9
 # envy.lua: @envy sha256sums "0000..." -> "3f9c..."
 ```
 
@@ -94,14 +94,14 @@ is the failure mode that would otherwise leave a project stuck.
 ### To start verifying envy downloads
 
 ```bash
-./bin/envy use 0.2.0 --pin-sums
+envy use 0.2.0 --pin-sums
 ```
 
 This adds a `@envy sha256sums` line directly below `@envy version`. A directive
 lower in the file is read by nothing. To stop verifying:
 
 ```bash
-./bin/envy use 0.2.0 --no-pin-sums
+envy use 0.2.0 --no-pin-sums
 ```
 
 which removes the line and its terminator, leaving no blank gap.
@@ -109,7 +109,7 @@ which removes the line and its terminator, leaving no blank gap.
 ### To pin a version published only on a private mirror
 
 ```bash
-./bin/envy use 0.2.0 --mirror s3://acme-envy-mirror
+envy use 0.2.0 --mirror s3://acme-envy-mirror
 ```
 
 This reads `SHA256SUMS` from that mirror. The flag decides only where the
@@ -119,7 +119,7 @@ manifest.
 ### To retarget one component of a superproject
 
 ```bash
-cd libs/firmware && ../../bin/envy use 0.2.0 --subproject
+cd libs/firmware && ../.envy use 0.2.0 --subproject
 # or, from anywhere:
 envy use 0.2.0 --manifest libs/firmware/envy.lua
 ```
@@ -129,7 +129,7 @@ Each manifest that carries its own `@envy version` needs its own `use`.
 ### To target an internal build with no published SHA256SUMS
 
 ```bash
-./bin/envy use 0.2.0-rc1 --no-pin-sums --force
+envy use 0.2.0-rc1 --no-pin-sums --force
 ```
 
 `--force` skips the existence check. It is refused alongside a pin, because

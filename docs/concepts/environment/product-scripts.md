@@ -48,6 +48,38 @@ compiler, a debugger suite, Python, and a formatter set can commit a hundred
 wrappers. They are small and they are stable text. A diff over them reads as a
 summary of what the project's tool surface gained or lost.
 
+### The Windows twin
+
+Each wrapper has a `.bat` counterpart that does the same job through `cmd`:
+
+```bat title="bin\cmake.bat"
+@echo off
+rem envy-managed schema "1"
+for /f "delims=" %%i in ('call "%~dp0envy.bat" product "cmake"') do set "PRODUCT_PATH=%%i"
+if not defined PRODUCT_PATH (
+    echo envy: failed to resolve product 'cmake' 1>&2
+    exit /b 1
+)
+call "%PRODUCT_PATH%" %*
+exit /b %ERRORLEVEL%
+```
+
+`%~dp0` is the script's own directory, so it finds `envy.bat` beside itself the
+way the POSIX wrapper finds `envy`. The exit code is forwarded.
+
+Deploy both flavors from whatever machine you are on:
+
+```console
+$ envy deploy --platform all
+deploy: 8 product script(s) (4 created, 0 updated, 4 unchanged, 0 removed)
+```
+
+A later `deploy` without `--platform all` writes only the host flavor and leaves
+the other one alone, so the Windows wrappers a macOS developer committed are not
+pruned by their colleagues' syncs. They do stop being restamped, though, so run
+`--platform all` in whatever job or hook keeps the bin directory current. See
+[`envy deploy`](../../reference/cli/deploy.md).
+
 ## What envy owns
 
 envy touches only files that contain the `envy-managed` marker. On every `sync`
@@ -105,6 +137,31 @@ Two things to know:
 - **The marker is a substring match.** Any file containing `envy-managed`
   anywhere counts as envy's. Do not mention the marker in a comment in a script
   you intend to own.
+
+## Line endings and file modes
+
+envy writes every script with LF endings on every platform, and gives POSIX
+scripts mode 755. Both matter to Git:
+
+- The POSIX bootstrap and wrappers need the executable bit. `git ls-files
+  --stage bin/envy` should show `100755`.
+- Git line-ending conversion fights envy. Check out a repo with
+  `core.autocrlf=true` and the `.bat` files arrive as CRLF, which envy sees as
+  changed content and rewrites on the next deploy:
+
+  ```console
+  $ envy deploy --platform all
+  deploy: 8 product script(s) (0 created, 1 updated, 7 unchanged, 0 removed)
+  ```
+
+  That churn is harmless but noisy. Turn conversion off for the directory:
+
+  ```text title=".gitattributes"
+  bin/** -text
+  ```
+
+LF `.bat` files work in `cmd.exe`. envy generates them that way on purpose, so
+the same bytes are correct in the repo whichever platform wrote them.
 
 ## What gets no script
 

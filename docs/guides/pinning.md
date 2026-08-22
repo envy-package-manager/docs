@@ -58,7 +58,7 @@ Edit the option and sync:
 ```
 
 ```console
-$ ./bin/envy sync
+$ envy sync
 [envy.cmake@r0] installed (8.4s)
 deploy: 3 product script(s) (0 created, 0 updated, 3 unchanged, 0 removed)
 ```
@@ -89,12 +89,12 @@ spec you take from it.
 checksum pin in one step:
 
 ```console
-$ ./bin/envy use 0.2.1
+$ envy use 0.2.1
 envy.lua: @envy version "0.2.0" -> "0.2.1"
 envy.lua: @envy sha256sums "a17e9c4f..." -> "3f9c2d1b..."
 run 'envy sync' to restamp the bootstrap scripts and .luarc.json for 0.2.1
 
-$ ./bin/envy sync
+$ envy sync
 Updated bootstrap script
 Updated .luarc.json types paths
 ```
@@ -113,7 +113,7 @@ is wrong. Nothing else can fix it, because everything else re-execs into the env
 that cannot be downloaded.
 
 ```console
-$ ./bin/envy use 0.2.0
+$ envy use 0.2.0
 envy.lua: @envy sha256sums "0000..." -> "a17e9c4f..."
 ```
 
@@ -123,8 +123,8 @@ pinned envy is unreachable.
 ## Starting and stopping verification
 
 ```bash
-./bin/envy use 0.2.0 --pin-sums      # add @envy sha256sums
-./bin/envy use 0.2.0 --no-pin-sums   # remove it
+envy use 0.2.0 --pin-sums      # add @envy sha256sums
+envy use 0.2.0 --no-pin-sums   # remove it
 ```
 
 Otherwise pinning follows the manifest: pinned stays pinned, unpinned stays

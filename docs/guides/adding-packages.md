@@ -167,16 +167,16 @@ an entry most contributors never see.
 ## Verifying the result
 
 ```console
-$ ./bin/envy sync
+$ envy sync
 [envy.cmake@r0] installed (8.2s)
 deploy: 3 product script(s) (3 created, 0 updated, 0 unchanged, 0 removed)
 
-$ ./bin/envy product                 # what the project now offers
+$ envy product                 # what the project now offers
 cmake   bin/cmake   envy.cmake@r0{version="4.4.0"}
 ctest   bin/ctest   envy.cmake@r0{version="4.4.0"}
 cpack   bin/cpack   envy.cmake@r0{version="4.4.0"}
 
-$ ./bin/cmake --version
+$ cmake --version
 cmake version 4.4.0
 ```
 

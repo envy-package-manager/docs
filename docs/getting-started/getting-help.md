@@ -66,7 +66,7 @@ Human output goes to stderr. stdout carries only machine-readable answers, from
 That is what makes this safe:
 
 ```bash
-CMAKE="$(./bin/envy product cmake)"     # never captures progress or warnings
+CMAKE="$(envy product cmake)"     # never captures progress or warnings
 ```
 
 ## Reading an error

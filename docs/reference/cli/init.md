@@ -63,7 +63,7 @@ C:\Temp\envy.exe init . .\bin
 # then: bin\envy.bat sync
 ```
 
-Then edit `envy.lua`, add packages, and run `./bin/envy sync`. The throwaway
+Then edit `envy.lua`, add packages, and run `envy sync`. The throwaway
 binary in `/tmp` is never needed again.
 
 ### To make bootstrap downloads verified
@@ -108,7 +108,7 @@ POSIX developers clone the same repo.
 ### To add a component manifest inside an existing project
 
 ```bash
-./bin/envy init libs/firmware libs/firmware/bin --root=false --deploy=true
+envy init libs/firmware libs/firmware/bin --root=false --deploy=true
 ```
 
 `@envy root "false"` marks it as a subproject.
@@ -118,7 +118,7 @@ root by default, and `envy sync --subproject` targets it directly.
 ### To add the Windows bootstrap script to a project that lacks it
 
 ```bash
-./bin/envy init . ./bin --platform windows
+envy init . ./bin --platform windows
 ```
 
 The manifest is left as-is, and only `bin/envy.bat` appears.

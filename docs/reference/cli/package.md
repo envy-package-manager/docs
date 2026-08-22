@@ -34,9 +34,9 @@ different `options` sets. Add namespace, revision, or the full canonical key to
 disambiguate:
 
 ```bash
-./bin/envy package python                       # error: ambiguous
-./bin/envy package envy.python@r1               # error: two option variants
-./bin/envy package 'envy.python@r1{version="3.13.14",provide_python3=true}'
+envy package python                       # error: ambiguous
+envy package envy.python@r1               # error: two option variants
+envy package 'envy.python@r1{version="3.13.14",provide_python3=true}'
 ```
 
 Two other errors: a query naming an entry excluded on this platform, and a query
@@ -48,14 +48,14 @@ naming a package that is not cache-managed. A
 ### To get an include directory for a compiler flag
 
 ```bash
-DOCTEST="$(./bin/envy package envy.doctest-cpp@r0)"
+DOCTEST="$(envy package envy.doctest-cpp@r0)"
 clang++ -I"$DOCTEST" test.cpp
 ```
 
 ### To install one package and inspect what it laid down
 
 ```bash
-ls "$(./bin/envy package envy.cmake@r0)"
+ls "$(envy package envy.cmake@r0)"
 # bin  doc  man  share
 ```
 
@@ -65,7 +65,7 @@ resolve relative to.
 ### To pre-seed a single dependency in a container build
 
 ```bash
-RUN ./bin/envy package envy.ninja@r0 > /dev/null
+RUN envy package envy.ninja@r0 > /dev/null
 ```
 
 This installs ninja and its dependencies without deploying wrappers or touching
@@ -74,7 +74,7 @@ the rest of the manifest.
 ### To rebuild one package from source while debugging its spec
 
 ```bash
-./bin/envy package --ignore-depot local.armgcc@r0
+envy package --ignore-depot local.armgcc@r0
 ```
 
 ## See also

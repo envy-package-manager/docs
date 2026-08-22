@@ -50,7 +50,7 @@ deployment is off.
 ### To install everything up front
 
 ```bash
-./bin/envy sync
+envy sync
 ```
 
 Running a tool would install it on demand, so this is for when you want the
@@ -62,7 +62,7 @@ package and deploys a wrapper per product.
 ### To pick up a package you just added to the manifest
 
 ```bash
-./bin/envy sync
+envy sync
 ```
 
 The same command. Cached packages are skipped, the new one installs, and the new
@@ -71,7 +71,7 @@ product's wrapper appears in the bin directory.
 ### To install one package while iterating on its spec
 
 ```bash
-./bin/envy sync envy.cmake@r0
+envy sync envy.cmake@r0
 ```
 
 Dependencies come along. Unrelated packages are left alone.
@@ -80,7 +80,7 @@ Dependencies come along. Unrelated packages are left alone.
 A filtered `sync` only knows about the filtered subgraph, and the deploy step
 prunes envy-managed wrappers it does not recognize. In a project with ten
 products, `sync envy.cmake@r0` leaves cmake's wrappers and removes the others.
-Run a bare `./bin/envy sync` to restore them. Wrappers you
+Run a bare `envy sync` to restore them. Wrappers you
 [own](/concepts/environment/product-scripts) are never pruned, because they carry
 no marker.
 :::
@@ -88,7 +88,7 @@ no marker.
 ### To commit wrappers for a platform you are not on
 
 ```bash
-./bin/envy sync --platform all
+envy sync --platform all
 ```
 
 This writes both the POSIX scripts and the `.bat` files, so a Windows colleague
@@ -98,7 +98,7 @@ flavors you name, so `--platform posix` never touches `.bat` files.
 ### To sync only the component you are standing in
 
 ```bash
-cd libs/firmware && ../../bin/envy sync --subproject
+cd libs/firmware && ../.envy sync --subproject
 ```
 
 In a [superproject](/concepts/projects#manifest-discovery), discovery normally
@@ -109,7 +109,7 @@ component's bin directory.
 ### To verify a build from source, ignoring prebuilt artifacts
 
 ```bash
-./bin/envy sync --ignore-depot
+envy sync --ignore-depot
 ```
 
 Or set `ENVY_IGNORE_DEPOT=1` in the environment, which is the usual form in CI.
@@ -120,7 +120,7 @@ published it.
 ### To catch a name collision instead of skipping it
 
 ```bash
-./bin/envy sync --strict
+envy sync --strict
 ```
 
 Without `--strict`, a hand-written `bin/format` that shadows a `format` product

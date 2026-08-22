@@ -67,7 +67,7 @@ the total reconciles.
 ### To find out what is using disk
 
 ```bash
-./bin/envy cache
+envy cache
 ```
 
 Rows are sorted largest first within each section.
@@ -88,7 +88,7 @@ are looking at the shared cache or your own.
 
 ```bash
 rm -rf "$(envy cache | head -1 | cut -d' ' -f2)/packages/envy.cmake@r0"
-./bin/envy sync
+envy sync
 ```
 
 Nothing outside the cache points into it by absolute path, so the only cost is

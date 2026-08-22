@@ -47,7 +47,7 @@ graph`.
 ### To get the absolute path of a tool
 
 ```bash
-./bin/envy product cmake
+envy product cmake
 # /Users/you/Library/Caches/envy/packages/envy.cmake@r0/darwin-arm64-blake3-49a9b2620de8c380/pkg/CMake.app/Contents/bin/cmake
 ```
 
@@ -57,8 +57,8 @@ something real.
 ### To point a build system at project tools
 
 ```bash
-CC="$(./bin/envy product arm-none-eabi-gcc)"
-CMAKE="$(./bin/envy product cmake)"
+CC="$(envy product arm-none-eabi-gcc)"
+CMAKE="$(envy product cmake)"
 "$CMAKE" -DCMAKE_C_COMPILER="$CC" -S . -B build
 ```
 
@@ -74,8 +74,8 @@ built its product value with `envy.EXE_EXT`.
 ### To locate a header-only library, which has no executable
 
 ```bash
-./bin/envy product doctest_cpp_h    # .../pkg/doctest.h
-./bin/envy product doctest_cpp_dir  # .../pkg
+envy product doctest_cpp_h    # .../pkg/doctest.h
+envy product doctest_cpp_dir  # .../pkg
 ```
 
 Products with `script = false` never get a wrapper, so `envy product` is the
@@ -85,7 +85,7 @@ compiler flag, and the file itself for a dependency edge.
 ### To see everything the project offers
 
 ```bash
-./bin/envy product
+envy product
 # cmake          bin/cmake          envy.cmake@r0{version="4.2.3"}
 # ctest          bin/ctest          envy.cmake@r0{version="4.2.3"}
 # doctest_cpp_h  doctest.h          envy.doctest-cpp@r0
@@ -99,7 +99,7 @@ whatever the spec resolved on this machine rather than a cache path.
 ### To feed a whole toolchain into a generator
 
 ```bash
-./bin/envy product --json > build/envy-products.json
+envy product --json > build/envy-products.json
 ```
 
 One object, one process, no per-tool invocation. This is the recommended shape
@@ -110,7 +110,7 @@ for CMake, Bazel, and Meson glue. See
 
 ```bash
 cat bin/cmake                       # exec "$("$SCRIPT_DIR/envy" product "cmake")" "$@"
-./bin/envy product cmake            # the same path the wrapper resolves
+envy product cmake            # the same path the wrapper resolves
 ```
 
 ## See also

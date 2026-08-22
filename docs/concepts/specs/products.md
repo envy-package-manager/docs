@@ -109,7 +109,7 @@ end
 
 | Surface | How | Who uses it |
 | --- | --- | --- |
-| Deployed wrapper | `./bin/cmake` | humans, Makefiles, anything expecting a normal executable |
+| Deployed wrapper | `cmake` | humans, Makefiles, anything expecting a normal executable |
 | CLI | [`envy product cmake`](../../reference/cli/product.md), `envy product --json` | build-system glue, scripts, `envy run` users |
 | Lua | `envy.product("ninja")` | other specs, during `BUILD` and `INSTALL` |
 

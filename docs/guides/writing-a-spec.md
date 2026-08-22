@@ -30,10 +30,10 @@ PACKAGES = {
 ```
 
 ```console
-$ ./bin/envy sync
+$ envy sync
 [local.ripgrep@r0] installed (1.9s)
 deploy: 1 product script(s) (1 created, 0 updated, 0 unchanged, 0 removed)
-$ ./bin/rg --version
+$ rg --version
 ripgrep 14.1.1
 ```
 

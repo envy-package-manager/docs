@@ -16,7 +16,7 @@ definitions and writes the configuration that points the server at them.
 manifest:
 
 ```console
-$ ./bin/envy init . bin
+$ envy init . bin
 Created bin/envy
 Created ./envy.lua
 Created ./.luarc.json
@@ -58,8 +58,8 @@ moves. [`sync`](../../reference/cli/sync.md) and
 [`deploy`](../../reference/cli/deploy.md) fix them:
 
 ```console
-$ ./bin/envy use 0.1.10
-$ ./bin/envy sync
+$ envy use 0.1.10
+$ envy sync
 Updated .luarc.json types paths
 ```
 
@@ -89,7 +89,7 @@ Two opt-outs, both by omission:
 instead:
 
 ```console
-$ ./bin/envy init . bin
+$ envy init . bin
 .luarc.json already exists at ./.luarc.json
 To enable envy autocompletion, add the following to workspace.library:
   "~/Library/Caches/envy/envy/0.1.10"

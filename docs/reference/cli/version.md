@@ -37,7 +37,7 @@ version, because the script downloads and runs that envy.
 ### To check which envy a project is pinned to
 
 ```bash
-./bin/envy version
+envy version
 # envy version 0.2.0 (/Users/you/Library/Caches/envy/envy/0.2.0/envy)
 ```
 
@@ -65,7 +65,7 @@ and the rest, is what turns "download failed" into a diagnosable report.
 ### To produce a compliance artifact
 
 ```bash
-./bin/envy version --licenses > third-party-licenses.txt
+envy version --licenses > third-party-licenses.txt
 ```
 
 Everything statically linked into the binary, in one file, generated from the

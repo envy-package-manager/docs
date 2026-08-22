@@ -37,9 +37,17 @@ The built-in choices are constants rather than strings:
 | `ENVY_SHELL.CMD` | Windows |
 | `ENVY_SHELL.POWERSHELL` | Windows |
 
-Asking for one on the wrong platform is an error, not a silent fallback. A
-manifest that wants a per-platform choice makes it explicitly, with a
-[function](#a-function).
+Asking for one on the wrong platform is an error, not a silent fallback:
+
+```text
+shell option must be 'powershell' or 'cmd' on Windows
+shell option must be 'bash' or 'sh' on POSIX
+```
+
+A manifest that wants a per-platform choice makes it explicitly, with a
+[function](#a-function). All four constants exist on every platform, so a spec
+can name `ENVY_SHELL.POWERSHELL` inside an `envy.PLATFORM == "windows"` branch
+that never runs elsewhere.
 
 ## Working directories
 
@@ -281,6 +289,45 @@ BUILD = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
   ]], { prefix = install_dir, jobs = opts.jobs or 4 })
 end
 ```
+
+## How each built-in is invoked
+
+envy writes the script to a temporary file and runs an interpreter over it. The
+exact invocation matters when a script behaves differently than it does in your
+terminal:
+
+| Constant | Command | Temp file |
+| --- | --- | --- |
+| `ENVY_SHELL.BASH` | `bash -e`, or `$BASH -e` when that is set | no extension |
+| `ENVY_SHELL.SH` | `/bin/sh -e` | no extension |
+| `ENVY_SHELL.POWERSHELL` | `powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File` | `.ps1` |
+| `ENVY_SHELL.CMD` | `cmd.exe /D /V:ON /S /C` | `.cmd` |
+
+Two consequences on Windows worth knowing up front. `-NoProfile` means your
+PowerShell profile does not run, so a function or alias you defined there is not
+available to a spec. `-NonInteractive` means a script that prompts fails instead
+of hanging, which is what `envy.run(..., { interactive = true })` is for.
+
+### Fail-fast is arranged differently per platform
+
+POSIX gets `-e` from the interpreter itself, so a failing command stops the
+script no matter what `check` says. `check` only decides whether envy raises.
+
+Windows has no `-e`, so envy generates it. With `check = true`, which is the
+default:
+
+- **PowerShell** gets `$ErrorActionPreference = 'Stop'` and `$Error.Clear()` at
+  the top, `$PSNativeCommandUseErrorActionPreference = $true` on PowerShell 7.3
+  and later, an `if ($LASTEXITCODE -ne 0 ...) { exit $LASTEXITCODE }` after every
+  non-comment line, and a final `if ($Error.Count -gt 0) { exit 1 }`.
+- **cmd** gets `@echo off`, `setlocal enabledelayedexpansion`, and
+  ` || exit /b !errorlevel!` appended to every line that is not blank, a label, a
+  `rem` or `::` comment, an `@echo off`, or an `exit`.
+
+With `check = false` envy injects nothing, so a Windows script keeps going after
+a failing line while the POSIX one still stops at it. If a multi-line script has
+to behave identically on both, write the error handling yourself rather than
+relying on the interpreter.
 
 ## Failure semantics
 

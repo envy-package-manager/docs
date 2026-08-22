@@ -49,7 +49,7 @@ and writes no wrappers.
 ### To restore a bin directory you cleaned or gitignored
 
 ```bash
-./bin/envy deploy
+envy deploy
 ```
 
 This recreates every wrapper from the manifest and refreshes `bin/envy` and
@@ -59,7 +59,7 @@ has to be reachable is the specs.
 ### To pick up a new product without reinstalling
 
 ```bash
-./bin/envy deploy
+envy deploy
 ```
 
 Run this after adding `ctest` to a spec's `PRODUCTS`, or after bumping a spec
@@ -69,7 +69,7 @@ one. The package in the cache is untouched.
 ### To commit wrappers for every platform the repo supports
 
 ```bash
-./bin/envy deploy --platform all
+envy deploy --platform all
 ```
 
 This writes POSIX scripts and `.bat` files together. Pruning follows the same
@@ -79,7 +79,7 @@ your colleagues rely on.
 ### To assert in CI that the committed bin directory is current
 
 ```bash
-./bin/envy deploy --platform all --strict
+envy deploy --platform all --strict
 git diff --exit-code bin/
 ```
 
@@ -89,7 +89,7 @@ into an error instead of a skip.
 ### To deploy only one component of a superproject
 
 ```bash
-cd tools/codegen && ../../bin/envy deploy --subproject
+cd tools/codegen && ../.envy deploy --subproject
 ```
 
 :::warning

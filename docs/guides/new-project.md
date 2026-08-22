@@ -16,13 +16,13 @@ Download any envy release to a scratch location and run
 ```console
 $ /tmp/envy init . ./bin --deploy=true --pin-sums
 Fetching SHA256SUMS for https://github.com/envy-package-manager/envy/releases/download/v0.2.0/SHA256SUMS
-Created ./bin/envy
+Created envy
 Created ./envy.lua
 Created ./.luarc.json
 Initialized envy project.
 Next steps:
   1. Edit ./envy.lua to add packages
-  2. Run ./bin/envy sync
+  2. Run envy sync
 ```
 
 Two positional arguments: where the manifest goes, and where the bin directory
@@ -36,7 +36,7 @@ different one, run [`envy use <version>`](../reference/cli/use.md) afterwards.
 
 | Flag | When you want it |
 | --- | --- |
-| `--deploy=true` | Almost always. It enables [product wrappers](/concepts/environment/product-scripts), so `./bin/cmake` works. |
+| `--deploy=true` | Almost always. It enables [product wrappers](/concepts/environment/product-scripts), so `cmake` works. |
 | `--pin-sums` | Anything shared. It stamps `@envy sha256sums`, so bootstrap verifies the envy binary it downloads. |
 | `--platform all` | A repo with both POSIX and Windows developers. Writes `bin/envy` and `bin/envy.bat`. |
 | `--mirror <url>` | A network that cannot reach GitHub releases. See [`envy mirror-envy`](../reference/cli/mirror-envy.md). |
@@ -93,11 +93,11 @@ PACKAGES = {
 Then sync:
 
 ```console
-$ ./bin/envy sync
+$ envy sync
 [envy.package-specs@r3] fetched (1.4s)
 [envy.cmake@r0] installed (8.2s)
 deploy: 3 product script(s) (3 created, 0 updated, 0 unchanged, 0 removed)
-$ ./bin/cmake --version
+$ cmake --version
 cmake version 4.4.0
 ```
 
@@ -119,7 +119,7 @@ bin/cpack
 ```
 
 Committing the wrappers is the point. A colleague clones the repo and runs
-`./bin/cmake` with nothing installed. See
+`cmake` with nothing installed. See
 [Product Scripts](/concepts/environment/product-scripts).
 
 Worth adding to `.gitignore`:

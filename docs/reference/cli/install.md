@@ -37,7 +37,7 @@ skipped, unless you name one explicitly, which is an error.
 ### To warm a CI cache without touching the work tree
 
 ```bash
-./bin/envy install
+envy install
 ```
 
 The tree is byte-identical afterward, so a later `git status` in the job still
@@ -46,7 +46,7 @@ means something. Pair it with a cache action keyed on the manifest's hash.
 ### To build one package's Docker layer
 
 ```bash
-RUN ./bin/envy install envy.python@r1
+RUN envy install envy.python@r1
 ```
 
 This installs python and its dependencies only, so editing an unrelated package
@@ -55,7 +55,7 @@ in the manifest does not invalidate the layer.
 ### To prefetch everything before going offline
 
 ```bash
-./bin/envy install && ./bin/envy sync
+envy install && envy sync
 ```
 
 `install` does the downloading. The later `sync` is then local-only and just
@@ -64,7 +64,7 @@ deploys wrappers.
 ### To check that a spec still builds from source
 
 ```bash
-ENVY_IGNORE_DEPOT=1 ./bin/envy install local.armgcc@r0
+ENVY_IGNORE_DEPOT=1 envy install local.armgcc@r0
 ```
 
 This bypasses the depot and any published artifact, running the spec's real

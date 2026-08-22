@@ -13,7 +13,7 @@ Two commands answer most questions. `--verbose` narrates the decisions, and
 
 ## Bootstrap
 
-**`envy: command not found` from `./bin/envy`**
+**`envy: command not found` from `envy`**
 
 The bootstrap script is not executable, or the file is a Git LFS pointer, or the
 line endings are CRLF on a Unix runner. Check `git ls-files --stage bin/envy` for
@@ -58,8 +58,8 @@ the upstream artifact was re-published under the same URL, or something is
 intercepting the download. Verify the bytes yourself before changing the spec:
 
 ```bash
-./bin/envy fetch <url> /tmp/artifact
-./bin/envy hash /tmp/artifact
+envy fetch <url> /tmp/artifact
+envy hash /tmp/artifact
 ```
 
 If the hash upstream changed and you cannot explain why, do not just update the
@@ -76,7 +76,7 @@ A git source needs a full commit sha in `ref`. Branches and tags are not
 reproducible, and a short sha can be ambiguous. Resolve it once:
 
 ```bash
-./bin/envy git-resolve https://github.com/acme/specs refs/heads/main
+envy git-resolve https://github.com/acme/specs refs/heads/main
 ```
 
 ## Resolution
@@ -121,7 +121,7 @@ it. Check the [lifecycle](/concepts/specs/lifecycle) for which directory each ve
 owns, and look at the cache entry directly:
 
 ```bash
-ls "$(./bin/envy package mytool)"
+ls "$(envy package mytool)"
 ```
 
 **`envy.template` errors**
@@ -149,7 +149,7 @@ Work down this list:
 2. Does the product deploy a script? A product with `script = false` never gets
    one, on purpose. Use `envy product <name>`.
 3. Is the [shell hook](/concepts/environment/shell-hooks) installed? Without it,
-   nothing adds the bin directory to `PATH`. Call `./bin/<tool>` directly, or use
+   nothing adds the bin directory to `PATH`. Call `<tool>` directly, or use
    [`envy run`](./cli/run.md).
 4. Is `ENVY_SHELL_HOOK_DISABLE` set?
 
@@ -182,7 +182,7 @@ is never touched, which is exactly the situation where a stale one can persist.
 **Out of disk**
 
 ```bash
-./bin/envy cache            # what is using space
+envy cache            # what is using space
 ```
 
 Deleting a whole cache entry directory is safe. envy re-creates what it needs on
@@ -208,7 +208,7 @@ workspace path.
 That is a key mismatch, not a failure. Compare the two:
 
 ```bash
-./bin/envy -q package cmake    # .../envy.cmake@r0/darwin-arm64-blake3-49a9b26.../pkg
+envy -q package cmake    # .../envy.cmake@r0/darwin-arm64-blake3-49a9b26.../pkg
 grep 49a9b26 packages.txt      # is that artifact published?
 ```
 

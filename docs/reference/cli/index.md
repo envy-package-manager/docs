@@ -14,6 +14,12 @@ and CI.
 
 These hold for every command, so the per-command pages do not repeat them.
 
+**Examples call `envy` by bare name.** That assumes the
+[shell hook](/getting-started/shell-integration) put the project's bin directory
+on `PATH`. Without the hook, run the committed bootstrap script directly, as
+`./bin/envy` or `bin\envy.bat`. The two are the same program, since the bare name
+resolves to that same script.
+
 **Global flags go before the subcommand.** Write `envy --verbose sync`. The
 reverse, `envy sync --verbose`, is a parse error. Per-command flags go after the
 subcommand.

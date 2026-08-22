@@ -91,14 +91,14 @@ By default, commands anywhere in the tree act on the root:
 
 ```console
 $ cd libs/common
-$ ../../bin/envy sync            # syncs the whole superproject
+$ ../.envy sync            # syncs the whole superproject
 ```
 
 `--subproject` stops discovery at the nearest manifest instead:
 
 ```console
 $ cd libs/common
-$ ./bin/envy sync --subproject   # syncs only this component, into its own bin dir
+$ envy sync --subproject   # syncs only this component, into its own bin dir
 ```
 
 That is available on [`sync`](../reference/cli/sync.md),
@@ -152,8 +152,8 @@ different envy versions. Keep them equal in practice, and remember
 [`envy use`](../reference/cli/use.md) edits one manifest at a time:
 
 ```bash
-./bin/envy use 0.2.1
-cd libs/common && ./bin/envy use 0.2.1 --subproject
+envy use 0.2.1
+cd libs/common && envy use 0.2.1 --subproject
 ```
 
 A CI check that greps every `envy.lua` for the version is cheap and catches

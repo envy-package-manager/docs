@@ -53,7 +53,7 @@ unverified, because its filename is the only claim made about it.
 ### To load one artifact into the cache
 
 ```bash
-./bin/envy import exports/envy.cmake@r0-darwin-arm64-blake3-49a9b2620de8c380.tar.zst
+envy import exports/envy.cmake@r0-darwin-arm64-blake3-49a9b2620de8c380.tar.zst
 # /Users/you/Library/Caches/envy/packages/envy.cmake@r0/darwin-arm64-blake3-49a9b2620de8c380/pkg
 ```
 
@@ -63,7 +63,7 @@ Use it to pre-warm a shared cache or a container image.
 ### To install a whole project from a USB stick
 
 ```bash
-./bin/envy import --dir /media/usb/envy-artifacts
+envy import --dir /media/usb/envy-artifacts
 ```
 
 Every archive on the stick becomes an available depot entry, and the manifest's
@@ -73,7 +73,7 @@ so a partial artifact set still produces a working project.
 ### To check artifacts as they are imported
 
 ```bash
-./bin/envy import --dir ./exports --checksums exports/packages.txt
+envy import --dir ./exports --checksums exports/packages.txt
 ```
 
 `--checksums` supplies the expected sha256 per filename, so an archive corrupted
@@ -84,7 +84,7 @@ in the cache. Use it for anything that travelled by USB stick.
 
 ```bash
 curl -O https://packages.acme.example/envy/packages.txt
-./bin/envy import packages.txt
+envy import packages.txt
 ```
 
 A one-off equivalent of adding the depot to `PACKAGE_DEPOTS`, useful for testing
@@ -93,9 +93,9 @@ a depot before committing it to the manifest.
 ### To confirm an export round-trips
 
 ```bash
-ENVY_IGNORE_DEPOT=1 ./bin/envy export -o /tmp/x
+ENVY_IGNORE_DEPOT=1 envy export -o /tmp/x
 rm -rf "$(envy cache | head -1 | cut -d' ' -f2)/packages"
-./bin/envy import --dir /tmp/x
+envy import --dir /tmp/x
 ```
 
 Clear, import, and confirm nothing rebuilds from source. Run this before pointing

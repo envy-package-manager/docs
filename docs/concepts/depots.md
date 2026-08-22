@@ -77,7 +77,7 @@ Three commands, and only the first two are envy's:
    runner can only build for itself.
 
    ```bash
-   ./bin/envy export -o envy-export --depot-prefix s3://acme-envy-packages/ \
+   envy export -o envy-export --depot-prefix s3://acme-envy-packages/ \
      > envy-export/linux-x64-packages.txt
    ```
 
@@ -86,7 +86,7 @@ Three commands, and only the first two are envy's:
    gone.
 
    ```bash
-   ./bin/envy merge-depot envy-export/*-packages.txt --existing existing.txt > packages.txt
+   envy merge-depot envy-export/*-packages.txt --existing existing.txt > packages.txt
    ```
 
 3. Upload the archives and the merged index with whatever your host uses. envy
