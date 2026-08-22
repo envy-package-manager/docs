@@ -159,6 +159,20 @@ moves, and keep project-specific specs in your own repo under `local.*`.
 
 [Reproducibility](/concepts/reproducibility) covers the trust chain in detail.
 
+## The name, and the raccoon
+
+envy is what you feel looking at someone else's toolchain, and the tagline at the
+top of this page is what the tool does about it. The name is literal as well:
+what envy builds is a hermetic **env**ironment, one per project, out of things it
+went and got for you.
+
+Ruckus is a raccoon because a raccoon is the right animal for the job. Raccoons
+take things that are not theirs, hoard anything shiny, and have no opinion
+whatsoever about what any of it does. That is exactly envy's model of a package.
+It does not know whether the shiny thing is a compiler, a vendor SDK, a Python
+interpreter, or a udev rule. It grabs it, verifies it, stashes it in the den with
+everything else, and hands it over when you ask.
+
 :::tip Are you an AI coding agent?
 
 Read **[envy for agents](/agents)**, a one-page, maximally dense summary of
