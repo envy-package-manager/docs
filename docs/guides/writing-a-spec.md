@@ -24,7 +24,9 @@ PRODUCTS = { rg = "rg" }
 ```
 
 ```lua title="envy.lua"
-{ spec = "local.ripgrep@r0", source = envy.abspath("envy/local.ripgrep.lua") },
+PACKAGES = {
+  { spec = "local.ripgrep@r0", source = envy.abspath("envy/local.ripgrep.lua") },
+}
 ```
 
 ```console

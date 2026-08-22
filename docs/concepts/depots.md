@@ -70,87 +70,34 @@ package nobody has published yet, so it builds locally.
 
 ## Publishing
 
-The producer side is three commands, and the shape is stable enough to copy.
-This is a nightly workflow, trimmed from a production repo:
+Three commands, and only the first two are envy's:
 
-```yaml title=".github/workflows/envy-package-depot.yml"
-on:
-  schedule: [{ cron: "0 4 * * *" }]
-  workflow_dispatch:
+1. [`envy export`](../reference/cli/export.md) archives cache entries as
+   `.tar.zst` and prints index lines for them. One run per platform, because a
+   runner can only build for itself.
 
-env:
-  ENVY_CACHE_ROOT: ${{ github.workspace }}/.envy-cache
-  ENVY_IGNORE_DEPOT: 1          # publishers must build from source
+   ```bash
+   ./bin/envy export -o envy-export --depot-prefix s3://acme-envy-packages/ \
+     > envy-export/linux-x64-packages.txt
+   ```
 
-jobs:
-  export:
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      matrix:
-        include:
-          - { name: linux-x64,   runner: ubuntu-latest,  envy: ./bin/envy }
-          - { name: linux-arm64, runner: ubuntu-arm64,   envy: ./bin/envy }
-          - { name: mac-arm64,   runner: macos-latest,   envy: ./bin/envy }
-          - { name: win-x64,     runner: windows-latest, envy: bin\envy.bat }
-    steps:
-      - uses: actions/checkout@v6
-      - name: Export
-        run: |
-          mkdir -p envy-export
-          ${{ matrix.envy }} export -o envy-export \
-            --depot-prefix s3://acme-envy-packages/ > envy-export/${{ matrix.name }}-packages.txt
-      - uses: actions/upload-artifact@v7
-        with:
-          name: envy-export-${{ matrix.name }}
-          path: envy-export/
+2. [`envy merge-depot`](../reference/cli/merge-depot.md) combines the per-platform
+   indexes with the one already published, and prunes entries whose objects are
+   gone.
 
-  upload:
-    needs: export
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/download-artifact@v8
-        with:
-          pattern: envy-export-*
-          path: envy-export
-          merge-multiple: true
-      - uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: arn:aws:iam::111122223333:role/AcmeDeploymentRole
-          aws-region: us-east-1
-      - name: Merge indexes
-        run: |
-          aws s3 cp s3://acme-envy-packages/packages.txt existing-packages.txt || true
-          aws s3 ls s3://acme-envy-packages/ > retain.txt
-          EXISTING=""
-          if [ -f existing-packages.txt ]; then EXISTING="--existing existing-packages.txt"; fi
-          ./bin/envy merge-depot envy-export/*-packages.txt $EXISTING \
-            --retain-s3-ls retain.txt --retain-prefix s3://acme-envy-packages/ \
-            > envy-export/packages.txt
-      - name: Publish
-        run: aws s3 sync envy-export/ s3://acme-envy-packages/ --exclude "*-packages.txt"
-```
+   ```bash
+   ./bin/envy merge-depot envy-export/*-packages.txt --existing existing.txt > packages.txt
+   ```
 
-Five things in there are deliberate:
+3. Upload the archives and the merged index with whatever your host uses. envy
+   reads a depot but never writes one.
 
-- **`ENVY_IGNORE_DEPOT: 1` at the workflow level.** A publisher that reads the
-  depot would republish its own artifacts and never notice a spec that stopped
-  building.
-- **One export job per platform.** A runner can only build for itself, so the
-  matrix is the coverage.
-- **One merge job for all of them.** Each runner sees only its own artifacts, and
-  [`envy merge-depot`](../reference/cli/merge-depot.md) combines them with what is
-  already published.
-- **`|| true` on the existing index.** The first run has nothing to merge with.
-- **`--exclude "*-packages.txt"` on the upload.** Only the merged index and the
-  archives get published, never the per-platform intermediates.
+Publish jobs should set `ENVY_IGNORE_DEPOT=1`. A publisher that reads its own
+depot republishes what it already has and never notices a spec that stopped
+building.
 
-The `aws s3 ls` and `--retain-s3-ls` pair is the garbage collector. The retain
-list is what the bucket actually holds, so an index entry whose object is gone is
-pruned instead of sent to consumers as a 404.
+[Running a Package Depot](../guides/package-depots.md) has the full nightly
+workflow, the retention policy, and how to debug a miss.
 
 ## Depots behind something envy cannot speak
 

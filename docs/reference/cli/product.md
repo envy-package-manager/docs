@@ -48,7 +48,7 @@ graph`.
 
 ```bash
 ./bin/envy product cmake
-# /Users/you/Library/Caches/envy/packages/envy.cmake@r0/darwin-arm64-blake3-49a9b2620de8c380/pkg/bin/cmake
+# /Users/you/Library/Caches/envy/packages/envy.cmake@r0/darwin-arm64-blake3-49a9b2620de8c380/pkg/CMake.app/Contents/bin/cmake
 ```
 
 The package installs first if it is not cached, so the path always points at
