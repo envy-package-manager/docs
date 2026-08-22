@@ -161,17 +161,12 @@ moves, and keep project-specific specs in your own repo under `local.*`.
 
 ## The name, and the raccoon
 
-You have a project, and it needs a pile of fancy things off the internet to work:
-a compiler, a vendor SDK, an interpreter, a formatter. envy goes and gets them.
-The name is also literal, because what it builds out of all that is a hermetic
-**env**ironment, one per project.
+Your project wants a pile of shiny things off the internet. envy goes and gets
+them, and what it leaves behind is a hermetic **env**ironment.
 
-Ruckus is a raccoon because a raccoon is the right animal for the job. Raccoons
-take things that are not theirs, hoard anything shiny, and have no opinion
-whatsoever about what any of it does. That is exactly envy's model of a package.
-It does not know whether the shiny thing is a toolchain, a header-only library, a
-udev rule, or a licensed blob behind a click-through. It grabs it, verifies it, stashes it in the den with
-everything else, and hands it over when you ask.
+Ruckus is a raccoon for the obvious reason. Raccoons take shiny things that are
+not theirs and have no idea what any of them do. Neither does envy. A compiler, a
+udev rule, and a license-gated vendor blob are all just shiny things to it.
 
 :::tip Are you an AI coding agent?
 
