@@ -15,8 +15,9 @@ Will cover:
 - The intuition, with three examples:
   - A build tool, such as cmake for a source build, is `needed_by = "build"`.
     The dependent can fetch and stage its own sources while cmake installs.
-  - A fetch tool, such as the AWS CLI for a spec whose `FETCH` shells out to
-    `aws s3 cp`, is `needed_by = "fetch"`.
+  - A fetch tool, such as an Artifactory CLI for a spec whose `FETCH` shells out
+    to it, is `needed_by = "fetch"`. Note that `https://` and `s3://` need no
+    such tool, because envy fetches both itself.
   - A companion that `INSTALL` invokes is `needed_by = "install"`.
 - Valid values: `check`, `import`, `fetch`, `stage`, `build`, `install`. These
   are the phases of the dependent that can wait on a dependency.

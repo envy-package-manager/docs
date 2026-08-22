@@ -90,6 +90,31 @@ four-line spec is common.
 
 So use apt or Homebrew for your machine, and envy for your project.
 
+## A standalone toolbox
+
+A package manager has to download from anywhere, unpack anything, verify bytes,
+and run scripts. envy exposes all of that directly. These commands need no
+manifest, no project, and no configuration:
+
+| Command | What it does |
+| --- | --- |
+| [`envy fetch`](/reference/cli/fetch) | Download over `https`, `http`, `ftp`, `ftps`, `s3://`, `git://`, `git+ssh://`, or a local path |
+| [`envy extract`](/reference/cli/extract) | Unpack `tar`, `tar.gz`, `tar.xz`, `tar.bz2`, `tar.zst`, `zip`, `7z`, `rar`, `iso`, and bare compressed streams, with glob selection |
+| [`envy hash`](/reference/cli/hash) | Print `sha256sum`-style lines, ready to paste into a spec or a depot index |
+| [`envy git-resolve`](/reference/cli/git-resolve) | Turn a remote branch or tag into a full commit sha without cloning |
+| [`envy lua`](/reference/cli/lua) | Run a Lua script with envy's whole API available |
+| [`envy mirror-envy`](/reference/cli/mirror-envy) | Mirror an envy release to a directory or an S3 prefix |
+
+The capabilities are compiled in rather than shelled out to. The AWS SDK is
+linked in, so `s3://` works with your ambient credentials and no AWS CLI
+anywhere on the machine. libgit2 handles git, so no `git` binary is required.
+libarchive handles archives, so format support does not depend on what the host
+happens to have installed.
+
+Specs reach the same machinery through
+[`envy.fetch`, `envy.extract`, and friends](/reference/lua-api). Anything a spec
+can do, you can do from a shell while writing it.
+
 ## Supply-chain resilience
 
 envy has no advisory feed and no scanner. Its answer to supply-chain risk is

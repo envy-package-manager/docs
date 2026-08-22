@@ -26,6 +26,7 @@ Will cover:
 - Which packages are depot-eligible: `EXPORTABLE` specs, and why user-managed
   packages are excluded.
 - Authenticated depots, where a depot entry has its own dependencies, for example
-  the AWS CLI being installed before the index can be fetched. See
-  [Package Depots](/concepts/depots).
+  a registry CLI that has to be installed before the index can be fetched. An
+  `s3://` or `https://` index needs none of that, because envy fetches both
+  itself. See [Package Depots](/concepts/depots).
 - Opting out per run with `--ignore-depot` or `ENVY_IGNORE_DEPOT`.

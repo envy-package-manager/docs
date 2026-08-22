@@ -81,8 +81,8 @@ path. Two rules govern the call:
 - The dependency's `needed_by` has to be at or before the phase you call from.
   The default is `build`, which is why the call above works in `BUILD`. To
   resolve a product inside `FETCH`, declare it
-  `{ product = "aws", needed_by = "fetch" }`. Without that, envy reports
-  `product 'aws' needed_by 'build' but accessed during 'fetch'`.
+  `{ product = "jf", needed_by = "fetch" }`. Without that, envy reports
+  `product 'jf' needed_by 'build' but accessed during 'fetch'`.
 
 `envy.package(identity)` follows the same rules and returns the package
 directory, for a dependency whose author never named a product.

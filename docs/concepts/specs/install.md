@@ -80,7 +80,9 @@ end
 ### function running a platform installer
 
 Some vendors ship only an installer. Run it, but point it at `install_dir` so
-the result is still a normal cache-managed package:
+the result is still a normal cache-managed package. This one packages the AWS
+CLI because a project wants the CLI itself, not because envy needs it: `s3://`
+URLs are handled by the AWS SDK compiled into envy.
 
 ```lua
 INSTALL = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)

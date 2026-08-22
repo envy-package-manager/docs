@@ -55,6 +55,8 @@ aws s3 cp --recursive exports/ s3://acme-envy-packages/
 
 One job per platform, each producing an archive set and an index file. The index
 goes to stdout, so it redirects cleanly while progress stays on your terminal.
+envy reads from S3 itself but does not upload, so publishing uses whatever
+storage CLI you already have.
 
 ### To export one package you just fixed
 

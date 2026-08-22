@@ -29,15 +29,19 @@ PACKAGE_DEPOTS = { "s3://acme-envy-packages/packages.txt" }
   software.
 - The exact-match rule. A depot hit requires the same identity, options, and
   platform, so a depot can never give you the wrong bits, only save you time.
-- Authenticated depots. A depot entry can bootstrap its own access tooling:
+- What needs no tooling. An `https://` or `s3://` index is a plain URI string in
+  `PACKAGE_DEPOTS`. envy has the AWS SDK compiled in, so an S3 depot works with
+  your ambient credentials and no AWS CLI installed anywhere.
+- Depots behind something envy cannot speak. A depot entry can bootstrap its own
+  access tooling, for an index behind a registry API or a token-minting CLI:
 
 ```lua
 PACKAGE_DEPOTS = {
-  { DEPENDS = { "acme.aws@r0" },
+  { DEPENDS = { "tools.jfrog-cli@r1" },
     FETCH = function(ctx)
-      local aws = envy.path.join(ctx.deps["acme.aws@r0"].pkg_path, "bin", "aws")
+      local jf = envy.path.join(ctx.deps["tools.jfrog-cli@r1"].pkg_path, "bin", "jf")
       local index = envy.path.join(ctx.tmp_dir, "packages.txt")
-      envy.run(aws .. " s3 cp s3://acme-envy-packages/packages.txt " .. index)
+      envy.run(jf .. " rt download --flat envy-packages/packages.txt " .. index)
       return index
     end },
 }

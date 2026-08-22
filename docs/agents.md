@@ -118,8 +118,12 @@ stderr.
 - `git-resolve <url> <ref>`: remote ref to full sha, for pinning.
 - `hash <paths>`: sha256 lines for depot indexes.
 - `export`, `import`, `merge-depot`: depot artifact publish and consume.
-- `fetch <src> <dst>`, `extract <archive> [dst]`, `lua <script>`: spec-dev
-  utilities.
+- `fetch <src> <dst>`, `extract <archive> [dst]`, `hash <paths>`,
+  `git-resolve`, `lua <script>`: standalone utilities, no manifest or project
+  required. Transports and formats are compiled in: AWS SDK (so `s3://` works
+  with ambient credentials and no AWS CLI), libgit2 (no `git` binary),
+  libarchive (tar/gz/xz/bz2/zst/zip/7z/rar/iso). Package the AWS CLI only when a
+  project wants the CLI itself.
 - `cache`: show cache location and disk usage. Also `version`, `mirror-envy`.
 
 Superprojects: nested `envy.lua` manifests compose. A sub-manifest sets `@envy
