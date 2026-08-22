@@ -33,7 +33,7 @@ The same environment a spec's phase functions see:
 | `envy.PLATFORM`, `envy.ARCH`, `envy.PLATFORM_ARCH`, `envy.EXE_EXT` | Host identification, as specs see it. |
 | `envy.template` | `{{placeholder}}` substitution, with a hard error on a missing value. |
 | `envy.extend`, `envy.loadenv` | Table extension and environment-file loading. |
-| `envy.path.join`, `.basename`, `.dirname`, `.stem`, `.extension` | Path manipulation, plus the file-operation helpers such as copy, move, and mkdir. |
+| `envy.path.join`, `.basename`, `.dirname`, `.stem`, `.extension` | Path manipulation, plus `envy.copy`, `envy.move`, `envy.remove`, `envy.exists`, `envy.is_file`, and `envy.is_dir`. |
 | `envy.run` | Run a shell script, one string or an array of lines, the way a phase verb does. Returns `{exit_code, stdout, stderr}`. Options include `capture`, `check`, `cwd`, `env`, `shell`, `quiet`. |
 | `envy.fetch`, `envy.extract` | The download and archive verbs. |
 | `envy.package`, `envy.product`, `envy.options` | Resolution helpers. |

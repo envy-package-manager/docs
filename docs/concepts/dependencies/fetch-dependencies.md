@@ -79,6 +79,8 @@ PACKAGES = {
   tools the same way, and `needed_by` decides how early that is legal:
 
 ```lua title="corp.toolchain@r2.lua"
+local hashes -- version -> sha256, at the bottom of this file
+
 DEPENDENCIES = {
   { spec = "tools.jfrog-cli@r1", product = "jf", source = "tools.jfrog-cli.lua",
     needed_by = "fetch" },

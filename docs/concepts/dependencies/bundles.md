@@ -231,6 +231,10 @@ A project-local spec then reads as one call:
 -- @envy schema "1"
 IDENTITY = "local.toolchain@r0"
 
+local hashes -- version -> sha256, at the bottom of this file
+
+OPTIONS = { version = { required = true } }
+
 BUNDLES = {
   acme = {
     identity = "acme.specs@r1",
@@ -253,9 +257,18 @@ FETCH = function(tmp_dir, opts)
     sha256 = hashes[opts.version],
   }
 end
+
+hashes = { ["15.2"] = "9f2c1d5b...1a4f" }
 ```
 
-Four rules govern that call:
+`jfrog.artifact` returns a table, and `FETCH` hands that table back unchanged, so
+envy performs the download and verifies the hash. No `envy.commit_fetch` is
+involved. That call belongs to the imperative path, where a fetch function
+downloads into `tmp_dir` itself and has to move the result somewhere durable.
+`jfrog.download` above is that path, which is why it commits and why a `FETCH`
+calling it returns nothing.
+
+Four rules govern `envy.loadenv_spec`:
 
 - **It needs a declared dependency.** `envy.loadenv_spec` resolves the module
   relative to a dependency you named. When that dependency came from a bundle,

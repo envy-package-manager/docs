@@ -57,25 +57,37 @@ An inline interpreter, where the script is passed as an argument:
 DEFAULT_SHELL = { inline = { "/usr/bin/python3", "-c" } }
 ```
 
-A function, so the interpreter can itself be an envy-managed package:
+A function, to decide at load time:
 
 ```lua
 DEFAULT_SHELL = function()
-  return { file = { envy.product("python3") }, ext = ".py" }
+  if envy.PLATFORM == "windows" then return ENVY_SHELL.POWERSHELL end
+  return os.getenv("CI") and ENVY_SHELL.SH or ENVY_SHELL.BASH
 end
 ```
 
-The last form lets every build script in the project be written in Python,
-specifically the Python the manifest pins. Nothing assumes a Python on the
-machine. envy calls the function once, and the function can use `envy.product`
-or `envy.package` to resolve the interpreter.
+envy calls the function once, while loading the manifest, before any package
+runs.
 
-:::caution The bootstrap exception
-A spec that provides the interpreter cannot use it. If `DEFAULT_SHELL` resolves
-to a Python that envy is still installing, that spec's string verbs would need
-Python in order to install Python. Specs in that position have to use the
-built-in shells, or use function verbs and `envy.run` with an explicit `shell`
-option.
+:::caution `DEFAULT_SHELL` cannot name an envy-managed interpreter
+The function runs with no phase context, so `envy.product` and `envy.package`
+are unavailable inside it and report `not in phase context (missing pkg)`. A
+`file` or `inline` interpreter therefore has to be a path that already exists on
+the machine, or one the environment supplies.
+
+To run a verb under an interpreter envy installs, override the shell for that
+call instead. `envy.run` takes the same shapes, and inside a phase verb the
+product is resolvable:
+
+```lua
+DEPENDENCIES = { { product = "python3" } }
+
+BUILD = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
+  envy.run("print('generating')", {
+    shell = { file = { envy.product("python3") }, ext = ".py" },
+  })
+end
+```
 :::
 
 ## `envy.run`

@@ -154,13 +154,13 @@ drift.
 
 Every verb receives the validated table as its last argument:
 
-```lua
-FETCH = function(tmp_dir, opts) ... end
-STAGE = function(fetch_dir, stage_dir, tmp_dir, opts) ... end
-BUILD = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts) ... end
-INSTALL = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts) ... end
-PRODUCTS = function(opts) ... end
-SETUP.<pair>.CHECK = function(pkg_dir, opts) ... end
+```text
+FETCH    = function(tmp_dir, opts)
+STAGE    = function(fetch_dir, stage_dir, tmp_dir, opts)
+BUILD    = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
+INSTALL  = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
+PRODUCTS = function(opts)
+SETUP.<pair>.CHECK = function(pkg_dir, opts)
 ```
 
 One file, one set of verbs, and every project's variation expressed as data in

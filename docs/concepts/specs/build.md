@@ -110,7 +110,10 @@ where no binaries are published, and use prebuilt archives elsewhere.
 ```lua
 if envy.PLATFORM == "darwin" then
   BUILD = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
-    return envy.template("...", { ... })
+    return envy.template([[
+      ./configure --prefix={{prefix}}
+      make -j
+    ]], { prefix = install_dir })
   end
 end
 ```

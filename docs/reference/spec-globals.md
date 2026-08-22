@@ -28,7 +28,7 @@ Terse companion to [Anatomy of a Spec](/concepts/specs).
 
 ## Verb signatures
 
-```lua
+```text
 FETCH(tmp_dir, options)
 STAGE(fetch_dir, stage_dir, tmp_dir, options)
 BUILD(install_dir, stage_dir, fetch_dir, tmp_dir, options)
