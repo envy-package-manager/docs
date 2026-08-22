@@ -91,7 +91,7 @@ DEFAULT_SHELL = { inline = { "/usr/bin/python3", "-c" } }
 
 ### A function
 
-Called once, while the manifest loads:
+Called lazily, the first time something needs a shell:
 
 ```lua title="envy.lua"
 DEFAULT_SHELL = function()
@@ -100,8 +100,9 @@ DEFAULT_SHELL = function()
 end
 ```
 
-A function can also resolve an interpreter that envy installs, which is
-[the next section](#bootstrapping-a-custom-shell).
+A bare function cannot name a package, because it has no dependency to
+authorize against. To point at an interpreter envy installs, use the
+`{ DEPENDS, SHELL }` form in [the next section](#bootstrapping-a-custom-shell).
 
 ## How a custom shell is invoked
 
@@ -126,7 +127,7 @@ The point of a custom shell is to stop assuming anything about the host. A
 project that writes its build logic in Python should not care which Python the
 machine has, or whether it has one at all.
 
-Package the interpreter, then point `DEFAULT_SHELL` at it:
+Package the interpreter, then name it with the `{ DEPENDS, SHELL }` form:
 
 ```lua title="envy.lua"
 -- @envy schema "1"
@@ -149,13 +150,16 @@ PACKAGES = {
   { spec = "acme.codegen@r0", source = envy.abspath("envy/acme.codegen.lua") },
 }
 
--- Every string verb in the project now runs under the pinned interpreter.
-DEFAULT_SHELL = function()
-  return { file = { envy.product("python3") }, ext = ".py" }
-end
+DEFAULT_SHELL = {
+  DEPENDS = { "envy.python@r1" },
+  SHELL = function()
+    return { file = { envy.product("python3") }, ext = ".py" }
+  end,
+}
 ```
 
-A spec's string verbs are then Python:
+Every string verb in the project now runs under the pinned interpreter, so a
+spec's verbs are Python:
 
 ```lua title="envy/acme.codegen.lua"
 -- @envy schema "1"
@@ -173,18 +177,37 @@ for src in pathlib.Path("templates").glob("*.in"):
 ]]
 ```
 
-Ordering is handled for you. The interpreter package installs before any string
-verb that needs it runs.
+### The rules
+
+- **`DEPENDS` names packages the manifest already declares.** Entries are
+  [queries](../reference/cli/index.md#package-queries) against `PACKAGES`, the
+  same matching the CLI uses. An entry that matches nothing is an error that
+  names it.
+- **`DEPENDS` requires `SHELL` to be a function.** A value form is read before
+  any package exists, so it could never name one, and envy says
+  `DEFAULT_SHELL DEPENDS requires SHELL to be a function`.
+- **`envy.product` and `envy.package` both work inside `SHELL`.** envy
+  synthesizes a consumer for the manifest-wide shell, holding an edge to each
+  `DEPENDS` entry. It shows up in traces as `envy.DEFAULT_SHELL@v1`. A bare
+  function with no `DEPENDS` has no such edges, so `envy.product` there fails.
+- **The interpreter is installed first.** envy waits for the whole `DEPENDS`
+  closure to complete, then resolves the shell once, and only then can another
+  package's string verb run.
+- **Resolution happens once, lazily.** The function is called on the first
+  request for a shell, not while the manifest loads.
+- **Strong references only.** A weak or product reference inside the `DEPENDS`
+  closure is refused with `DEFAULT_SHELL dependency closure must use strong
+  dependencies`, because that closure can be needed before the resolution pass
+  that would settle it.
 
 :::caution The bootstrap exception
-A spec that provides the interpreter cannot use it. If `DEFAULT_SHELL` resolves
-to a Python that envy is still installing, that spec's own string verbs would
-need Python in order to install Python.
+The `DEPENDS` closure supplies the shell, so it cannot consume it. The
+interpreter package and everything it depends on run their own string verbs under
+the platform built-in, transitively. Without that carve-out, installing Python
+would require Python.
 
-Specs in that position stick to the built-in shells. That is the common case
-anyway, because an interpreter spec is usually a download and an unpack with no
-string verbs at all. The alternative is a function verb plus `envy.run` with an
-explicit `shell`.
+The same applies to `envy.run` called inside the `SHELL` function itself: it runs
+under the built-in, which also keeps the lazy resolution from re-entering itself.
 :::
 
 ### Overriding one verb instead of the project
@@ -202,8 +225,8 @@ BUILD = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
 end
 ```
 
-This is also the escape hatch for the bootstrap exception above, and for a spec
-that needs one Python step inside an otherwise `bash` project.
+Use this for a project that is mostly shell with one Python step, and inside the
+interpreter's own spec, where the carve-out applies.
 
 ## `envy.run`
 

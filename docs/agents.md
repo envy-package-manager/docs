@@ -32,11 +32,16 @@ manifest edit, or to install everything up front.
   `ENVY_SHELL.BASH|SH|CMD|POWERSHELL`, platform-validated, wrong platform is an
   error not a fallback. Custom: `{ file = <path|argv>, ext = ".py" }` runs
   `argv <tempfile>`; `{ inline = argv }` runs `argv <script text>`. The function
-  form can resolve an envy-installed interpreter,
-  `DEFAULT_SHELL = function() return { file = { envy.product("python3") }, ext = ".py" } end`,
-  so every project script runs under a pinned interpreter. The spec that
-  provides that interpreter must use built-ins. Per-call override:
-  `envy.run(script, { shell = ... })`.
+  form can resolve an envy-installed interpreter, but only through the
+  `{ DEPENDS, SHELL }` wrapper:
+  `DEFAULT_SHELL = { DEPENDS = { "envy.python@r1" }, SHELL = function() return { file = { envy.product("python3") }, ext = ".py" } end }`.
+  DEPENDS entries are queries against PACKAGES; DEPENDS requires SHELL to be a
+  function; envy.product/envy.package authorize against a synthesized
+  `envy.DEFAULT_SHELL@v1` consumer; the closure installs before the shell
+  resolves and before any other string verb; closure members (transitively) run
+  under the platform built-in, which is the bootstrap carve-out. A bare
+  `DEFAULT_SHELL = function()` has no edges, so envy.product fails there.
+  Per-call override: `envy.run(script, { shell = ... })`.
 - directives: `version` pins envy. `sha256sums` pins release checksums and
   requires `version`. `bin` is REQUIRED and names the project bin dir. `mirror`
   sets the release mirror. `deploy "true"` enables product scripts. `root
