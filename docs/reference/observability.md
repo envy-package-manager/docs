@@ -75,6 +75,16 @@ Everything else prints nothing to stdout. `envy product cmake > path.txt` gets a
 path and nothing else, with the progress narrative still visible on your
 terminal.
 
+On Windows, `>` in PowerShell writes UTF-16, which most parsers reject. Pipe
+through `Out-File` with an explicit encoding instead:
+
+```powershell
+envy product --json | Out-File -FilePath products.json -Encoding utf8
+envy export -o out --depot-prefix s3://bucket/ | Out-File -FilePath index.txt -Encoding ascii
+```
+
+`cmd.exe` redirection needs no such care, and neither does any POSIX shell.
+
 ## Traces
 
 ```bash
@@ -85,6 +95,10 @@ envy --trace=stderr,file:trace.jsonl sync  # both
 
 Bare `--trace` means `stderr`. Tracing does not change the log level, so pair it
 with `-q` when you want events without the narrative.
+
+A Windows path after `file:` is fine, including the drive letter:
+`--trace=file:C:\temp\trace.jsonl`. envy disables `/flag` style options, so a
+POSIX-looking path is never mistaken for a flag either.
 
 The stderr form is one event per line:
 

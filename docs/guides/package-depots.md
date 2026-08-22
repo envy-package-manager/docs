@@ -140,6 +140,7 @@ jobs:
           - { name: linux-x64,   runner: ubuntu-latest,   envy: ./bin/envy }
           - { name: linux-arm64, runner: ubuntu-24.04-arm, envy: ./bin/envy }
           - { name: mac-arm64,   runner: macos-latest,    envy: ./bin/envy }
+          - { name: win-x64,     runner: windows-latest,  envy: bin\envy.bat }
     steps:
       - uses: actions/checkout@v6
       - name: Export
@@ -189,9 +190,21 @@ Why each piece is there:
 - **`ENVY_IGNORE_DEPOT: 1` at the workflow level.** A publisher that reads its own
   depot republishes what it already has and never notices a spec that stopped
   building. This job exists to build from source.
-- **Windows in the matrix, if you support it.** Use `bin\envy.bat` and a
-  PowerShell redirect, since `>` in PowerShell writes UTF-16 by default:
-  `... | Out-File -FilePath envy-export/win-x64-packages.txt -Encoding ascii`.
+- **Windows needs its own export step.** `>` in PowerShell writes UTF-16, which
+  `merge-depot` will not parse, so pipe instead:
+
+  ```yaml
+  - name: Export (Windows)
+    if: runner.os == 'Windows'
+    shell: powershell
+    run: |
+      New-Item -ItemType Directory -Force -Path envy-export
+      ${{ matrix.envy }} export -o envy-export --depot-prefix s3://acme-envy-packages/ |
+        Out-File -FilePath envy-export/${{ matrix.name }}-packages.txt -Encoding ascii
+  ```
+
+  Guard the POSIX step with `if: runner.os != 'Windows'`. Everything downstream
+  is platform-agnostic, since the merge job only reads text files.
 - **Per-platform index filenames.** Every runner writes its own, and the merge job
   globs them.
 - **`|| true` on the existing index.** The first run has nothing to merge with.

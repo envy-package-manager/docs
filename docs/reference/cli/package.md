@@ -77,6 +77,14 @@ the rest of the manifest.
 envy package --ignore-depot local.armgcc@r0
 ```
 
+Paths are native, so on Windows the same command prints
+`C:\Users\you\AppData\Local\envy\packages\...\pkg`. Capture it into a
+variable rather than reconstructing it:
+
+```powershell
+$pkg = bin\envy.bat -q package envy.cmake@r0
+```
+
 ## See also
 
 - [`envy product`](./product.md) for resolving a named entry point instead of a tree.

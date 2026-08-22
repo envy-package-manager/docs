@@ -98,9 +98,11 @@ All three parts of `namespace.name@revision` are required. The revision
 versions the spec, not the tool the spec installs:
 
 ```lua
-{ spec = "envy.cmake@r0", bundle = "envy", options = { version = "4.4.0" } }
---       ^^^^ ^^^^^ ^^                                        ^^^^^^^
---    namespace name spec revision                    the tool's version
+PACKAGES = {
+  { spec = "envy.cmake@r0", bundle = "envy", options = { version = "4.4.0" } }
+  --       ^^^^ ^^^^^ ^^                                        ^^^^^^^
+  --    namespace name spec revision                    the tool's version
+}
 ```
 
 Going from `@r0` to `@r1` means the spec changed shape, for example new options
@@ -116,11 +118,13 @@ Two entries for the same spec with different `options` are two independent
 packages. Both install, and both are usable at once:
 
 ```lua
-{ spec = "envy.python@r1", bundle = "envy",
-  options = { version = "3.13.14", release = "20260623", provide_python3 = true } },
+PACKAGES = {
+  { spec = "envy.python@r1", bundle = "envy",
+    options = { version = "3.13.14", release = "20260623", provide_python3 = true } },
 
-{ spec = "envy.python@r1", bundle = "envy",
-  options = { version = "3.14.2", release = "20260623" } },
+  { spec = "envy.python@r1", bundle = "envy",
+    options = { version = "3.14.2", release = "20260623" } },
+}
 ```
 
 The first entry claims the `python3` product name and the second does not, so
@@ -286,6 +290,47 @@ the root imports. `envy.abspath` anchors its spec paths to its own directory in
 either case. From inside `libs/firmware-common`, `envy sync` syncs the whole
 superproject, and `envy sync --subproject` syncs only that component into only
 its bin directory.
+
+## One manifest, three platforms
+
+A manifest is meant to be byte-identical on macOS, Linux, and Windows. Nothing in
+it is per-platform except where you say so:
+
+| Concern | Where it belongs |
+| --- | --- |
+| A package only some platforms need | `platforms = { "windows" }` on the entry, or `PLATFORMS` in the spec |
+| A different cache location per OS family | `@envy cache-posix` and `@envy cache-win` |
+| A different interpreter for string verbs | [`DEFAULT_SHELL`](./shells.md), usually a function that branches on `envy.PLATFORM` |
+| A per-platform download URL or hash | inside the spec's `FETCH`, keyed on `envy.PLATFORM_ARCH` |
+
+The bin directory is the one place both platforms appear side by side. It holds
+`envy` and `envy.bat`, plus a POSIX and a `.bat` wrapper per product, and all of
+it is committed:
+
+```text
+bin/
+├── envy          bash bootstrap
+├── envy.bat      batch bootstrap
+├── cmake
+├── cmake.bat
+├── ninja
+└── ninja.bat
+```
+
+Both bootstrap scripts parse the `@envy` header themselves, in bash and in batch,
+using the same rules as envy. Both walk up the directory tree for the root
+manifest, and both honor `ENVY_CACHE_ROOT` and `ENVY_MIRROR`. A Windows developer
+cloning the repo runs `bin\envy.bat` and gets the same pinned envy from
+`%LOCALAPPDATA%\envy`.
+
+Write both flavors from whatever machine you have with
+`envy sync --platform all`. See
+[Product Scripts](./environment/product-scripts.md#the-windows-twin).
+
+One Lua detail: `envy.abspath` returns a native path, so it produces backslashes
+on Windows. Pass its result around, and use
+[`envy.path.join`](../reference/lua-api.md#paths) to extend it, rather than
+concatenating `"/"` yourself.
 
 ## See also
 

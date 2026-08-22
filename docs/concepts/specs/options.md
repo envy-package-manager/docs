@@ -10,8 +10,10 @@ the spec validates them, every verb receives them, and they become part of the
 package's identity.
 
 ```lua title="envy.lua"
-{ spec = "envy.python@r1", bundle = "envy",
-  options = { version = "3.13.14", release = "20260623", provide_python3 = true } },
+PACKAGES = {
+  { spec = "envy.python@r1", bundle = "envy",
+    options = { version = "3.13.14", release = "20260623", provide_python3 = true } },
+}
 ```
 
 ```lua title="python.lua"
@@ -36,10 +38,12 @@ envy names the cache entry with a hash of the identity plus the serialized
 options, so two entries differing in one option are two packages:
 
 ```lua
-{ spec = "envy.python@r1", bundle = "envy",
-  options = { version = "3.13.14", release = "20260623", provide_python3 = true } },
-{ spec = "envy.python@r1", bundle = "envy",
-  options = { version = "3.14.2", release = "20260623" } },
+PACKAGES = {
+  { spec = "envy.python@r1", bundle = "envy",
+    options = { version = "3.13.14", release = "20260623", provide_python3 = true } },
+  { spec = "envy.python@r1", bundle = "envy",
+    options = { version = "3.14.2", release = "20260623" } },
+}
 ```
 
 Both install, both coexist, and neither invalidates the other. The canonical key
@@ -55,6 +59,13 @@ as a fully specific
 
 Two consequences. Changing an option never mutates a package, it names a new
 one. And options have to hash, so a function in an options table is rejected.
+
+The platform is not an option. It is a separate component of the cache entry
+path, so one option set on macOS and the same option set on Windows are two
+entries that never collide. A spec should therefore branch on `envy.PLATFORM`
+rather than take a `platform` option, and an option that only makes sense
+somewhere can be validated per platform inside
+[the function form](#shape-2-a-function).
 
 ## Shape 1: a schema table
 

@@ -59,6 +59,24 @@ purpose:
   coexist: only the entry that sets `provide_python3 = true` claims `python3`. See
   [Products](../specs/products.md).
 
+## Platform filtering happens first
+
+An entry whose `platforms` filter excludes the host is dropped before resolution,
+so it contributes no node, no product, and no weak-reference candidate. That is
+what makes a per-platform graph work without conditionals:
+
+- A Windows-only helper and a Linux-only helper can both provide the same product
+  name, because only one of them is ever in the graph.
+- A weak reference that would be ambiguous on one platform can be unambiguous on
+  another.
+- A product that only some platforms ship is simply absent elsewhere, and
+  `envy product <name>` reports it has no provider rather than resolving to
+  nothing.
+
+So the same manifest produces three different graphs on macOS, Linux, and
+Windows, and each is validated on its own terms. See
+[Platforms](../specs/platforms.md).
+
 ## De-duplication
 
 An identical `(identity, options, platform)` anywhere in the graph is one package.

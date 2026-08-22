@@ -41,10 +41,12 @@ matches.
 | 4 | [Product](./products.md) `platforms = { ... }` | This tool only ships here. |
 
 ```lua title="envy.lua: (1) the project only wants apt on Linux"
-{ spec = "acme.apt@r0", source = specs .. "acme.apt.lua",
-  platforms = { "linux" },
-  options = { packages = { "libudev-dev" } },
-  setup = { "packages" } },
+PACKAGES = {
+  { spec = "acme.apt@r0", source = specs .. "acme.apt.lua",
+    platforms = { "linux" },
+    options = { packages = { "libudev-dev" } },
+    setup = { "packages" } },
+}
 ```
 
 ```lua title="acme.jlink.lua: (2), (3) and (4)"

@@ -103,6 +103,21 @@ The `sync` is not optional bookkeeping. The bootstrap scripts and `.luarc.json`
 are stamped from the running binary, so only the newly pinned envy can restamp
 them. Commit the manifest and the scripts together.
 
+One `@envy sha256sums` value covers every platform, because it pins the release's
+`SHA256SUMS` file and that file lists the macOS, Linux, and Windows archives. So
+`envy use` on a Mac produces a pin that verifies the Windows binary too.
+
+The bootstrap scripts are the part that is per platform. A plain `sync` restamps
+only the host's flavor, so use `--platform all` when both are committed:
+
+```console
+$ envy sync --platform all
+Updated bootstrap script
+```
+
+Otherwise `bin/envy.bat` keeps pointing at the old version, and the first Windows
+developer to pull gets a different envy than everyone else.
+
 Downgrades are the same command. In a [superproject](./monorepos.md), run `use`
 once per manifest that carries its own version.
 

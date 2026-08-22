@@ -40,6 +40,9 @@ Your command's exit status becomes envy's, with no translation. On POSIX envy
 | `ENVY_PROJECT_ROOT` | The governing manifest's directory. |
 | envy version | The one the manifest pins, because `run` re-execs first. |
 
+`PATH` uses the platform's separator, `:` on macOS and Linux and `;` on Windows,
+and the bin directory always lands first.
+
 That is deliberately small. `run` installs nothing itself and deploys nothing.
 What it does is make `envy` callable by name and tell the child where the project
 is, so the child can resolve what it needs:
@@ -107,6 +110,9 @@ envy run ./scripts/test.sh || exit $?
   rather than warnings, since `run` has nothing to put on `PATH` otherwise.
 - Windows has no `execvp`, so envy spawns the child, waits, and forwards the
   code. Observable behavior is identical, with one extra process while it runs.
+- On Windows the child can be a `.bat` file, named without its extension.
+  `envy run my-tool` finds `bin\my-tool.bat`, which is what makes
+  `envy run <product>` work the same way on both platforms.
 
 ## See also
 

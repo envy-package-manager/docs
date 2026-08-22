@@ -166,6 +166,18 @@ drift.
 `bin`. Both are committed. A component's bin directory is what makes it usable
 standalone.
 
+Each bin directory also needs its own Windows flavor. `--platform` applies to the
+manifest being synced, not to the repo, so a cross-platform monorepo runs it per
+manifest:
+
+```bash
+envy sync --platform all                                  # root
+envy sync --subproject --platform all                     # from inside libs/common
+```
+
+Miss one and Windows developers get a working root and a component they cannot
+bootstrap.
+
 ## See also
 
 - [Manifest Discovery](/concepts/projects#manifest-discovery) for the exact walk.

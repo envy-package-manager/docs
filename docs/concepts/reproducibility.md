@@ -108,6 +108,30 @@ Prefer the `https://` form of a bucket, for example
 `s3://` natively, but the bootstrap script is plain shell with no AWS SDK, so an
 `s3://` mirror makes it require the AWS CLI on every machine that bootstraps.
 
+## The same pins on every platform
+
+One manifest covers all three platforms, and the pins are shared where they can
+be:
+
+| Pin | Scope |
+| --- | --- |
+| `@envy version` | all platforms. One release, one version number. |
+| `@envy sha256sums` | all platforms. It pins the release's `SHA256SUMS` file, which lists every platform's archive, so one value verifies the macOS, Linux, and Windows binaries. |
+| A spec's `sha256` | per artifact. A spec that downloads per-platform archives records one hash each. |
+| A bundle `ref` | all platforms. Git commits are not platform-specific. |
+
+So a Windows machine and a Linux machine reading the same manifest install the
+same envy, the same specs, and the same tool versions. What differs is only the
+artifact each spec picks for the host, and each of those is hashed.
+
+Two things to keep in the checklist for a cross-platform repo:
+
+- Commit the Windows bootstrap and wrappers, not just the POSIX ones. Run
+  `envy sync --platform all` so both flavors exist even if nobody on the team
+  uses Windows today.
+- Cover each platform in CI. A spec's Windows branch is only proven by a Windows
+  runner, and a per-platform hash table is only proven where it is used.
+
 ## Known limits
 
 Stated plainly, because each one is a place where "reproducible" needs a

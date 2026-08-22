@@ -99,6 +99,12 @@ envy git-resolve https://github.com/org/tool 9BDB0A11CEFA3E83418CFF37DC68EA755C0
 Offline and idempotent, which is handy in a script that accepts either a tag or a
 sha.
 
+## No git required
+
+Resolution goes through libgit2, so there is no `git` binary involved on any
+platform. That matters most on Windows and on minimal CI images, where a project
+can pin git sources without installing Git for Windows first.
+
 ## See also
 
 - [Pinning & Updating](/guides/pinning)

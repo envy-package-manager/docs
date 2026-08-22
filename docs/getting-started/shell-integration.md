@@ -34,6 +34,28 @@ Supported shells and their profiles:
 The output is instructions on stderr, not a bare line, so copy the line rather
 than redirecting the command into your profile.
 
+On Windows the shell is `powershell`, the profile is `$PROFILE`, and the hook is
+dot-sourced rather than `source`d:
+
+```console
+> envy shell powershell
+Add this line to $PROFILE:
+
+  . "${env:USERPROFILE}/AppData/Local/envy/shell/hook.ps1"
+
+Then restart your shell or run the command directly.
+```
+
+Three Windows notes:
+
+- `$PROFILE` often does not exist yet. `New-Item -ItemType File -Path $PROFILE
+  -Force` creates it, and the directory with it.
+- Your execution policy has to allow running your own profile. `RemoteSigned` is
+  enough, since the hook is a local file. This is separate from spec scripts,
+  which envy runs with `-ExecutionPolicy Bypass` on a temp file.
+- `cmd.exe` has no hook. Use the committed `bin\envy.bat` and `bin\<tool>.bat`
+  wrappers there, or `envy run`.
+
 envy maintains the hook file itself, in the cache. Any earlier envy command has
 already created it. If it is missing, `envy shell` says so and tells you to run
 any envy command first.

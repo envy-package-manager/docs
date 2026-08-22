@@ -115,6 +115,10 @@ envy.path.extension(path)    -- ".gz"
 envy.abspath(relative_path)  -- absolute, anchored at the calling file
 ```
 
+`join` uses the platform separator and `abspath` returns a native path, so both
+produce backslashes on Windows. Build every path with these rather than
+concatenating `"/"`, and a spec works on all three platforms unchanged.
+
 `envy.abspath` is what lets a manifest name a sibling file without caring about
 your working directory:
 
@@ -178,9 +182,16 @@ end
 `check = false` is how you inspect an exit code. With the default, a non-zero exit
 aborts the phase.
 
-Scripts are not portable by themselves. Branch on `envy.PLATFORM`, or set
-`DEFAULT_SHELL` so one dialect covers everything. See
-[Shells & Scripts](/concepts/shells).
+Scripts are not portable by themselves. The interpreter is bash on macOS and
+Linux and PowerShell on Windows, so branch on `envy.PLATFORM`, pass
+`shell = ENVY_SHELL.CMD` or `.POWERSHELL` per call, or set `DEFAULT_SHELL` so one
+dialect covers everything.
+
+`check` also behaves differently underneath. bash gets `-e`, so a failing line
+stops the script whatever `check` says. On Windows there is no `-e`, so
+`check = true` makes envy inject fail-fast into the generated PowerShell or cmd
+script, and `check = false` injects nothing. See
+[Shells & Scripts](/concepts/shells#how-each-built-in-is-invoked).
 
 ## Archives
 
@@ -212,7 +223,8 @@ extract tool.tar.gz: 'only' entries matched no archive contents: "bin/**"
 ```
 
 envy handles tar with gzip, bzip2, xz, and zstd, plus zip, 7z, dmg, pkg, and
-plain files. You rarely need to care which.
+plain files. You rarely need to care which, which matters most on Windows, where
+upstream ships a `.zip` and the same two lines of Lua unpack it.
 
 ## Fetching
 

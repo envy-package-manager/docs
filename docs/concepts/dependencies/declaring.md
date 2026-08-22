@@ -97,6 +97,7 @@ Every entry accepts the same shaping fields a manifest entry does:
 | `needed_by` | How early the dependency must be ready. See [Phase Ordering](./ordering.md). Defaults to `build`. |
 | `weak` | The fallback described above. Mutually exclusive with `source`. |
 | `bundle` | Take the spec from a bundle instead of a source. Resolved against the declaring file's own `BUNDLES`. |
+| `platforms` | Where the dependency applies, for example `{ "windows" }`. Excluded platforms skip it silently, which is how one spec depends on a Windows-only helper without breaking elsewhere. |
 
 The `setup` field is how a spec insists on host state it needs. This entry says
 "install Homebrew before you install me", without the project having to know:

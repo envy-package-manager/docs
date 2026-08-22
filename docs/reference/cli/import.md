@@ -101,6 +101,13 @@ envy import --dir /tmp/x
 Clear, import, and confirm nothing rebuilds from source. Run this before pointing
 a team at a new depot.
 
+## On Windows
+
+An archive only imports on the platform it was exported for, since the platform
+is part of the cache key encoded in its filename. Importing a
+`...-darwin-arm64-...` archive on Windows resolves to a cache entry nothing will
+ever look for.
+
 ## See also
 
 - [Package Depots](/concepts/depots) for how a configured depot does this automatically.

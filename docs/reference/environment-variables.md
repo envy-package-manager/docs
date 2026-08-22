@@ -44,6 +44,17 @@ Read by the hook scripts, not by the binary. See
 Variables the hook keeps for itself, such as `_ENVY_BIN_DIR` and
 `_ENVY_ORIG_PS1`, start with an underscore and are not exported. Do not set them.
 
+## Windows
+
+The variables are the same. Three details differ:
+
+- Set them the usual PowerShell way, `$env:ENVY_CACHE_ROOT = "C:\envy-cache"`, or
+  `set ENVY_CACHE_ROOT=C:\envy-cache` in `cmd`.
+- `ENVY_CACHE_ROOT` and `ENVY_MIRROR` are read by `bin\envy.bat` as well as by
+  the binary, so they steer the bootstrap download too.
+- The hook variables apply to the PowerShell hook. `cmd.exe` has no hook, so
+  nothing there reads them.
+
 ## Cache root precedence
 
 Highest to lowest:

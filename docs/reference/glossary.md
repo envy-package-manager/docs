@@ -17,6 +17,9 @@ title: Glossary
   package's identity.
 - **Package**: one installed instance of a spec, keyed by `(identity, options,
   platform)`.
+- **Platform**: an OS name, `darwin`, `linux`, or `windows`, optionally with an
+  architecture, `arm64` or `x86_64`. Part of every package's cache key, and the
+  thing platform filters match against.
 - **Product**: a named capability a package exposes, either an executable path
   or a plain value.
 - **Product script**: a deployed wrapper in the project bin dir that resolves

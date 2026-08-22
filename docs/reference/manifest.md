@@ -85,8 +85,14 @@ error.
 ```lua
 PACKAGE_DEPOTS = {
   "s3://acme-envy-packages/packages.txt",     -- plain URI
+
   { DEPENDS = { "tools.registry-cli@r1" },    -- fetched through a tool
-    FETCH = function(ctx) ... end },
+    FETCH = function(ctx)
+      local cli = envy.path.join(ctx.deps["tools.registry-cli@r1"].pkg_path, "bin", "reg")
+      local index = envy.path.join(ctx.tmp_dir, "packages.txt")
+      envy.run(cli .. " download envy-packages/packages.txt " .. index)
+      return index
+    end },
 }
 ```
 

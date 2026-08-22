@@ -105,6 +105,19 @@ end
   during 'fetch'`. A fetch dependency needs no `needed_by`, because it is already
   gated on the earliest phase there is.
 
+## On Windows
+
+The bootstrapped tool is an executable in a cache directory, so nothing about the
+mechanism changes. Two things about the fetch function do:
+
+- Resolve the tool with `envy.product`, then build the command line with
+  `envy.path.join`. The resolved path contains backslashes, and a hand-built
+  `"/"` path will not survive being handed to `cmd`.
+- A script string inside the fetch function runs under the platform default, so
+  PowerShell on Windows. A one-line CLI invocation is usually identical in both
+  dialects, but redirection and quoting are not. Prefer passing the command to
+  `envy.run` as a single line and letting the tool write the file itself.
+
 ## Rules
 
 - **The guarantee.** Every entry in `source.dependencies` goes through its entire

@@ -19,7 +19,7 @@ committed wrapper) or `./bin/envy run <cmd>`, and the wrapper bootstraps envy an
 installs that tool's subgraph on demand. `./bin/envy sync` is for after a
 manifest edit, or to install everything up front. Windows: `bin\envy.bat`,
 `bin\<tool>.bat`. With the shell hook installed the bin dir is on PATH, so bare
-`envy sync` and `cmake` work, which is the form the rest of the docs use; in CI
+`envy sync` and `cmake` work, which is the form the rest of the docs use. In CI
 and scripts use the explicit path.
 
 ## model
@@ -78,6 +78,43 @@ and scripts use the explicit path.
 - reproducibility: no lockfile. Pins live in the manifest: `@envy version` plus
   `sha256sums`, per-source `sha256`, git `ref` as a full sha via
   `envy git-resolve <url> <ref>`. Unhashed fetches re-download every run.
+
+## windows
+
+First-class, not a port. Same manifest, same specs, same cache layout.
+
+- bootstrap `bin\envy.bat` (batch, parses the `@envy` header itself, walks up for
+  the root manifest, honors `ENVY_CACHE_ROOT`/`ENVY_MIRROR`). Wrappers are
+  `bin\<tool>.bat`, using `%~dp0envy.bat product <name>` then
+  `call "%PRODUCT_PATH%" %*`, forwarding `%ERRORLEVEL%`.
+- `--platform posix|windows|all` on `init`/`sync`/`deploy` selects which script
+  flavors get written, defaulting to the host. Bootstrap AND wrappers are
+  per-flavor, so a plain `sync` on macOS does NOT restamp `envy.bat`. Use
+  `--platform all` in a cross-platform repo. A host-only deploy does not prune
+  the other flavor.
+- scripts are written LF on every platform, POSIX ones mode 755. `core.autocrlf`
+  rewriting them makes every deploy report "updated"; fix with `bin/** -text` in
+  `.gitattributes`.
+- string verbs default to PowerShell, invoked
+  `powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File <temp .ps1>`;
+  cmd is `cmd.exe /D /V:ON /S /C <temp .cmd>`. POSIX gets `bash -e`, so fail-fast
+  is free there; on Windows `check=true` (default) makes envy INJECT fail-fast
+  (`$ErrorActionPreference='Stop'`, per-line `$LASTEXITCODE` test, final
+  `$Error.Count` check; cmd gets `|| exit /b !errorlevel!` per line). `check=false`
+  injects nothing, so a Windows script keeps going where a POSIX one stops.
+- paths are native: `envy.path.join`/`envy.abspath`/`envy product` all yield
+  backslashes. Never hardcode `/`. `envy.EXE_EXT` is `".exe"`.
+- cache `%LOCALAPPDATA%\envy`; long-path prefix used internally for cache scans;
+  deletions retry with backoff around antivirus handles.
+- `envy run <name>` finds `bin\<name>.bat` (no `execvp`, so it spawns, waits, and
+  forwards the exit code). PATH separator `;`, bin dir first.
+- shell hook is PowerShell only, dot-sourced from `$PROFILE`
+  (`. "${env:USERPROFILE}/AppData/Local/envy/shell/hook.ps1"`). `cmd.exe` has no
+  hook; use the `.bat` wrappers or `envy run`.
+- PowerShell `>` writes UTF-16. Redirecting `export`/`hash`/`product --json`
+  output needs `| Out-File -Encoding ascii|utf8`.
+- host mutation via `winget`/`choco` in a `USER_MANAGED` spec's SETUP pair;
+  elevation needs `interactive = true`.
 
 ## verb forms
 

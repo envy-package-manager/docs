@@ -40,9 +40,12 @@ Initialized envy project.
 }
 ```
 
-Three library paths, one per platform's default cache location. Only one exists
-on any given machine and the language server ignores the rest, which is why this
-file can be committed and shared. Each points at `envy/<version>` in the cache,
+Three library paths, one per platform's default cache location, with
+`${env:USERPROFILE}/AppData/Local/envy` covering Windows. Only one exists on any
+given machine and the language server ignores the rest, which is why this file can
+be committed and shared. `${env:VAR}` is the language server's own placeholder
+syntax, so it is expanded by the server rather than by a shell, and forward
+slashes are correct on Windows too. Each points at `envy/<version>` in the cache,
 where envy extracts `envy.lua`, a few hundred lines of
 [LuaCATS](https://luals.github.io/wiki/annotations/) annotations covering
 `envy.run`, `envy.path`, `envy.commit_fetch`, the phase globals, and the rest of

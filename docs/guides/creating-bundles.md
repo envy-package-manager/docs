@@ -85,6 +85,37 @@ output, and is fetched once no matter how many specs are taken from it.
 Specs from the bundle `require()` modules by path, because envy prefixes
 `package.path` with the bundle root:
 
+The helper most bundles end up with first is platform naming, because every spec
+in the bundle needs the same answer:
+
+```lua title="lib/platform.lua"
+-- Platform naming shared by the specs in this bundle.
+local M = {}
+
+M.WINDOWS = envy.PLATFORM == "windows"
+
+-- Windows release artifacts are almost always zips, everything else tarballs.
+M.ARCHIVE_EXT = M.WINDOWS and ".zip" or ".tar.gz"
+
+-- Rust-style target triple, matching how Rust projects name their release
+-- artifacts. Linux picks musl so the binaries do not depend on the host glibc.
+function M.rust_triple()
+  if envy.PLATFORM == "darwin" then
+    return (envy.ARCH == "arm64") and "aarch64-apple-darwin" or "x86_64-apple-darwin"
+  elseif envy.PLATFORM == "linux" then
+    return (envy.ARCH == "x86_64") and "x86_64-unknown-linux-musl"
+        or "aarch64-unknown-linux-musl"
+  end
+  return "x86_64-pc-windows-msvc"
+end
+
+return M
+```
+
+Getting this wrong in one spec is a bug in one spec. Getting it right in
+`lib/platform.lua` fixes it for the whole bundle, which is most of the argument
+for bundling in the first place.
+
 ```lua title="lib/github.lua"
 local M = {}
 

@@ -201,6 +201,78 @@ The cache uses file locks and hard links. Both work on local disks and are
 unreliable on NFS and SMB. Keep the cache on local disk, and point CI at a
 workspace path.
 
+## Windows
+
+**`bin\envy.bat` is missing, or points at an old version**
+
+The bootstrap scripts are per platform, and a plain `sync` restamps only the host
+flavor. Whoever last bumped the pin on macOS or Linux left the `.bat` behind. Fix
+it from any machine:
+
+```console
+$ envy sync --platform all
+Updated bootstrap script
+```
+
+Same for wrappers. `bin\cmake.bat` only exists if someone ran
+`--platform windows` or `--platform all`. See
+[Product Scripts](/concepts/environment/product-scripts#the-windows-twin).
+
+**Every deploy reports scripts as updated, and Git shows the whole bin directory
+as modified**
+
+Git line-ending conversion. envy writes LF, `core.autocrlf` rewrites to CRLF on
+checkout, and envy writes them back:
+
+```console
+$ envy deploy --platform all
+deploy: 8 product script(s) (0 created, 1 updated, 7 unchanged, 0 removed)
+```
+
+Turn conversion off for the directory with `bin/** -text` in `.gitattributes`.
+
+**The shell hook does nothing in PowerShell**
+
+Three checks, in order. `$PROFILE` exists and contains the dot-source line that
+`envy shell powershell` prints. Your execution policy allows running your own
+profile, `RemoteSigned` being enough. And you are in PowerShell rather than
+`cmd.exe`, which has no hook at all. In `cmd`, call `bin\envy.bat` and
+`bin\<tool>.bat` directly.
+
+**A spec's script works in my terminal and fails in envy**
+
+envy runs PowerShell with `-NoProfile -NonInteractive`, so a function or alias
+from your profile does not exist and a prompt fails instead of waiting. Pass
+`interactive = true` for anything that legitimately needs input, such as an
+elevation prompt.
+
+The other common cause is fail-fast. envy injects it into generated PowerShell and
+cmd scripts when `check` is true, so a line whose exit code you were ignoring now
+stops the script. See
+[How each built-in is invoked](/concepts/shells#how-each-built-in-is-invoked).
+
+**A file will not delete, or an install fails partway with a sharing violation**
+
+Defender or the Search indexer is holding a handle on a freshly written file.
+envy already retries deletions with backoff, so a failure that survives that is
+usually a real open handle, often an editor or a running binary out of the cache.
+Excluding the cache root from real-time scanning also makes large installs
+noticeably faster.
+
+**Long paths**
+
+envy opts out of `MAX_PATH` for its own cache scans, so deep cache entries are
+fine. A build tool running inside a package is not covered by that, so a
+toolchain that hits the limit is usually fighting `MAX_PATH` itself. Either enable
+the system-wide long-path policy or move the cache nearer the drive root with
+`ENVY_CACHE_ROOT=C:\envy-cache`.
+
+**Redirecting envy output produces a file nothing can parse**
+
+PowerShell's `>` writes UTF-16. Use
+`| Out-File -Encoding ascii` for depot indexes and `-Encoding utf8` for JSON. See
+[the stdout contract](./observability.md#stdout-is-a-contract).
+
 ## Depots
 
 **Everything builds from source with a depot configured**

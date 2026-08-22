@@ -83,6 +83,13 @@ works in the spec.
 envy --verbose --trace fetch https://vendor.example/tool.tgz /tmp/tool.tgz
 ```
 
+## On Windows
+
+Local sources take either separator, so `envy fetch C:\vendor\tool.zip` and a
+`file:///C:/vendor/tool.zip` URL both work, and so does a UNC path such as
+`\\fileserver\share\tool.zip`. Transports are compiled in, so nothing here needs
+`curl`, `git`, or `tar` on the machine.
+
 ## See also
 
 - [FETCH](/concepts/specs/fetch) for the spec verb this mirrors.

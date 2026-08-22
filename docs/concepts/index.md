@@ -33,6 +33,9 @@ read them in order, this page is also a reasonable tour of the model.
   with control over how early it is needed, down to "before I can fetch".
 - **[Bundle](/concepts/dependencies/bundles)**: a versioned container shipping
   many specs behind one pin.
+- **[Platform](/concepts/specs/platforms)**: the OS and architecture envy is
+  running on. macOS, Linux, and Windows are equal targets, and filters decide
+  which packages a given machine instantiates.
 - **[Cache](/concepts/cache)**: the user-wide, content-addressed store all
   projects share. Always safe to delete.
 - **[Depot](/concepts/depots)**: the optional prebuilt-artifact layer.

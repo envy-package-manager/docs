@@ -93,6 +93,20 @@ envy hash exports --prefix s3://acme-envy-packages/ > exports/packages.txt
 `hash` on a directory produces the same lines from the archives themselves, with
 no re-export.
 
+## On Windows
+
+`export` runs on the machine whose packages it is exporting, so a Windows depot
+needs a Windows runner. Redirect through `Out-File`, because PowerShell's `>`
+writes UTF-16 and [`merge-depot`](./merge-depot.md) will not parse it:
+
+```powershell
+bin\envy.bat export -o envy-export --depot-prefix s3://acme-envy-packages/ |
+  Out-File -FilePath envy-export/win-x64-packages.txt -Encoding ascii
+```
+
+The archive names carry the platform, so a Windows export never collides with a
+macOS one and both live in the same index.
+
 ## See also
 
 - [Running a Package Depot](/guides/package-depots) for the full CI loop.

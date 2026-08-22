@@ -82,6 +82,15 @@ are interchangeable when you re-hash a directory after moving files around.
 envy hash cmake-4.2.3-macos-universal.tar.gz | diff - expected.txt
 ```
 
+## On Windows
+
+Output is the same `sha256sum` format. Redirecting it with PowerShell's `>` gives
+UTF-16, which nothing downstream parses, so pipe it instead:
+
+```powershell
+bin\envy.bat hash *.tar.zst | Out-File -FilePath index.txt -Encoding ascii
+```
+
 ## See also
 
 - [Writing a Spec](/guides/writing-a-spec) for fingerprint tables in context.

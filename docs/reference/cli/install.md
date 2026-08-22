@@ -80,6 +80,12 @@ envy install --manifest ~/work/firmware/envy.lua
 Useful from a scratch shell, or when driving envy from a script that knows the
 manifest path but has no working directory inside the project.
 
+## On Windows
+
+`install` writes nothing into the bin directory on any platform, so it has no
+`--platform` flag. Wrapper scripts, including the `.bat` twins, come from
+[`deploy`](./deploy.md) or from [`sync`](./sync.md).
+
 ## See also
 
 - [`envy sync`](./sync.md) for install plus deploy, the everyday command.

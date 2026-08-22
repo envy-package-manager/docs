@@ -46,7 +46,9 @@ There is no depot server software, no API, and no registration. An S3 bucket, a
 static web server, or a directory on a file share all qualify.
 
 envy derives the lookup key from the archive filename, so the index needs no
-schema beyond that naming. Lines it cannot parse are skipped with a warning, and
+schema beyond that naming. The platform and architecture are part of that name,
+which is why one index serves every platform: a Windows machine looks for
+`...-windows-x86_64-blake3-<hash>.tar.zst` and never sees the macOS entry. Lines it cannot parse are skipped with a warning, and
 so is an index it cannot download, which is what makes an unreachable depot a
 slowdown rather than a failure.
 

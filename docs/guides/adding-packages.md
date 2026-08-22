@@ -50,10 +50,12 @@ commit you are on.
 ## From a URL
 
 ```lua
-{ spec = "acme.protoc-gen-acme@r0",
-  source = "https://specs.acme.example/protoc-gen-acme@r0.lua",
-  sha256 = "9f2c1d5b8e47a03f6c2d9b1e4a7f0c3d8b5e2a9f4c1d7b0e3a6f9c2d5b8e1a4f",
-  options = { version = "2.1.0" } },
+PACKAGES = {
+  { spec = "acme.protoc-gen-acme@r0",
+    source = "https://specs.acme.example/protoc-gen-acme@r0.lua",
+    sha256 = "9f2c1d5b8e47a03f6c2d9b1e4a7f0c3d8b5e2a9f4c1d7b0e3a6f9c2d5b8e1a4f",
+    options = { version = "2.1.0" } },
+}
 ```
 
 Pin the hash. Get it with [`envy hash`](../reference/cli/hash.md) after
@@ -62,11 +64,13 @@ downloading the file once.
 ## From git
 
 ```lua
-{ spec = "acme.jlink@r1",
-  source = "https://github.com/acme/envy-specs.git",
-  -- envy git-resolve https://github.com/acme/envy-specs refs/heads/main
-  ref = "7bc9a0bfe050ef97e1712ff61c6f11952799e951",
-  options = { version = "9.30" } },
+PACKAGES = {
+  { spec = "acme.jlink@r1",
+    source = "https://github.com/acme/envy-specs.git",
+    -- envy git-resolve https://github.com/acme/envy-specs refs/heads/main
+    ref = "7bc9a0bfe050ef97e1712ff61c6f11952799e951",
+    options = { version = "9.30" } },
+}
 ```
 
 A git source requires a full commit sha. Use
@@ -79,28 +83,32 @@ Options are ordinary Lua values, and the spec's `OPTIONS` schema decides which
 are legal:
 
 ```lua
-{ spec = "envy.python@r1", bundle = "envy",
-  options = {
-    version = "3.13.14",        -- string
-    release = "20260623",
-    provide_python3 = true,     -- boolean
-  } },
+PACKAGES = {
+  { spec = "envy.python@r1", bundle = "envy",
+    options = {
+      version = "3.13.14",        -- string
+      release = "20260623",
+      provide_python3 = true,     -- boolean
+    } },
 
-{ spec = "acme.clang-tools@r0", source = specs .. "acme.clang-tools.lua",
-  options = {
-    version = "22.1.8",
-    tools = { "clang-format", "clang-tidy" },   -- list
-  } },
+  { spec = "acme.clang-tools@r0", source = specs .. "acme.clang-tools.lua",
+    options = {
+      version = "22.1.8",
+      tools = { "clang-format", "clang-tidy" },   -- list
+    } },
+}
 ```
 
 Options are part of the package's identity, which is what lets two entries for
 one spec coexist:
 
 ```lua
-{ spec = "envy.python@r1", bundle = "envy",
-  options = { version = "3.13.14", release = "20260623", provide_python3 = true } },
-{ spec = "envy.python@r1", bundle = "envy",
-  options = { version = "3.14.2", release = "20260623" } },
+PACKAGES = {
+  { spec = "envy.python@r1", bundle = "envy",
+    options = { version = "3.13.14", release = "20260623", provide_python3 = true } },
+  { spec = "envy.python@r1", bundle = "envy",
+    options = { version = "3.14.2", release = "20260623" } },
+}
 ```
 
 Both install. The first claims the `python3` product name, the second does not, so
@@ -109,26 +117,35 @@ there is no collision. Each also provides its own `python3.13` or `python3.14`.
 ## Restricting to platforms
 
 ```lua
-{ spec = "acme.apt@r0", source = specs .. "acme.apt.lua",
-  platforms = { "linux" },
-  options = { packages = { "libusb-1.0-0-dev" } } },
+PACKAGES = {
+  { spec = "acme.apt@r0", source = specs .. "acme.apt.lua",
+    platforms = { "linux" },
+    options = { packages = { "libusb-1.0-0-dev" } } },
 
-{ spec = "acme.dtrace-tools@r0", source = specs .. "acme.dtrace-tools.lua",
-  platforms = { "darwin-arm64" } },
+  { spec = "acme.dtrace-tools@r0", source = specs .. "acme.dtrace-tools.lua",
+    platforms = { "darwin-arm64" } },
+}
 ```
 
 An entry whose filter excludes the current machine never instantiates, with no
 error. Naming it explicitly on the wrong platform *is* an error, so a typo in a
-CLI query fails loudly. See [Platforms](/concepts/specs/platforms).
+CLI query fails loudly.
+
+Filter values are `darwin`, `linux`, and `windows`, optionally with an
+architecture: `windows-x86_64`, `windows-arm64`, `darwin-arm64`. A cross-platform
+package needs no filter at all, and most do not have one. See
+[Platforms](/concepts/specs/platforms).
 
 ## Opting into setup pairs
 
 Nothing in a spec's [SETUP](/concepts/specs/setup) runs unless an entry names it:
 
 ```lua
-{ spec = "acme.jlink@r1", source = specs .. "acme.jlink.lua",
-  options = { version = "9.30" },
-  setup = { "udev_rules" } },
+PACKAGES = {
+  { spec = "acme.jlink@r1", source = specs .. "acme.jlink.lua",
+    options = { version = "9.30" },
+    setup = { "udev_rules" } },
+}
 ```
 
 Conditional selection is normal, because the manifest is Lua:
@@ -136,10 +153,12 @@ Conditional selection is normal, because the manifest is Lua:
 ```lua
 local ci = os.getenv("CI")
 
-{ spec = "acme.apt@r0", source = specs .. "acme.apt.lua",
-  platforms = { "linux" },
-  options = { packages = { "libusb-1.0-0-dev" } },
-  setup = not ci and { "packages" } or nil },
+PACKAGES = {
+  { spec = "acme.apt@r0", source = specs .. "acme.apt.lua",
+    platforms = { "linux" },
+    options = { packages = { "libusb-1.0-0-dev" } },
+    setup = not ci and { "packages" } or nil },
+}
 ```
 
 Selecting a pair does not change the package's identity, so the same cached
@@ -184,7 +203,14 @@ If a product you expected is missing, the spec probably declares it
 `script = false`, which deploys no wrapper on purpose. Ask for it directly with
 `envy product <name>`.
 
-Commit the manifest and the new wrappers together.
+Commit the manifest and the new wrappers together. On a cross-platform repo, add
+`--platform all` so the `.bat` twins are written and committed too, whichever
+machine you happen to be on:
+
+```console
+$ envy sync --platform all
+deploy: 6 product script(s) (3 created, 0 updated, 3 unchanged, 0 removed)
+```
 
 ## See also
 

@@ -20,7 +20,7 @@ Terse companion to [Anatomy of a Spec](/concepts/specs).
 | `OPTIONS` | schema table or function | options are accepted unvalidated |
 | `PRODUCTS` | table or function | the package exports nothing |
 | `DEPENDENCIES` | array of entry tables | none |
-| `PLATFORMS` | array of strings | every platform |
+| `PLATFORMS` | array of strings, `darwin`, `linux`, `windows`, optionally `-arm64` or `-x86_64` | every platform |
 | `USER_MANAGED` | boolean or function | `false`, meaning cache-managed |
 | `EXPORTABLE` | boolean | `false`, so only fetched bytes are kept for export |
 
@@ -74,6 +74,31 @@ An array of these tables fetches several files.
 | --- | --- |
 | `strip` | Drop this many leading path components. |
 | `only` | Extract just these archive-relative paths or globs, matched after `strip`. |
+
+## Platform-aware specs
+
+A spec runs on the machine doing the install, so the platform is read at spec
+load time rather than declared:
+
+```lua
+PLATFORMS = { "darwin", "linux", "windows" }
+
+PRODUCTS = { mytool = "bin/mytool" .. envy.EXE_EXT }
+
+FETCH = function(tmp_dir, opts)
+  local ext = (envy.PLATFORM == "windows") and ".zip" or ".tar.gz"
+  return {
+    source = base .. opts.version .. "-" .. envy.PLATFORM_ARCH .. ext,
+    sha256 = hashes[opts.version][envy.PLATFORM_ARCH],
+  }
+end
+```
+
+`envy.EXE_EXT` is `".exe"` on Windows and `""` elsewhere, so one `PRODUCTS` line
+covers all three. A product that only exists on some platforms takes its own
+`platforms` field instead. String verbs run under PowerShell on Windows, so a
+spec with a `BUILD` string needs
+[a portability plan](/concepts/specs/build#on-windows).
 
 ## `PRODUCTS` entry fields
 

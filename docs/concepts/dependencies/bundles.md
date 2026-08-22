@@ -45,8 +45,10 @@ An entry can also carry an inline declaration instead of an alias, which is wort
 it only for a one-off:
 
 ```lua
-{ spec = "acme.tool@r0",
-  bundle = { identity = "acme.specs@r1", source = envy.abspath("vendor/specs") } }
+PACKAGES = {
+  { spec = "acme.tool@r0",
+    bundle = { identity = "acme.specs@r1", source = envy.abspath("vendor/specs") } }
+}
 ```
 
 ## Producing a bundle

@@ -201,6 +201,59 @@ than debugging a stale one. Ship a `bin/build.bat` alongside it for Windows. env
 will not touch either file, because it only manages scripts carrying its own
 marker. See [Product Scripts](/concepts/environment/product-scripts#taking-ownership-of-a-name).
 
+## On Windows
+
+The bootstrap script has a different name, so anything that spells the path needs
+a variable rather than a literal:
+
+```cmake title="CMakeLists.txt"
+if(WIN32)
+  set(ENVY "${CMAKE_SOURCE_DIR}/bin/envy.bat")
+else()
+  set(ENVY "${CMAKE_SOURCE_DIR}/bin/envy")
+endif()
+```
+
+```python title="build/BUILDCONFIG.gn"
+script_ext = ""
+if (host_os == "win") {
+  script_ext = ".bat"
+}
+
+envy_tools = exec_script("//gntools/envy_tools.py",
+                         [ "--envy-bin", rebase_path("//bin/envy${script_ext}") ],
+                         "json",
+                         envy_inputs)
+```
+
+```make title="Makefile"
+ENVY := ./bin/envy
+ifeq ($(OS),Windows_NT)
+ENVY := bin/envy.bat
+endif
+```
+
+Everything downstream is unchanged. `envy product --json` prints native paths, so
+the values you get on Windows contain backslashes and are ready to hand to a
+compiler. In CMake they work as-is. In a generated file that also treats `\` as an
+escape, convert once at ingestion time:
+
+```cmake
+string(REPLACE "\\" "/" cmake_path "${raw_path}")
+```
+
+If you ship the wrapper-script pattern above, ship a `.bat` twin next to it:
+
+```bat title="bin\build.bat"
+@echo off
+call "%~dp0envy.bat" sync || exit /b %ERRORLEVEL%
+for /f "delims=" %%i in ('call "%~dp0envy.bat" -q product ninja') do set "NINJA=%%i"
+call "%NINJA%" -C "%~dp0..\out" %*
+exit /b %ERRORLEVEL%
+```
+
+envy leaves both alone, since neither carries the `envy-managed` marker.
+
 ## Rules
 
 - **Never hardcode a cache path.** They contain a hash of the identity and
