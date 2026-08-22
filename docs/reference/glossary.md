@@ -5,8 +5,6 @@ title: Glossary
 
 # Glossary
 
-> **Placeholder content.** Definitions drafted. Tighten wording during review.
-
 - **Bundle**: a versioned container distributing many specs behind one pin.
 - **Cache**: the per-user, content-addressed store shared by all projects.
 - **Depot**: an optional remote store of prebuilt package artifacts.

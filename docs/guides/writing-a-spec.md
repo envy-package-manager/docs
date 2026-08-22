@@ -80,7 +80,7 @@ hashes and put them in a table:
 ```console
 $ envy fetch https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-aarch64-apple-darwin.tar.gz /tmp/rg.tar.gz
 $ envy hash /tmp/rg.tar.gz
-9f2c1d5b8e47a03f6c2d9b1e4a7f0c3d8b5e2a9f4c1d7b0e3a6f9c2d5b8e1a4f  rg.tar.gz
+24ad76777745fbff131c8fbc466742b011f925bfa4fffa2ded6def23b5b937be  rg.tar.gz
 ```
 
 ```lua
@@ -102,7 +102,7 @@ end
 -- https://github.com/BurntSushi/ripgrep/releases
 hashes = {
   ["14.1.1"] = {
-    ["aarch64-apple-darwin"] = "9f2c1d5b...1a4f",
+    ["aarch64-apple-darwin"] = "24ad7677...37be",
     ["x86_64-unknown-linux-musl"] = "023fdd3b...4c70c",
   },
 }
