@@ -5,19 +5,17 @@ title: Fetch Dependencies
 
 # Fetch Dependencies
 
-> **Placeholder content.** Outline for review. Verify against sources.
-
 The bootstrap problem. This project's specs live in Artifactory. The Artifactory
 CLI is itself an envy package, so it has to be installed before any of those
 specs can be fetched. Ordinary dependencies cannot express that. They order
 phases of packages whose specs envy already has. Fetch dependencies order the
 acquisition of the spec itself.
 
-Will cover:
+## The shape
 
-- The shape. A `source` table carrying both the tools it needs and the custom
-  fetch that uses them. Here it is on a manifest `BUNDLES` declaration, fetching
-  a bundle of specs out of Artifactory with a `jf` that envy installed:
+A `source` table carries both the tools it needs and the custom fetch that uses
+them. Here it is on a manifest `BUNDLES` declaration, fetching a bundle of specs
+out of Artifactory with a `jf` that envy installed:
 
 ```lua title="envy.lua"
 BUNDLES = {
@@ -64,19 +62,22 @@ PACKAGES = {
   its `envy-bundle.lua` and spec files. A single spec commits one file named
   `spec.lua`.
 
-- Where a source table can be declared: a `BUNDLES` declaration, in a manifest or
-  a spec, and a spec `DEPENDENCIES` entry. A manifest `PACKAGES` entry cannot
-  carry `source.fetch`. envy fails with `Custom fetch function spec has no
-  parent`. The fetch function is looked up in the declaring spec's Lua state, and
-  a manifest entry has no declaring spec.
+## Where it can be declared
 
-- `opts`. A spec-declared `source.fetch` receives `(tmp_dir, opts)`. Those are
-  the declaring spec's options, not the dependency's. One spec can therefore
-  route its dependency fetches through whichever server the project configured.
-  A bundle's fetch receives `(tmp_dir)` only.
+A `BUNDLES` declaration, in a manifest or a spec, and a spec `DEPENDENCIES`
+entry. A manifest `PACKAGES` entry cannot carry `source.fetch`: envy fails with
+`Custom fetch function spec has no parent`, because the fetch function is looked
+up in the declaring spec's Lua state and a manifest entry has no declaring spec.
 
-- The ordinary case, for comparison. Once a spec is loaded, its own verbs resolve
-  tools the same way, and `needed_by` decides how early that is legal:
+A spec-declared `source.fetch` receives `(tmp_dir, opts)`, where `opts` is the
+declaring spec's options rather than the dependency's. One spec can therefore
+route its dependency fetches through whichever server the project configured. A
+bundle's fetch receives `(tmp_dir)` only.
+
+## The ordinary case, for comparison
+
+Once a spec is loaded, its own verbs resolve tools the same way, and `needed_by`
+decides how early that is legal:
 
 ```lua title="corp.toolchain@r2.lua"
 local hashes -- version -> sha256, at the bottom of this file
@@ -104,19 +105,21 @@ end
   during 'fetch'`. A fetch dependency needs no `needed_by`, because it is already
   gated on the earliest phase there is.
 
-- The guarantee. Every entry in `source.dependencies` goes through its entire
+## Rules
+
+- **The guarantee.** Every entry in `source.dependencies` goes through its entire
   lifecycle, install and setup included, before the dependent's spec is fetched.
   Compare `needed_by = "fetch"`, which gates payload fetching only.
-- `source.dependencies` requires `source.fetch`. If nothing custom runs, the tool
-  was not needed.
-- Strong references only, for anything a fetch function resolves by name. A
+- **`source.dependencies` requires `source.fetch`.** If nothing custom runs, the
+  tool was not needed.
+- **Strong references only** for anything a fetch function resolves by name. A
   fetch dependency with its own `spec` and `source` is wired before the fetch
   runs. A bare product query or a weak reference is deferred to the resolution
-  pass. That pass runs after the graph is discovered, too late for a fetch
-  function.
-- Chains. A fetch dependency's own spec can have fetch dependencies, and
+  pass, which runs after the graph is discovered and is therefore too late.
+- **Chains work.** A fetch dependency's own spec can have fetch dependencies, and
   bootstrap chains resolve bottom-up.
-- Where the same machinery appears without being called this: fetching
-  [bundles](./bundles.md), and authenticated [depot](/concepts/depots) indexes
-  with `DEPENDS`, which hands its fetch function `ctx.deps[identity].pkg_path`.
-- Failure modes. Cycles among fetch dependencies are detected and reported.
+- **Cycles are detected** among fetch dependencies and reported.
+
+The same machinery appears twice more without being called this: fetching
+[bundles](./bundles.md), and authenticated [depot](/concepts/depots) indexes with
+`DEPENDS`, which hands its fetch function `ctx.deps[identity].pkg_path`.

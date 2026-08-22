@@ -5,16 +5,13 @@ title: Bundles
 
 # Bundles
 
-> **Placeholder content.** Outline for review. Verify against sources.
+A bundle is a versioned container of specs: one pin that delivers a whole toolbox
+of package definitions. Instead of pinning ten spec URLs, a project pins one
+commit.
 
-A bundle is a versioned container of specs: one pin that delivers a whole
-toolbox of package definitions.
+## Consuming a bundle
 
-Will cover:
-
-- The consumer side:
-
-```lua
+```lua title="envy.lua"
 BUNDLES = {
   envy = {
     identity = "envy.package-specs@r3",
@@ -28,21 +25,67 @@ PACKAGES = {
   { spec = "envy.uv@r0", bundle = "envy", options = { version = "0.11.30" } },
   { spec = "envy.python@r1", bundle = "envy",
     options = { version = "3.13.14", release = "20260623" } },
+  { spec = "envy.cmake@r0", bundle = "envy", options = { version = "4.4.0" } },
 }
 ```
 
-- One `ref` pin covers every spec taken from the bundle, so the whole toolbox
-  upgrades atomically.
-- The producer side, meaning `envy-bundle.lua` with its `BUNDLE` and `SPECS`
-  globals. See [Creating a Bundle](/guides/creating-bundles).
-- How bundles arrive. envy materializes the bundle through the
-  [fetch-dependency](./fetch-dependencies.md) machinery before reading any spec
-  out of it. A bundle can therefore live behind the same bootstrap tooling as
-  anything else.
-- Inline bundle references on a single entry, using `bundle = { ... }` in place
-  of an alias.
-- Identity integrity. A spec fetched from a bundle has to declare the identity
-  the bundle promised for it.
+`BUNDLES` maps an alias to a declaration, and an entry uses `bundle = "<alias>"`
+in place of `source`. One `ref` covers every spec taken from that bundle, so the
+whole toolbox upgrades atomically: advance the ref, run `sync`, and every spec
+moves together.
+
+| Field | Meaning |
+| --- | --- |
+| `identity` | Required. The bundle's own identity, which the bundle file must declare. |
+| `source` | Required. A git URL, an https URL, a local path, or a `{ fetch, dependencies }` table. |
+| `ref` | Required for a git source. A full commit sha. |
+| `sha256` | Integrity pin for an archive source. |
+
+An entry can also carry an inline declaration instead of an alias, which is worth
+it only for a one-off:
+
+```lua
+{ spec = "acme.tool@r0",
+  bundle = { identity = "acme.specs@r1", source = envy.abspath("vendor/specs") } }
+```
+
+## Producing a bundle
+
+A bundle is a directory or repo with a manifest of its own:
+
+```lua title="envy-bundle.lua"
+-- @envy schema "1"
+BUNDLE = "envy.package-specs@r3"
+
+SPECS = {
+  ["envy.cmake@r0"] = "specs/cmake.lua",
+  ["envy.python@r1"] = "specs/python.lua",
+  ["envy.uv@r0"] = "specs/uv.lua",
+}
+```
+
+`BUNDLE` is the identity consumers pin. `SPECS` maps each identity to a file
+inside the bundle. The identities have to match: a spec file whose `IDENTITY`
+disagrees with its `SPECS` key is an error, so a bundle cannot promise one thing
+and deliver another.
+
+See [Creating a Bundle](../../guides/creating-bundles.md) for the authoring
+workflow.
+
+## How a bundle arrives
+
+envy materializes the bundle through the
+[fetch-dependency](./fetch-dependencies.md) machinery before reading any spec out
+of it. The bundle is itself a package, with its own cache entry under `specs/`,
+and it reports its own row in the output.
+
+Two consequences. A bundle can live behind the same bootstrap tooling as anything
+else, including a `source` table with its own `dependencies` and `fetch`. And
+several specs pulled from one bundle share a single fetch, because they share the
+bundle package.
+
+Declaring the same bundle identity twice with different sources or refs is an
+error rather than a silent winner.
 
 ## Shipping an API with your specs
 
