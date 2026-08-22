@@ -46,8 +46,12 @@ The `envy` table available in manifests and specs.
 
 - `envy.product(name)` resolves a declared product dependency.
 - `envy.package(identity)` resolves a declared package dependency's directory.
-- `envy.loadenv(module)` and `envy.loadenv_spec(identity, module)` load manifest
-  and spec Lua modules for composition.
+- `envy.loadenv(module)` loads a sibling Lua file for manifest composition.
+- `envy.loadenv_spec(identity, module)` loads a Lua module out of a declared
+  dependency, resolving inside the bundle root when that dependency came from a
+  bundle. Phase functions only, and subject to `needed_by`. It returns the
+  module's sandbox globals rather than its return value. See
+  [Shipping an API with your specs](/concepts/dependencies/bundles#shipping-an-api-with-your-specs).
 
 ## Other
 

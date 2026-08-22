@@ -31,3 +31,6 @@ SPECS = {
   Identities stay the same, and only the source moves.
 - Versioning discipline: when to bump the bundle identity rather than a spec
   identity.
+- Shipping Lua helpers next to the specs, so the bundle presents an API rather
+  than a pile of files. See
+  [Shipping an API with your specs](/concepts/dependencies/bundles#shipping-an-api-with-your-specs).
