@@ -14,7 +14,12 @@ slug: /agents
 envy: per-project package manager. Lua manifest `envy.lua` at project root pins
 everything including envy itself. No install step, no server, no registry, no
 lockfile. Committed bootstrap script `<bin>/envy` (plus `envy.bat`) downloads the
-pinned envy binary on first run. Everyday command: `./bin/envy sync`.
+pinned envy binary on first run.
+
+Using an already-set-up project needs NO setup step: run `./bin/<tool>` (a
+committed wrapper) or `./bin/envy run <cmd>`, and the wrapper bootstraps envy and
+installs that tool's subgraph on demand. `./bin/envy sync` is for after a
+manifest edit, or to install everything up front.
 
 ## model
 

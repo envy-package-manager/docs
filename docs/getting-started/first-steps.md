@@ -11,9 +11,11 @@ A five-minute tour from a fresh clone to running project tools.
 
 Will cover:
 
-- `./bin/envy sync`, the everyday command. It installs everything in the
-  manifest and deploys product wrapper scripts into the project's bin
-  directory.
+- Running a tool in a freshly cloned project, which takes no setup at all.
+  `./bin/cmake --version` bootstraps envy and installs cmake by itself. See
+  [Installation](./installation.md).
+- When you do run `envy sync`: after editing the manifest, or to install
+  everything up front instead of on demand.
 - The command triangle, three distinct verbs rather than synonyms:
   - `envy install` installs packages into the cache and touches nothing in the
     project.

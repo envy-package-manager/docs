@@ -46,9 +46,9 @@ package manager.
   toolchain, a vendor SDK, a Python interpreter, a Homebrew formula, a udev rule:
   each is a package if you can describe it with a handful of Lua verbs.
 - **Hermetic.** A project pins its whole toolchain in one `envy.lua` manifest,
-  including envy itself, by version and checksum. Clone the repo, run the
-  committed bootstrap script, and you have the tools the project expects. No
-  Homebrew, no apt, no "install these ten things first".
+  including envy itself, by version and checksum. Clone the repo and run a tool.
+  The committed wrapper fetches the pinned envy, which installs what that tool
+  needs. No Homebrew, no apt, no "install these ten things first".
 - **Per-project.** Every project declares its own world. Packages install into a
   user-wide content-addressed cache shared across projects, so ten projects
   pinning the same compiler store it once.
@@ -171,8 +171,8 @@ everything on this site.
 
 ## Where to go
 
-- **[Getting started](/getting-started)** for bootstrapping a project and
-  running your first `envy sync`.
+- **[Getting started](/getting-started)** for running the tools in an existing
+  project, or bootstrapping a new one.
 - **[Guides](/guides)** for task-oriented recipes: adding packages, writing
   specs, monorepos, depots, CI.
 - **[Concepts](/concepts)** for how envy works: manifests, specs, the verb

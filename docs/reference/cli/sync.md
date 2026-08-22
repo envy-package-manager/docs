@@ -7,8 +7,12 @@ title: envy sync
 
 Install every package the manifest requests, then deploy product wrapper scripts
 into the project's bin directory. `sync` is [`install`](./install.md) plus
-[`deploy`](./deploy.md). Run it after cloning, after editing the manifest, and
-whenever you are unsure. It is idempotent and incremental.
+[`deploy`](./deploy.md). Run it after editing the manifest, and whenever you are
+unsure. It is idempotent and incremental.
+
+A fresh clone does not need it. The committed wrappers bootstrap envy and install
+what they need on first call, so `sync` is for maintaining the bin directory and
+for installing everything up front rather than on demand.
 
 A run does the following, in order:
 
@@ -43,15 +47,17 @@ deployment is off.
 
 ## Examples
 
-### To get a freshly cloned project ready to build
+### To install everything up front
 
 ```bash
 ./bin/envy sync
 ```
 
-That is the whole onboarding step. The committed `bin/envy` bootstrap script
-downloads the pinned envy, which installs every package and deploys a wrapper
-per product. `./bin/cmake` then works on a machine that has never seen cmake.
+Running a tool would install it on demand, so this is for when you want the
+whole manifest resolved now: before going offline, before timing a build, or in
+a CI job that should fail at install rather than mid-compile. The committed
+`bin/envy` bootstrap script downloads the pinned envy, which installs every
+package and deploys a wrapper per product.
 
 ### To pick up a package you just added to the manifest
 

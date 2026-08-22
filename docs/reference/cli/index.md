@@ -96,7 +96,7 @@ fails instead of silently doing less.
 
 | Command | Purpose |
 | --- | --- |
-| [`envy sync`](./sync.md) | Install packages and deploy product scripts. The everyday command. |
+| [`envy sync`](./sync.md) | Install packages and deploy product scripts. Run it after a manifest edit. |
 | [`envy install`](./install.md) | Install packages only. |
 | [`envy deploy`](./deploy.md) | Deploy product scripts only. |
 | [`envy product`](./product.md) | Resolve a product to its path or value, or list all. |
