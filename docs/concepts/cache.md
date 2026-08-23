@@ -18,9 +18,11 @@ deleted, moved, or rebuilt without touching a single project.
 ```
 ~/Library/Caches/envy/
 ├── envy/
-│   ├── 0.1.9/            # envy binaries, one directory per pinned version
+│   ├── 0.1.9/
 │   ├── 0.1.10/
-│   └── latest            # the newest version envy has resolved, a bare string
+│   │   ├── envy          # the binary itself
+│   │   └── envy.lua      # Lua type definitions, what .luarc.json points at
+│   └── latest            # a bare version string, no newline
 ├── locks/                # per-entry lock files, empty between runs
 ├── packages/
 │   └── envy.cmake@r0/
@@ -39,10 +41,31 @@ deleted, moved, or rebuilt without touching a single project.
             └── pkg/      # the fetched spec or bundle
 ```
 
-Five things live there. envy's own pinned binaries, so several projects can pin
-several versions. Fetched specs and bundles. Installed package trees. The shell
-hook files [`envy shell`](../reference/cli/shell.md) points your profile at. And
-lock files, which exist only while work is in flight.
+Five things live there. envy's own binaries, one directory per version, so
+several projects can pin several versions. Fetched specs and bundles. Installed
+package trees. The shell hook files
+[`envy shell`](../reference/cli/shell.md) points your profile at. And lock files,
+which exist only while work is in flight.
+
+Two of those are worth a note:
+
+- **`envy/latest`** is written by whichever envy last ran, and only when that
+  version is newer than what the file already says. It is how an unpinned project
+  gets a version without going to the network: the bootstrap script reads it
+  first, and uses it when the matching binary is present. A project with
+  `@envy version` ignores it entirely. See
+  [what happens without a version pin](./reproducibility.md#what-happens-without-a-version-pin).
+- **`shell/`** holds one hook per shell, not one per envy version. Each file
+  carries its own version number internally, and any envy command rewrites a
+  hook that is older than the one it ships:
+
+  ```console
+  $ envy sync
+  Shell hook updated (zsh) — restart your shell
+  ```
+
+  So the hook your profile sources keeps up with envy without you editing
+  anything.
 
 ## Content addressing
 
