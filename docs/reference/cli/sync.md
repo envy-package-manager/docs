@@ -5,12 +5,22 @@ title: envy sync
 
 # `envy sync`
 
-> **Placeholder content.** Verify flags and semantics against sources.
+Install every package the manifest requests, then deploy product wrapper scripts
+into the project's bin directory. `sync` is [`install`](./install.md) plus
+[`deploy`](./deploy.md). Run it after editing the manifest, and whenever you are
+unsure. It is idempotent and incremental.
 
-Install every package the manifest requests, then deploy product wrapper
-scripts into the project bin dir. `sync` = [`install`](./install.md) +
-[`deploy`](./deploy.md). The command you run after cloning, after editing the
-manifest, and whenever in doubt — it is idempotent and incremental.
+A fresh clone does not need it. The committed wrappers bootstrap envy and install
+what they need on first call, so `sync` is for maintaining the bin directory and
+for installing everything up front rather than on demand.
+
+A run does the following, in order:
+
+1. Re-exec into the envy version the manifest pins.
+2. Refresh the `.luarc.json` type paths for that version.
+3. Install every target package concurrently, skipping anything already cached.
+4. Restamp the bootstrap scripts.
+5. Write, refresh, and prune the product wrappers in the bin directory.
 
 ## Usage
 
@@ -19,28 +29,117 @@ envy sync [<queries>...] [--manifest=<path>] [--strict] [--subproject]
           [--platform=posix|windows|all] [--ignore-depot]
 ```
 
-## Arguments & flags
+## Arguments and flags
 
-| Argument / flag | Meaning |
+| Argument or flag | Meaning |
 | --- | --- |
-| `queries` | Optional partial-match identity filters; no queries = everything. |
-| `--manifest <path>` | Use this manifest instead of discovery. |
-| `--strict` | Error (instead of skip) when a non-envy-managed file collides with a product script name. |
-| `--subproject` | Use the nearest manifest; don't walk up to the root. Excludes `--manifest`. |
-| `--platform posix\|windows\|all` | Which script flavors to write. |
-| `--ignore-depot` | Skip depot lookups; build from source (env: `ENVY_IGNORE_DEPOT`). |
+| `queries` | Which manifest entries to sync. See [query forms](./index.md#package-queries). No queries means everything. |
+| `--manifest <path>` | Use this manifest instead of [discovery](/concepts/projects#manifest-discovery). |
+| `--strict` | Error instead of skipping when a file in the bin directory collides with a product script name and is not envy-managed. |
+| `--subproject` | Stop discovery at the nearest manifest instead of walking to the project root. Mutually exclusive with `--manifest`. |
+| `--platform posix\|windows\|all` | Which wrapper flavors to write: shell scripts, `.bat` files, or both. Defaults to the current OS. |
+| `--ignore-depot` | Ignore the [package depot](/concepts/depots) and build from source. Env: `ENVY_IGNORE_DEPOT`. |
+
+`@envy bin` is required, because `sync` has nowhere to deploy without it. envy
+creates the bin directory if it is missing. Deployment also needs
+`@envy deploy "true"`. Without it, packages install and `sync` warns that
+deployment is off.
 
 ## Examples
 
+### To install everything up front
+
 ```bash
-./bin/envy sync                    # everything, everyday
-./bin/envy sync python             # just packages matching "python"
-./bin/envy sync --platform all     # commit both posix and windows wrappers
-./bin/envy sync --ignore-depot     # force source builds this run
+envy sync
 ```
+
+Running a tool would install it on demand, so this is for when you want the
+whole manifest resolved now: before going offline, before timing a build, or in
+a CI job that should fail at install rather than mid-compile. The committed
+`bin/envy` bootstrap script downloads the pinned envy, which installs every
+package and deploys a wrapper per product.
+
+### To pick up a package you just added to the manifest
+
+```bash
+envy sync
+```
+
+The same command. Cached packages are skipped, the new one installs, and the new
+product's wrapper appears in the bin directory.
+
+### To install one package while iterating on its spec
+
+```bash
+envy sync envy.cmake@r0
+```
+
+Dependencies come along. Unrelated packages are left alone.
+
+:::warning
+A filtered `sync` only knows about the filtered subgraph, and the deploy step
+prunes envy-managed wrappers it does not recognize. In a project with ten
+products, `sync envy.cmake@r0` leaves cmake's wrappers and removes the others.
+Run a bare `envy sync` to restore them. Wrappers you
+[own](/concepts/environment/product-scripts) are never pruned, because they carry
+no marker.
+:::
+
+### To commit wrappers for a platform you are not on
+
+```bash
+envy sync --platform all
+```
+
+This writes both the POSIX scripts and the `.bat` files, so a Windows colleague
+gets working wrappers from a repo synced on macOS. Pruning is limited to the
+flavors you name, so `--platform posix` never touches `.bat` files.
+
+### To sync only the component you are standing in
+
+```bash
+cd libs/firmware && ../.envy sync --subproject
+```
+
+In a [superproject](/concepts/projects#manifest-discovery), discovery normally
+walks up to the manifest marked `@envy root "true"`. `--subproject` stops at the
+nearest manifest instead, syncing that component's packages into that
+component's bin directory.
+
+### To verify a build from source, ignoring prebuilt artifacts
+
+```bash
+envy sync --ignore-depot
+```
+
+Or set `ENVY_IGNORE_DEPOT=1` in the environment, which is the usual form in CI.
+Every package rebuilds through its full pipeline instead of downloading from the
+depot. This checks that a spec still builds, not just that someone once
+published it.
+
+### To catch a name collision instead of skipping it
+
+```bash
+envy sync --strict
+```
+
+Without `--strict`, a hand-written `bin/format` that shadows a `format` product
+is left in place and skipped. With it, the run fails and names the file. Worth
+having in CI.
+
+### To see why a package rebuilt
+
+```bash
+envy --verbose sync
+envy --trace=file:/tmp/sync.jsonl sync
+```
+
+`--verbose` narrates each package's decisions. `--trace` records the machinery
+underneath. Both are [global flags](./index.md#global-flags), so they go before
+the subcommand.
 
 ## See also
 
-- [First Steps](/getting-started/first-steps) — the sync/install/deploy
-  triangle.
-- [Product Scripts](/concepts/environment/product-scripts)
+- [First Steps](/getting-started/first-steps) for the sync, install, and deploy triangle.
+- [Product Scripts](/concepts/environment/product-scripts) for what gets written to the bin directory.
+- [`envy install`](./install.md) and [`envy deploy`](./deploy.md) for the two halves.

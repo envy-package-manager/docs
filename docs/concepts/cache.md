@@ -1,38 +1,206 @@
 ---
-sidebar_position: 6
+sidebar_position: 7
 title: The Cache
 ---
 
 # The Cache
 
-> **Placeholder content.** Outline for review; verify against sources.
+One per-user store serves every project on the machine. It is content-addressed,
+safe under concurrent use, and always safe to delete.
 
-One per-user store serves every project on the machine. Content-addressed,
-concurrency-safe, and always safe to delete.
+Nothing outside the cache points into it by absolute path. Projects resolve paths
+through [`envy product`](../reference/cli/product.md) and
+[`envy package`](../reference/cli/package.md) at call time, so the cache can be
+deleted, moved, or rebuilt without touching a single project.
 
-Will cover:
-
-- What lives there: envy's own pinned binaries, fetched specs and bundles,
-  installed package trees, durable download caches, shell hooks.
-- The user-facing shape (enough to navigate, not an internals spec):
+## What is in it
 
 ```
-<cache-root>/
-├── envy/<version>/          # envy binaries, per pinned version
-├── specs/<identity>/...     # fetched specs & bundles
-└── packages/<identity>/<platform-arch-hash>/pkg/   # installed packages
+~/Library/Caches/envy/
+├── envy/
+│   ├── 0.1.9/
+│   ├── 0.1.10/
+│   │   ├── envy          # the binary itself
+│   │   └── envy.lua      # Lua type definitions, what .luarc.json points at
+│   └── latest            # a bare version string, no newline
+├── locks/                # per-entry lock files, empty between runs
+├── packages/
+│   └── envy.cmake@r0/
+│       └── darwin-arm64-blake3-49a9b2620de8c380/
+│           ├── envy-complete
+│           └── pkg/      # the installed package
+├── shell/
+│   ├── hook.bash
+│   ├── hook.zsh
+│   ├── hook.fish
+│   └── hook.ps1
+└── specs/
+    └── envy.package-specs@r3/
+        └── blake3-2598ffe12c0d51fd/
+            ├── envy-complete
+            └── pkg/      # the fetched spec or bundle
 ```
 
-- Content addressing in user terms: the hash covers identity + options (+
-  platform), so different option sets coexist and nothing is ever clobbered;
-  ten projects pinning the same package share one entry.
-- Where the root lives per OS, and every way to move it (`ENVY_CACHE_ROOT`,
-  `--cache-root`, `@envy cache-posix`/`cache-win`) with precedence.
-- Lifecycle guarantees, stated as behavior: concurrent envy processes are
-  safe; interrupted work never leaves a "complete" lie; verified downloads
-  survive failed builds so retries are cheap.
-- Deleting things: the whole cache is reconstructible — `rm -rf` is the
-  supported cleanup tool; `envy cache` shows what's using space.
-- What deliberately is NOT in the cache key — setup selections and depot
-  configuration ([SETUP](/concepts/specs/setup) explains why).
-- Never hardcode cache paths; resolve via `envy product` / `envy package`.
+Five things live there. envy's own binaries, one directory per version, so
+several projects can pin several versions. Fetched specs and bundles. Installed
+package trees. The shell hook files
+[`envy shell`](../reference/cli/shell.md) points your profile at. And lock files,
+which exist only while work is in flight.
+
+Two of those are worth a note:
+
+- **`envy/latest`** is written by whichever envy last ran, and only when that
+  version is newer than what the file already says. It is how an unpinned project
+  gets a version without going to the network: the bootstrap script reads it
+  first, and uses it when the matching binary is present. A project with
+  `@envy version` ignores it entirely. See
+  [what happens without a version pin](./reproducibility.md#what-happens-without-a-version-pin).
+- **`shell/`** holds one hook per shell, not one per envy version. Each file
+  carries its own version number internally, and any envy command rewrites a
+  hook that is older than the one it ships:
+
+  ```console
+  $ envy sync
+  Shell hook updated (zsh) — restart your shell
+  ```
+
+  So the hook your profile sources keeps up with envy without you editing
+  anything.
+
+## Content addressing
+
+A package entry is named `<identity>/<platform>-<arch>-blake3-<hash>`, where the
+hash covers the identity, the serialized options, and any resolved
+[weak dependency](./dependencies/resolution.md) keys.
+
+Two consequences fall out of that. Different option sets coexist rather than
+overwrite, so a project can hold two Pythons at once. And ten projects that pin
+the same package with the same options share one entry, so the second project to
+ask for cmake 4.4.0 installs nothing.
+
+Bumping an option does not modify an entry, it names a new one. The old tree stays
+until you delete it, which is why `envy cache` sometimes shows two variants of
+one identity.
+
+Deliberately not in the hash: [setup-pair selections](./specs/setup.md) and depot
+configuration. The same artifact serves a machine that selected `udev_rules` and
+one that did not.
+
+## Where the root lives
+
+| Platform | Default |
+| --- | --- |
+| macOS | `~/Library/Caches/envy` |
+| Linux | `$XDG_CACHE_HOME/envy`, or `~/.cache/envy` |
+| Windows | `%LOCALAPPDATA%\envy` |
+
+Precedence, highest first:
+
+1. `--cache-root <path>`
+2. `ENVY_CACHE_ROOT`
+3. The discovered manifest's `@envy cache-posix` or `@envy cache-win` directive.
+   A relative path anchors to the manifest's directory, never the working
+   directory.
+4. The platform default.
+
+envy reads that directive out of the manifest as text and never runs the
+manifest's Lua to get it, so a broken manifest above your working directory
+cannot break a cache lookup.
+
+The most common reason to move it is CI, where the cache has to sit somewhere the
+runner's cache action can archive:
+
+```yaml
+env:
+  ENVY_CACHE_ROOT: ${{ github.workspace }}/.envy-cache
+```
+
+See [GitHub Actions](../guides/integrations/github-actions.md) for the rest of
+that setup, including what to key the cache on.
+
+## Guarantees
+
+- **Concurrent processes are safe.** Each entry is file-locked, so two
+  `envy sync` runs in two terminals cooperate rather than corrupt. Locks live in
+  `locks/` and are per entry, so unrelated packages still install in parallel.
+- **A partial install is never visible.** The `envy-complete` marker is written
+  last, after `INSTALL` reports success. An interrupted run leaves an unmarked
+  entry, which the next run redoes.
+- **Retries are cheap.** A failed attempt keeps `fetch/`, so verified downloads
+  survive and the next attempt resumes from bytes already on disk.
+- **A finished entry is never re-validated.** No timestamp checks and no
+  re-hashing. A package is done until its identity changes or you delete it.
+
+## Windows specifics
+
+The cache works the same way, with three details that only exist there:
+
+- **Long paths.** Cache trees nest deeply, and a content-addressed entry
+  directory name is long. envy opts out of `MAX_PATH` at the cache root by
+  prefixing its own scans, so a deep entry is not a problem even without the
+  system-wide long-path policy enabled. The prefixed form is internal and never
+  printed.
+- **Antivirus.** Defender and the Search indexer hold handles on freshly written
+  files, which makes a delete fail for a moment. envy retries deletions with
+  backoff rather than failing the run. A directory that will not go away after
+  the retries is usually an open handle in another process.
+- **Paths in output.** Everything envy prints or hands to a Lua phase uses the
+  platform separator, so cache paths look like
+  `C:\Users\you\AppData\Local\envy\packages\envy.cmake@r0\windows-x86_64-blake3-...\pkg`.
+  Build `.bat` and PowerShell strings with
+  [`envy.path.join`](../reference/lua-api.md#paths) rather than hardcoding a
+  separator.
+
+## Reclaiming space
+
+There is no `envy cache clean`. Everything is reconstructible from the manifest,
+so deletion is the cleanup tool. [`envy cache`](../reference/cli/cache.md) shows
+what is worth deleting:
+
+```console
+$ envy cache
+Cache: /Users/you/Library/Caches/envy
+
+Packages:
+  envy.python@r1/darwin-arm64-blake3-f92708b498a20257  257.25MB
+  envy.cmake@r0/darwin-arm64-blake3-49a9b2620de8c380   240.93MB
+  envy.ninja@r0/darwin-arm64-blake3-268bff6f91bfacc4     2.14MB
+
+Envy deployments:
+  0.1.10                                                 5.72MB
+  0.1.9                                                  5.69MB
+
+Other:
+  specs                                                180.00KB
+  shell                                                 32.00KB
+  locks                                                      0B
+
+  TOTAL                                                514.36MB
+```
+
+Then delete whatever you no longer want, at whatever granularity:
+
+```bash
+CACHE="$(envy cache | head -1 | cut -d' ' -f2)"
+
+rm -rf "$CACHE/packages/envy.cmake@r0"   # one identity, every variant
+rm -rf "$CACHE/envy/0.1.9"               # an envy version nothing pins now
+rm -rf "$CACHE"                          # all of it
+```
+
+The next command in any project reinstalls what that project needs. The only cost
+is download and build time.
+
+## A note on fetched artifacts
+
+A completed entry usually holds only `pkg/`, because envy deletes the downloads
+once the package is installed. An entry for a spec that is not `EXPORTABLE`
+keeps its `fetch/` directory instead, so a [depot](./depots.md) can publish the
+downloaded artifacts for a package whose install has to run per machine. Seeing
+`fetch/` next to `pkg/` is that case, not a leak.
+
+## See also
+
+- [`envy cache`](../reference/cli/cache.md) for the command.
+- [The Package Lifecycle](./specs/lifecycle.md) for what writes each directory.
+- [Package Depots](./depots.md) for sharing entries between machines.

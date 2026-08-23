@@ -1,9 +1,0 @@
-{
-  "label": "Projects & Manifests",
-  "position": 2,
-  "link": {
-    "type": "generated-index",
-    "slug": "/concepts/projects",
-    "description": "The envy.lua manifest: directives, package entries, and how envy finds the right manifest."
-  }
-}

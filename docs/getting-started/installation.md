@@ -5,25 +5,88 @@ title: Installation
 
 # Installation
 
-> **Placeholder content.** Outline for review; verify against sources.
+envy has no installation of its own. A project commits a small bootstrap script,
+and that script downloads the exact envy version the project pins, the first
+time something needs it.
 
-The headline: **envy has no installation of its own.** Projects commit a small
-bootstrap script that downloads the exact envy version the project pins.
+## Joining an existing project
 
-Will cover:
+Clone the repo and run the tool you came for:
 
-- **Joining an existing project** (the 99% case): clone, run `./bin/envy sync`
-  (or wherever the project's bin dir is), done. The bootstrap script fetches
-  the pinned envy binary into the user-wide cache on first run.
-- **Starting a new project**: grab any envy binary temporarily, run
-  `envy init <project-dir> <bin-dir>`, commit the results, throw the temp
-  binary away. Links to the [Starting a Project](/guides/new-project) guide.
-- What `envy init` writes: `envy.lua` manifest, `<bin>/envy` +
-  `<bin>/envy.bat` bootstrap scripts, `.luarc.json` for editor support.
-- Where envy keeps its data: per-user cache (macOS `~/Library/Caches/envy`,
-  Linux `$XDG_CACHE_HOME/envy` or `~/.cache/envy`, Windows
-  `%LOCALAPPDATA%\envy`), overridable with `ENVY_CACHE_ROOT`.
-- Supported platforms: macOS, Linux, Windows on arm64 and x86_64.
-- Air-gapped / private-network installs: `@envy mirror` and `ENVY_MIRROR`
-  (pointer to [Reproducibility](/concepts/reproducibility) and
-  `envy mirror-envy` in the [CLI reference](/reference/cli)).
+```bash
+git clone https://github.com/acme/firmware
+cd firmware
+./bin/cmake --version
+```
+
+That is the whole procedure. There is no install step and no `envy sync` to run
+first. The first call does the work:
+
+1. `bin/cmake` is a committed [wrapper script](/concepts/environment/product-scripts)
+   that asks `bin/envy` where cmake is.
+2. `bin/envy` is a committed bootstrap script. It downloads the pinned envy
+   release into the user-wide cache.
+3. envy installs cmake, and cmake runs.
+
+Later calls skip straight to the last step. Note that the first call installs
+only what that tool needs, not the whole manifest, so trying one tool in an
+unfamiliar repo is cheap.
+
+[`envy sync`](/reference/cli/sync) exists for maintaining the bin directory after
+a manifest edit, and for installing everything up front rather than on demand.
+Using a project that is already set up does not require it.
+
+If a project deploys no wrappers, its entry point is
+[`envy run`](/reference/cli/run) instead:
+
+```bash
+./bin/envy run ./scripts/build.sh
+```
+
+Same story. The bootstrap script fetches the pinned envy, and the script resolves
+what it needs as it goes.
+
+## Starting a new project
+
+You need one throwaway envy binary, once. Download any release, run
+[`envy init`](/reference/cli/init), commit the result, and delete the binary:
+
+```bash
+/tmp/envy init . ./bin --pin-sums --deploy=true
+```
+
+The project is self-bootstrapping from then on. See
+[Starting a Project](/guides/new-project) for the full walkthrough.
+
+`init` writes the `envy.lua` manifest, the `bin/envy` and `bin/envy.bat`
+bootstrap scripts, and a `.luarc.json` for editor support. Commit all of it,
+along with the product wrappers `sync` deploys later.
+
+## Where envy keeps its data
+
+One user-wide cache, shared by every project on the machine:
+
+| Platform | Default location |
+| --- | --- |
+| macOS | `~/Library/Caches/envy` |
+| Linux | `$XDG_CACHE_HOME/envy`, or `~/.cache/envy` |
+| Windows | `%LOCALAPPDATA%\envy` |
+
+Override it with `ENVY_CACHE_ROOT`, `--cache-root`, or a manifest's
+`@envy cache-posix` and `@envy cache-win` directives. Deleting the cache is
+always safe. See [The Cache](/concepts/cache).
+
+## Supported platforms
+
+macOS, Linux, and Windows, on arm64 and x86_64. Windows is a first-class target
+rather than a WSL footnote, with its own `bin\envy.bat` bootstrap script and
+`.bat` wrappers.
+
+## Private networks and air-gapped machines
+
+A project can point bootstrap at your own mirror instead of envy's GitHub
+releases, with `@envy mirror` in the manifest or `ENVY_MIRROR` in the
+environment. Populate the mirror with
+[`envy mirror-envy`](/reference/cli/mirror-envy). See
+[Reproducibility](/concepts/reproducibility) for the trust chain that keeps a
+mirror from needing extra trust.

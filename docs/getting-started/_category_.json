@@ -4,6 +4,6 @@
   "link": {
     "type": "generated-index",
     "slug": "/getting-started",
-    "description": "Bootstrap a project and run your first sync."
+    "description": "Clone a project and run its tools, or start a new one."
   }
 }

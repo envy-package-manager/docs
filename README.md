@@ -5,8 +5,15 @@ static HTML and published to GitHub Pages by CI.
 
 Live at <https://envy-package-manager.github.io/docs/>.
 
-> The pages in `docs/` are **placeholder content** derived from the envy
-> sources. Replace them with real docs before announcing the site.
+> Page content is written against the envy sources, the Python functional tests,
+> and output captured from a real binary. Verify behavior claims the same way
+> before changing them.
+>
+> Two assets are still stand-ins: `static/screencasts/envy-sync.svg` and the
+> Open Graph card.
+>
+> `docs/agents.md` is a maximal-density summary of the whole site. Update it
+> whenever behavior changes.
 
 ## Requirements
 
@@ -83,7 +90,7 @@ with an explicit list.
   ```lua title="envy.lua"
   ````
   Languages beyond the defaults must be listed in `themeConfig.prism.additionalLanguages`.
-  `lua`, `bash`, `powershell`, and `json` are already registered.
+  `lua`, `bash`, `powershell`, `json`, and `makefile` are already registered.
 - **Cross-link with relative file paths** (`./concepts.md`), not URLs. The build
   validates them.
 - **Artwork lives in `static/img/`.** `Ruckus.svg` (navbar logo) and `Ruckus.png`

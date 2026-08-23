@@ -5,49 +5,134 @@ title: Fetch Dependencies
 
 # Fetch Dependencies
 
-> **Placeholder content.** Outline for review; verify against sources.
+The bootstrap problem. This project's specs live in Artifactory. The Artifactory
+CLI is itself an envy package, so it has to be installed before any of those
+specs can be fetched. Ordinary dependencies cannot express that. They order
+phases of packages whose specs envy already has. Fetch dependencies order the
+acquisition of the spec itself.
 
-The bootstrap problem: *"This package's spec lives in Artifactory. I need the
-Artifactory CLI — itself an envy package — installed before I can even fetch
-the spec, let alone the payload."* Ordinary dependencies can't express this:
-they order phases of packages whose specs envy already has. Fetch
-dependencies order the *acquisition of the spec itself*.
+## The shape
 
-Will cover:
+A `source` table carries both the tools it needs and the custom fetch that uses
+them. Here it is on a manifest `BUNDLES` declaration, fetching a bundle of specs
+out of Artifactory with a `jf` that envy installed:
 
-- The shape — a manifest entry whose `source` is a table carrying both the
-  tools it needs and the custom fetch that uses them:
-
-```lua
-PACKAGES = {
-  { spec = "corp.toolchain@r2",
+```lua title="envy.lua"
+BUNDLES = {
+  corp = {
+    identity = "corp.specs@r1",
     source = {
-      -- installed, end to end, before corp.toolchain's spec is fetched:
+      -- Installed end to end, including setup, before the bundle is fetched.
       dependencies = {
-        { spec = "tools.jfrog-cli@r1",
-          source = "https://specs.example.com/tools.jfrog-cli.lua",
-          sha256 = "..." },
+        { spec = "tools.jfrog-cli@r1", product = "jf",
+          source = envy.abspath("envy/tools.jfrog-cli.lua") },
       },
-      fetch = function(...)
-        -- free to use the jfrog CLI here, e.g. via envy.product/envy.package
+
+      fetch = function(tmp_dir)
+        envy.run(envy.template([[
+          {{jf}} config add ci --url={{url}} --access-token=$JF_TOKEN --interactive=false
+          {{jf}} rt download --flat --fail-no-op '{{repo}}/' '{{dest}}'
+        ]], {
+          jf = envy.product("jf"),  -- provided by tools.jfrog-cli
+          url = "https://acme.jfrog.io/artifactory",
+          repo = "envy-specs/corp.specs@r1",
+          dest = tmp_dir .. "/",
+        }))
+
+        envy.commit_fetch({ "envy-bundle.lua", "specs" })
       end,
     },
-    options = { version = "2.81.0" } },
+  },
+}
+
+PACKAGES = {
+  { spec = "corp.toolchain@r2", bundle = "corp", options = { version = "15.2" } },
 }
 ```
 
-- The guarantee: every entry in `source.dependencies` is taken through its
-  *entire* lifecycle (install and setup included) before the dependent's
-  spec is fetched. Compare `needed_by = "fetch"`, which only gates payload
-  fetching — this gates everything.
-- `source.dependencies` requires `source.fetch`: if nothing custom runs, you
-  didn't need the tool.
-- Chains: the fetch dependency's own spec can have fetch dependencies;
+  The fetch dependency declares `product = "jf"`, so the fetch function resolves
+  the tool with `envy.product("jf")` and gets an absolute path into the cache.
+  Nothing assumes a `jf` on `PATH`, and nothing hardcodes a cache path. Wrapping
+  the command in `envy.template` keeps the two `jf` invocations and the three
+  varying values in one place. `envy.package(identity)` is available the same way
+  when you need the dependency's whole directory rather than one product.
+
+  `fetch` writes into `tmp_dir` and calls `envy.commit_fetch`, which verifies any
+  hashes and moves the files into the durable fetch directory. A bundle commits
+  its `envy-bundle.lua` and spec files. A single spec commits one file named
+  `spec.lua`.
+
+## Where it can be declared
+
+A `BUNDLES` declaration, in a manifest or a spec, and a spec `DEPENDENCIES`
+entry. A manifest `PACKAGES` entry cannot carry `source.fetch`: envy fails with
+`Custom fetch function spec has no parent`, because the fetch function is looked
+up in the declaring spec's Lua state and a manifest entry has no declaring spec.
+
+A spec-declared `source.fetch` receives `(tmp_dir, opts)`, where `opts` is the
+declaring spec's options rather than the dependency's. One spec can therefore
+route its dependency fetches through whichever server the project configured. A
+bundle's fetch receives `(tmp_dir)` only.
+
+## The ordinary case, for comparison
+
+Once a spec is loaded, its own verbs resolve tools the same way, and `needed_by`
+decides how early that is legal:
+
+```lua title="corp.toolchain@r2.lua"
+local hashes -- version -> sha256, at the bottom of this file
+
+DEPENDENCIES = {
+  { spec = "tools.jfrog-cli@r1", product = "jf", source = "tools.jfrog-cli.lua",
+    needed_by = "fetch" },
+}
+
+FETCH = function(tmp_dir, opts)
+  envy.run(envy.template([[
+    {{jf}} rt download --flat --fail-no-op 'toolchains/{{version}}.tar.zst' '{{dest}}'
+  ]], {
+    jf = envy.product("jf"),  -- provided by tools.jfrog-cli
+    version = opts.version,
+    dest = envy.path.join(tmp_dir, "toolchain.tar.zst"),
+  }))
+
+  envy.commit_fetch({ filename = "toolchain.tar.zst", sha256 = hashes[opts.version] })
+end
+```
+
+  `needed_by = "fetch"` is what makes the call legal in `FETCH`. The default,
+  `build`, produces `envy.product: product 'jf' needed_by 'build' but accessed
+  during 'fetch'`. A fetch dependency needs no `needed_by`, because it is already
+  gated on the earliest phase there is.
+
+## On Windows
+
+The bootstrapped tool is an executable in a cache directory, so nothing about the
+mechanism changes. Two things about the fetch function do:
+
+- Resolve the tool with `envy.product`, then build the command line with
+  `envy.path.join`. The resolved path contains backslashes, and a hand-built
+  `"/"` path will not survive being handed to `cmd`.
+- A script string inside the fetch function runs under the platform default, so
+  PowerShell on Windows. A one-line CLI invocation is usually identical in both
+  dialects, but redirection and quoting are not. Prefer passing the command to
+  `envy.run` as a single line and letting the tool write the file itself.
+
+## Rules
+
+- **The guarantee.** Every entry in `source.dependencies` goes through its entire
+  lifecycle, install and setup included, before the dependent's spec is fetched.
+  Compare `needed_by = "fetch"`, which gates payload fetching only.
+- **`source.dependencies` requires `source.fetch`.** If nothing custom runs, the
+  tool was not needed.
+- **Strong references only** for anything a fetch function resolves by name. A
+  fetch dependency with its own `spec` and `source` is wired before the fetch
+  runs. A bare product query or a weak reference is deferred to the resolution
+  pass, which runs after the graph is discovered and is therefore too late.
+- **Chains work.** A fetch dependency's own spec can have fetch dependencies, and
   bootstrap chains resolve bottom-up.
-- Weak and product references are legal inside `source.dependencies` — "use
-  the project's uploader if it has one."
-- Where else this machinery appears (transparently): fetching
-  [bundles](./bundles.md), and authenticated
-  [depot](/concepts/depots) indexes with `DEPENDS`.
-- Failure modes and diagnostics: cycles among fetch dependencies are
-  detected and reported.
+- **Cycles are detected** among fetch dependencies and reported.
+
+The same machinery appears twice more without being called this: fetching
+[bundles](./bundles.md), and authenticated [depot](/concepts/depots) indexes with
+`DEPENDS`, which hands its fetch function `ctx.deps[identity].pkg_path`.

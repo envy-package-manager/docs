@@ -25,9 +25,6 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
   <p className="hero-splash__tagline">what's yours... is mine.</p>
 </div>
 
-> **Placeholder content.** Skeleton page — the shape is right, the prose is a
-> draft. Verify every claim against the envy sources before publishing.
-
 {/* Hermit-style animated terminal capture (see cashapp/hermit's
     static/screencasts/using.svg). The current SVG is a hand-drawn placeholder;
     regenerate with asciinema + svg-term per the comment inside the file. */}
@@ -40,42 +37,130 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 </p>
 
 envy is an **unopinionated**, **hermetic**, **per-project**, **serverless**
-package manager — unless you want it to be otherwise.
+package manager.
 
-- **Unopinionated.** envy has zero opinion about what a package *is*. A
-  compiler toolchain, a vendor SDK, a Python interpreter, a Homebrew formula, a
-  udev rule — anything you can describe with a handful of Lua verbs is a
-  package.
-- **Hermetic.** A project pins its entire toolchain — including envy itself, by
-  version and checksum — in one `envy.lua` manifest checked into the repo. Clone
-  the repo, run the committed bootstrap script, and you have the exact tools the
-  project expects. No Homebrew, no apt, no "install these ten things first."
-- **Per-project.** Every project declares its own world. Installed packages
-  live in a user-wide content-addressed cache shared across projects, so ten
-  projects pinning the same compiler store it once.
-- **Serverless.** There is no registry, no daemon, no central server. Package
-  specs fetch bits from wherever they already live — HTTPS, git, S3, local
-  files — verify them, and install them.
+- **Unopinionated.** A toolchain, a vendor SDK, an interpreter, a Homebrew
+  formula, a udev rule: each is a package if a handful of Lua verbs can describe
+  it.
+- **Hermetic.** One `envy.lua` pins the whole toolchain, envy included, by
+  version and checksum. Clone the repo and run a tool.
+- **Per-project.** Every project declares its own world, into a shared
+  content-addressed [cache](/concepts/cache), so ten projects pinning one
+  compiler store it once.
+- **Serverless.** No registry, no daemon, no server. Specs fetch bits from
+  wherever they already live and verify them.
 
-…*unless you want it to be otherwise*: an optional [package
-depot](/concepts/depots) lets your CI publish prebuilt package artifacts that
-everyone else's `envy sync` pulls instead of building from source. It's an
-accelerator you can bolt on, never a requirement.
+It ships as one batteries-included executable per platform: macOS, Linux, and
+Windows, on arm64 and x86_64. Lua, the archive formats, git, and S3 are compiled
+in, so there is nothing to install and no daemon to run. The committed bootstrap
+script downloads the build your project pins.
+
+An optional [package depot](/concepts/depots) lets CI publish prebuilt artifacts
+that everyone else's `sync` downloads instead of building. An accelerator you can
+add, never a requirement.
+
+## Why envy?
+
+One job: give a project the tools it declares, on any machine, without disturbing
+anything else on it.
+
+**Not a system package manager.** Homebrew and apt own one global set of packages
+and are built around moving you forward. envy never updates anything. A version
+is an option in a manifest, changed by editing that manifest. There is no
+`envy upgrade` and no "outdated".
+
+**Not Nix.** One executable, no daemon, no store to initialize, nothing needing
+root. The same binary and manifest work on macOS, Linux, and Windows, a real
+target rather than a WSL footnote. Packages are ordinary directories, so anything
+that takes a path can use them.
+
+**Not Hermit.** envy takes Hermit's best idea, the committed bootstrap script,
+but a Hermit package is a descriptor while an envy [spec](/concepts/specs) is a
+program. Any verb can be a Lua function, so a spec can accept a license over POST,
+drive a platform installer, or install a udev rule. Declarative shapes remain for
+the simple cases, and four-line specs are common.
+
+So: apt or Homebrew for your machine, envy for your project.
+
+## A standalone toolbox
+
+A package manager has to download from anywhere, unpack anything, verify bytes,
+and run scripts. envy exposes all of it, no manifest or project required:
+
+| Command | What it does |
+| --- | --- |
+| [`envy fetch`](/reference/cli/fetch) | Download over `https`, `http`, `ftp`, `ftps`, `s3://`, `git://`, `git+ssh://`, or a local path |
+| [`envy extract`](/reference/cli/extract) | Unpack `tar`, `tar.gz`, `tar.xz`, `tar.bz2`, `tar.zst`, `zip`, `7z`, `rar`, `iso`, and bare compressed streams, with glob selection |
+| [`envy hash`](/reference/cli/hash) | Print `sha256sum`-style lines, ready to paste into a spec or a depot index |
+| [`envy git-resolve`](/reference/cli/git-resolve) | Turn a remote branch or tag into a full commit sha without cloning |
+| [`envy lua`](/reference/cli/lua) | Run a Lua script with envy's whole API available |
+| [`envy mirror-envy`](/reference/cli/mirror-envy) | Mirror an envy release to a directory or an S3 prefix |
+
+All compiled in rather than shelled out to: the AWS SDK for `s3://` with your
+ambient credentials, libgit2 for git, libarchive for formats. No CLI tools
+required on the host. Specs reach the same machinery through
+[`envy.fetch` and friends](/reference/lua-api).
+
+## Supply-chain resilience
+
+No advisory feed, no scanner. The answer is structural: no registry to
+compromise, nothing resolved by name alone, and every link pinnable by content
+hash and committed to your repo.
+
+- **Nothing is fetched by name.** No index, so no namespace to squat and no
+  "latest" a publisher can push at you. A spec comes from a URL, a commit, or a
+  [bundle](/concepts/dependencies/bundles) you named.
+- **envy verifies itself.** `@envy version` and `@envy sha256sums` pin the
+  release, and the bootstrap script verifies every binary before running it.
+  Retargeting is [one command](/reference/cli/use) and a reviewable diff.
+- **Pins go all the way down.** Specs carry a `sha256` or a full commit sha,
+  bundles require one, and a spec's downloads are pinned in its own fingerprint
+  table. An unhashed download is re-fetched rather than trusted from cache.
+- **Prebuilt artifacts are an accelerator, not an authority.** A
+  [depot](/concepts/depots) hit is checked against its hash, and a mismatch
+  builds from source. A [private mirror](/reference/cli/mirror-envy) republishes
+  the checksum file byte for byte, so one pin validates against both.
+- **Nothing modifies your machine by accident.** Packages land in a
+  [cache](/concepts/cache) you can delete. Host-level work lives in a
+  [named SETUP pair](/concepts/specs/setup) that runs only when a manifest entry
+  selects it.
+
+One limit: specs are Lua and envy runs them, which is how a spec handles a
+license-acceptance POST. A spec source you do not control is code you do not
+control. Pin it, review the diff when it moves, and keep your own specs under
+`local.*`. [Reproducibility](/concepts/reproducibility) has the full trust
+chain.
+
+## The name, and the raccoon
+
+Your project wants a pile of shiny things off the internet. envy goes and gets
+them, then pins the pile into a hermetic **env**ironment.
+
+Ruckus is a raccoon. Raccoons take shiny things that are not theirs and have no
+idea what any of them do. Neither does envy. A compiler, a udev rule, and a
+license-gated vendor blob are all just shiny things to it.
 
 :::tip Are you an AI coding agent?
 
-Read **[envy for agents](/agents)** — a one-page, maximally dense summary of
+Read **[envy for agents](/agents)**, a one-page, maximally dense summary of
 everything on this site.
 
 :::
 
+## Conventions
+
+Examples call tools by bare name, `envy sync` and `cmake --version`, assuming the
+[shell hook](/getting-started/shell-integration) is installed. Without it, prefix
+the project's bin directory: `./bin/envy sync`, or `bin\envy.bat sync` on
+Windows. Snippets are POSIX for brevity, and every command behaves the same on
+Windows.
+
 ## Where to go
 
-- **[Getting started](/getting-started)** — bootstrap a project and run your
-  first `envy sync`.
-- **[Guides](/guides)** — task-oriented recipes: adding packages, writing
-  specs, monorepos, depots, CI.
-- **[Concepts](/concepts)** — how envy thinks: manifests, specs, the verb
-  system, and a deep section on [dependency behavior](/concepts/dependencies).
-- **[Reference](/reference)** — the CLI, the manifest format, spec globals, and
-  the `envy.*` Lua API.
+- **[Getting started](/getting-started)** to run an existing project's tools, or
+  start a new one.
+- **[Guides](/guides)** for recipes: packages, specs, monorepos, depots, CI.
+- **[Concepts](/concepts)** for the model: manifests, specs, verbs,
+  [dependencies](/concepts/dependencies).
+- **[Reference](/reference)** for the CLI, file formats, and the
+  [Lua API](/reference/lua-api).
