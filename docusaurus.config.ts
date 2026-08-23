@@ -112,7 +112,10 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} envy contributors. Built with Docusaurus.`,
+      // envy carries no copyright claim: the source is dual-licensed 0BSD OR
+      // Unlicense (SPDX), so a copyright line in the footer would contradict
+      // the license it links to.
+      copyright: `envy is public domain: <a href="https://github.com/${organizationName}/envy/blob/main/LICENSE">0BSD or the Unlicense</a>, your choice. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,
