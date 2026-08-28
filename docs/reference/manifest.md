@@ -17,8 +17,9 @@ Terse companion to [Projects & Manifests](/concepts/projects).
 | `mirror "<url>"` | GitHub releases | Where to download envy itself. `https://`, `s3://`, and `file://` all work. |
 | `deploy "true\|false"` | `false` | Write product scripts into the bin directory. |
 | `root "true\|false"` | `true` | Whether [discovery](/concepts/projects#manifest-discovery) stops here. |
-| `cache-posix "<path>"` | platform default | Cache root on macOS and Linux. `~` and `$VAR` expand. |
-| `cache-win "<path>"` | platform default | Cache root on Windows. |
+| `cache-local "<path>"` | none | Project-local cache tree, relative to the manifest. Declaring it makes local the project's default. Requires envy 0.2.0. |
+| `cache-mode "local\|shared"` | implied by `cache-local` | Overrides that implication. Requires envy 0.2.0. |
+| `state-dir "<path>"` | manifest's directory | Where `envy cache --local/--shared` writes its marker. Requires envy 0.2.0. |
 | `schema "N"` | none | Manifest schema version. |
 
 Rules:
@@ -29,8 +30,15 @@ Rules:
 - The last occurrence of a key wins.
 - Unknown keys are ignored, which is what makes a newer manifest readable by an
   older envy.
-- A relative `cache-posix` or `cache-win` anchors to the manifest's directory,
-  never to your working directory.
+- `cache-local` and `state-dir` are relative literals anchored to the manifest's
+  directory, never to your working directory. No expansion of any kind: `..`, a
+  leading separator, a drive letter, `~`, `$VAR` and `%VAR%` are all rejected. An
+  absolute cache root is `ENVY_CACHE_ROOT`'s job. See
+  [The Cache](/concepts/cache#where-the-root-lives).
+- `cache-posix` and `cache-win` were removed in envy 0.2.0 and now raise an error
+  naming `cache-local`. Because an older envy ignores keys it does not know, the
+  bootstrap launchers refuse to run one older than 0.2.0 against a manifest using
+  the new directives, rather than let it silently pick the shared cache.
 - `sha256sums` without `version` is an error. A sums pin names one release, so it
   is meaningless when the version is resolved dynamically.
 - `@envy package-depot` was removed. It now raises an error telling you to

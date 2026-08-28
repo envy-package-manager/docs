@@ -72,9 +72,10 @@ One user-wide cache, shared by every project on the machine:
 | Linux | `$XDG_CACHE_HOME/envy`, or `~/.cache/envy` |
 | Windows | `%LOCALAPPDATA%\envy` |
 
-Override it with `ENVY_CACHE_ROOT`, `--cache-root`, or a manifest's
-`@envy cache-posix` and `@envy cache-win` directives. Deleting the cache is
-always safe. See [The Cache](/concepts/cache).
+Override it with `ENVY_CACHE_ROOT` or `--cache-root`. A project can also keep
+its packages inside its own tree with `@envy cache-local`, and you can switch
+either way per project with `envy cache --local` / `--shared`. Deleting the
+cache is always safe. See [The Cache](/concepts/cache).
 
 ## Supported platforms
 

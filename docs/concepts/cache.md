@@ -5,8 +5,11 @@ title: The Cache
 
 # The Cache
 
-One per-user store serves every project on the machine. It is content-addressed,
-safe under concurrent use, and always safe to delete.
+One content-addressed store, safe under concurrent use and always safe to delete.
+By default it is per-user and serves every project on the machine, so ten projects
+that want the same cmake install it once. A project can instead keep its packages
+inside its own tree, and you can override that choice per project — see
+[Where the root lives](#where-the-root-lives).
 
 Nothing outside the cache points into it by absolute path. Projects resolve paths
 through [`envy product`](../reference/cli/product.md) and
@@ -88,35 +91,134 @@ one that did not.
 
 ## Where the root lives
 
+There are two answers, and a project picks which one is its default.
+
+**Shared** is the user-wide store, and what you get when a manifest says nothing:
+
 | Platform | Default |
 | --- | --- |
 | macOS | `~/Library/Caches/envy` |
 | Linux | `$XDG_CACHE_HOME/envy`, or `~/.cache/envy` |
 | Windows | `%LOCALAPPDATA%\envy` |
 
-Precedence, highest first:
+**Local** is a tree inside the project, so deleting the project deletes every
+package it downloaded. A manifest asks for it by naming where the tree goes:
 
-1. `--cache-root <path>`
-2. `ENVY_CACHE_ROOT`
-3. The discovered manifest's `@envy cache-posix` or `@envy cache-win` directive.
-   A relative path anchors to the manifest's directory, never the working
-   directory.
-4. The platform default.
+```lua
+-- @envy cache-local "out/.envy"
+```
 
-envy reads that directive out of the manifest as text and never runs the
-manifest's Lua to get it, so a broken manifest above your working directory
-cannot break a cache lookup.
+Naming the tree is what turns local mode on — a `cache-local` that needed a
+second directive to take effect would sit in a manifest doing nothing. Point it
+at whatever directory your build already deletes, and `rm -rf out` becomes a
+complete teardown. If you want local mode but do not care where, omit it and
+envy uses `.envy/cache` beside the manifest.
 
-The most common reason to move it is CI, where the cache has to sit somewhere the
-runner's cache action can archive:
+### Picking the other one
+
+Whichever the project declares, you can override it for your own checkout:
+
+```console
+$ envy cache --local     # keep this project's packages inside the project
+$ envy cache --shared    # use the user-wide cache instead
+```
+
+That writes a zero-byte marker file next to the manifest — `.envy-cache-local`
+or `.envy-cache-shared` — and the marker outranks the manifest from then on. The
+marker exists only when your choice *differs* from what the project declares, so
+`envy cache --local` on a project that already defaults local just clears it.
+Both markers present at once is an error; envy never writes that state.
+
+`envy init` adds `.envy/` and `.envy-cache-*` to `.gitignore`, so a marker is
+yours alone and never travels in a commit.
+
+Two more directives exist for projects that need them:
+
+| Directive | Default | What it does |
+| --- | --- | --- |
+| `cache-local "<path>"` | — | Where the local tree goes. Declaring it makes local the project's default. |
+| `cache-mode "local"` / `"shared"` | implied by `cache-local` | Overrides that implication. Use `"shared"` to declare where `--local` *would* put the tree while still defaulting to the user-wide cache. |
+| `state-dir "<path>"` | the manifest's directory | Where the override markers live. |
+
+Point `state-dir` at your build directory and one `rm -rf` erases the cache and
+your mode choice together — at the cost that `envy cache --shared` no longer
+survives a clean. Left alone, the markers sit beside the manifest and a cache
+wipe cannot silently revert you.
+
+### The rules those paths follow
+
+`cache-local` and `state-dir` are **relative literals**: one or more path
+components, no `..`, no leading separator, no drive letter, and no `~`, `$VAR`
+or `%VAR%`. Nothing is expanded, on any platform. That is deliberate — the two
+bootstrap launchers and the envy binary each have to resolve the cache root
+independently, and a shell-expansion grammar is not something `bash` and
+`cmd.exe` can be made to agree on. One relative literal reads the same
+everywhere, which is also why there is a single `cache-local` rather than the
+per-platform `cache-posix`/`cache-win` pair it replaced.
+
+An absolute cache root is `ENVY_CACHE_ROOT`'s job, not a directive's.
+
+### Full precedence
+
+Highest first:
+
+1. `--cache-root <path>` or `ENVY_CACHE_ROOT`. Must be absolute.
+2. A `.envy-cache-local` / `.envy-cache-shared` marker in the state directory.
+3. `@envy cache-mode`.
+4. `@envy cache-local` being present at all, which means local.
+5. Otherwise shared: the platform default.
+
+Tiers 2–5 all resolve relative to the manifest's directory, never the working
+directory, so one manifest names one cache tree from wherever you run. envy reads
+the directives out of the manifest as text and never runs its Lua to get them, so
+a broken manifest above your working directory cannot break a cache lookup. Under
+`--cache-root` envy does not read a manifest at all.
+
+`envy cache` tells you which tier won:
+
+```console
+$ envy cache | head -1
+Cache: /Users/you/src/firmware/out/.envy  (@envy cache-local)
+```
+
+### The first time a tree is used
+
+Before any packages land, envy says where they are about to go:
+
+```console
+$ envy sync
+envy: caching packages in /Users/you/Library/Caches/envy
+        shared with your other envy projects; deleting this project will not remove them
+        keep them in this project instead: ./bin/envy cache --local
+```
+
+It is a notice, not a prompt — nothing blocks, and CI is unaffected. It stops
+once the tree holds packages and comes back after you delete it, so it is always
+telling you something true.
+
+### Moving it for CI
+
+The most common reason to override is CI, where the cache has to sit somewhere
+the runner's cache action can archive:
 
 ```yaml
 env:
   ENVY_CACHE_ROOT: ${{ github.workspace }}/.envy-cache
 ```
 
-See [GitHub Actions](../guides/integrations/github-actions.md) for the rest of
-that setup, including what to key the cache on.
+An environment variable is the right tool there: it is absolute, it applies to
+the whole job, and it leaves no marker behind in the checkout. See
+[GitHub Actions](../guides/integrations/github-actions.md) for the rest of that
+setup, including what to key the cache on.
+
+### Version requirement
+
+`cache-local`, `cache-mode` and `state-dir` require **envy 0.2.0 or newer**. An
+older envy ignores directives it does not know, so it would quietly use the
+shared cache for a project asking for a hermetic tree. Rather than let that
+happen silently, the bootstrap launchers and the re-exec path both refuse to run
+an envy older than 0.2.0 against a manifest using them. If your manifest pins an
+earlier `@envy version`, raise it.
 
 ## Guarantees
 
@@ -159,7 +261,7 @@ what is worth deleting:
 
 ```console
 $ envy cache
-Cache: /Users/you/Library/Caches/envy
+Cache: /Users/you/Library/Caches/envy  (default)
 
 Packages:
   envy.python@r1/darwin-arm64-blake3-f92708b498a20257  257.25MB
@@ -181,7 +283,7 @@ Other:
 Then delete whatever you no longer want, at whatever granularity:
 
 ```bash
-CACHE="$(envy cache | head -1 | cut -d' ' -f2)"
+CACHE="$(envy cache --root)"
 
 rm -rf "$CACHE/packages/envy.cmake@r0"   # one identity, every variant
 rm -rf "$CACHE/envy/0.1.9"               # an envy version nothing pins now

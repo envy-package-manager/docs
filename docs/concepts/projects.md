@@ -41,7 +41,9 @@ batch, and they read the directives as text to learn which envy to download.
 | `deploy "true\|false"` | no (default: off) | Whether `sync`/`deploy` write [product wrapper scripts](./environment/product-scripts.md) into the bin dir. |
 | `root "true\|false"` | no (default: true) | Superproject boundary. `false` means discovery keeps searching upward. See [discovery](#manifest-discovery). |
 | `mirror "<url>"` | no | Where to download envy releases from, `https://` or `s3://`. `ENVY_MIRROR` overrides it. |
-| `cache-posix "<path>"` / `cache-win "<path>"` | no | Cache-root override for this project, per platform family. Relative paths anchor to the manifest's directory. |
+| `cache-local "<path>"` | no | Keep this project's packages in a tree inside it, relative to the manifest. See [The Cache](./cache.md#where-the-root-lives). |
+| `cache-mode "local\|shared"` | no | Override what `cache-local`'s presence implies. |
+| `state-dir "<path>"` | no | Where `envy cache --local/--shared` records your override. |
 
 Header rules:
 
@@ -299,7 +301,7 @@ it is per-platform except where you say so:
 | Concern | Where it belongs |
 | --- | --- |
 | A package only some platforms need | `platforms = { "windows" }` on the entry, or `PLATFORMS` in the spec |
-| A different cache location per OS family | `@envy cache-posix` and `@envy cache-win` |
+| Packages kept inside the project rather than the user-wide cache | `@envy cache-local` |
 | A different interpreter for string verbs | [`DEFAULT_SHELL`](./shells.md), usually a function that branches on `envy.PLATFORM` |
 | A per-platform download URL or hash | inside the spec's `FETCH`, keyed on `envy.PLATFORM_ARCH` |
 
