@@ -47,8 +47,9 @@ and scripts use the explicit path.
   requires `version`. `bin` is REQUIRED and names the project bin dir. `mirror`
   sets the release mirror. `deploy "true"` enables product scripts. `root
   "true|false"` marks a superproject boundary, default true.
-  `cache-posix`/`cache-win` override the cache root. `schema` sets the schema
-  version.
+  `cache-local` puts the cache in a tree inside the project (`cache-mode` and
+  `state-dir` tune that; all three need envy 0.2.0, and `cache-posix`/`cache-win`
+  now error). `schema` sets the schema version.
 - spec = Lua file describing one package: `IDENTITY = "ns.name@rev"` required,
   where `@rev` versions the spec rather than the payload, and `local.*` means
   project-local. Package = installed instance keyed `(identity, options,
@@ -71,10 +72,12 @@ and scripts use the explicit path.
   permanently, which is the supported way to wrap several products or run a
   pre-step. `envy`/`envy.bat` are always restamped, never pruned. A filtered
   `sync` prunes marked wrappers outside the filtered subgraph.
-- cache: user-wide, content-addressed, shared across projects, safe to delete.
-  Root precedence: `--cache-root`, then `$ENVY_CACHE_ROOT`, then `@envy cache-*`,
-  then platform default (`~/Library/Caches/envy`, `$XDG_CACHE_HOME/envy`,
-  `%LOCALAPPDATA%\envy`).
+- cache: content-addressed, safe to delete; user-wide and shared across projects
+  by default, or a tree inside the project. Root precedence: `--cache-root` or
+  `$ENVY_CACHE_ROOT` (absolute), then a `.envy-cache-local`/`.envy-cache-shared`
+  marker from `envy cache --local/--shared`, then `@envy cache-mode`, then
+  `@envy cache-local` being present, then platform default
+  (`~/Library/Caches/envy`, `$XDG_CACHE_HOME/envy`, `%LOCALAPPDATA%\envy`).
 - reproducibility: no lockfile. Pins live in the manifest: `@envy version` plus
   `sha256sums`, per-source `sha256`, git `ref` as a full sha via
   `envy git-resolve <url> <ref>`. Unhashed fetches re-download every run.

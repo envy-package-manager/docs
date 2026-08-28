@@ -191,9 +191,10 @@ the next `sync`, and nothing outside the cache points into it except through
 
 **Moving the cache**
 
-Set `ENVY_CACHE_ROOT`, or `@envy cache-posix` and `@envy cache-win` for a
-project-specific location. Copying an existing cache to the new root is optional
-and only saves re-downloading.
+Set `ENVY_CACHE_ROOT` for an absolute location, or `envy cache --local` to move
+this project's packages into a tree inside it (`@envy cache-local` makes that the
+project's default). Copying an existing cache to the new root is optional and
+only saves re-downloading.
 
 **Network filesystems**
 

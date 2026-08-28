@@ -59,10 +59,13 @@ The variables are the same. Three details differ:
 
 Highest to lowest:
 
-1. `--cache-root` or `ENVY_CACHE_ROOT`, resolved against the current directory.
-2. `@envy cache-posix` or `@envy cache-win` in the manifest, resolved against the
-   manifest's directory. `~` and `$VAR` or `${VAR}` are expanded.
-3. The platform default.
+1. `--cache-root` or `ENVY_CACHE_ROOT`. Must be absolute.
+2. A `.envy-cache-local` or `.envy-cache-shared` marker written by
+   [`envy cache --local/--shared`](/reference/cli/cache).
+3. `@envy cache-mode` in the manifest.
+4. `@envy cache-local` being present at all, which means local. Relative to the
+   manifest's directory; nothing is expanded.
+5. The platform default.
 
 | Platform | Default |
 | --- | --- |
