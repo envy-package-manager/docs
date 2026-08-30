@@ -65,7 +65,30 @@ and scripts use the explicit path.
   product script (and `.bat` twin under `--platform all`). A fresh clone then
   runs `./bin/cmake` with nothing installed: the wrapper calls `bin/envy`, which
   downloads pinned envy, which installs the package. Wrappers resolve at call
-  time (`exec "$(envy product cmake)" "$@"`), so they never go stale.
+  time (`exec "$("$ENVY_SCRIPT_DIR/envy" product cmake)" "$@"`), so they never go
+  stale. Every wrapper also prepends its own bin dir to PATH (so a tool can shell
+  out to a sibling product) and exports `ENVY_PROJECT_ROOT`, stamped as a hop
+  relative to the bin dir, and only for a root manifest (`root "false"` leaves it
+  empty and the caller's value stands). The `.bat` twin needs `setlocal`, or PATH
+  and the product path leak into the calling cmd.exe and a sibling product
+  re-runs the first payload forever. Wrapper/bootstrap schema is `3`.
+- **manifest discovery**: walk up from an anchor. Precedence `--manifest <path>`
+  (no walk) > global `--project <dir>` > CWD. `--subproject` means "nearest to
+  where I stand", so it anchors on CWD even under `--project`, and stops at the
+  first `envy.lua` ignoring `@envy root`. `envy run` also infers an anchor from
+  `-- <script>` or a first arg naming an existing file; `--project` outranks
+  both. Bootstrap and wrapper scripts inject `--project <their own dir>` ahead of
+  your argv (option takes last value, so a typed one still wins), so a bin dir
+  decides its project and `../B/bin/uv run x.py` acts on B, not on your CWD.
+  Trace event `manifest_resolved{path,anchor,mode,nearest}`, `mode` one of
+  `explicit|project|cwd`; `run` emits none (execvp beats the trace drain).
+- `deploy` verifies the walk back: a **root** manifest whose `@envy bin` walks up
+  to a *different* `envy.lua` is a hard error (`..` in `@envy bin`, a `.git`
+  between, or a `--manifest` outside the bin dir's tree). Finding nothing, or a
+  manifest not named `envy.lua`, warns. `root "false"` opts out entirely, which
+  is what lets a superproject restamp a submodule's bin dir byte-identically.
+  `deploy` also warns when it stamps scripts from a version the manifest does not
+  pin (reachable only via dev build or `ENVY_NO_REEXEC`).
 - **ownership**: envy creates, updates, and prunes only bin-dir files containing
   the `envy-managed` marker (substring match). An unmarked file is skipped, or an
   error under `--strict`. Writing your own `bin/gn` therefore takes that name
@@ -78,6 +101,25 @@ and scripts use the explicit path.
   marker from `envy cache --local/--shared`, then `@envy cache-mode`, then
   `@envy cache-local` being present, then platform default
   (`~/Library/Caches/envy`, `$XDG_CACHE_HOME/envy`, `%LOCALAPPDATA%\envy`).
+  Layout `envy/<ver>/{envy,envy.lua}` + `envy/latest`, `packages/`, `specs/`,
+  `shell/`, `locks/`; entry key `identity/<platform>-<arch>-blake3-<hash>`.
+- **a local tree reads the user-wide one, never writes to it**. Launchers and
+  reexec try `<project cache>/envy/<ver>/envy`, then `<user-wide>/envy/<ver>/envy`.
+  The second is tried only for a LOCAL tree with **no** `@envy sha256sums` (the fast
+  path never re-hashes, and every other project writes that tree, so a pin must
+  stay the trust boundary). Never the reverse (a clone shipping its own
+  `envy/<ver>/envy` would be arbitrary code execution). A candidate that is not a
+  regular non-empty executable file is skipped, not exec'd. A borrowed binary
+  still self-deploys into the project's own tree, so a local cache stays
+  self-contained. `envy cache --local/--shared` deploys into the mode it is
+  *establishing*, not the one still recorded. `envy cache --user-wide-root`
+  prints that second root, as `--root` prints the first.
+- **shell hooks are user-wide only**. Hook root is `--cache-root`/
+  `$ENVY_CACHE_ROOT` else platform default; no project tier moves it, and a
+  local-cache project writes **no** hooks at all. `envy shell` says so instead of
+  suggesting a command that cannot produce them, and names a stale project-local
+  `shell/` an older envy left. Warns about cache relocation only under an
+  override.
 - reproducibility: no lockfile. Pins live in the manifest: `@envy version` plus
   `sha256sums`, per-source `sha256`, git `ref` as a full sha via
   `envy git-resolve <url> <ref>`. Unhashed fetches re-download every run.
@@ -88,16 +130,22 @@ First-class, not a port. Same manifest, same specs, same cache layout.
 
 - bootstrap `bin\envy.bat` (batch, parses the `@envy` header itself, walks up for
   the root manifest, honors `ENVY_CACHE_ROOT`/`ENVY_MIRROR`). Wrappers are
-  `bin\<tool>.bat`, using `%~dp0envy.bat product <name>` then
-  `call "%PRODUCT_PATH%" %*`, forwarding `%ERRORLEVEL%`.
+  `bin\<tool>.bat`, using `setlocal`, `set "PATH=%~dp0.;%PATH%"`,
+  `%~dp0envy.bat product <name>` then `call "%ENVY_PRODUCT_PATH%" %*`, forwarding
+  `%ERRORLEVEL%`. Plain `setlocal`, not `EnableDelayedExpansion`: a product path
+  containing `!` must survive.
 - `--platform posix|windows|all` on `init`/`sync`/`deploy` selects which script
   flavors get written, defaulting to the host. Bootstrap AND wrappers are
   per-flavor, so a plain `sync` on macOS does NOT restamp `envy.bat`. Use
   `--platform all` in a cross-platform repo. A host-only deploy does not prune
   the other flavor.
-- scripts are written LF on every platform, POSIX ones mode 755. `core.autocrlf`
-  rewriting them makes every deploy report "updated"; fix with `bin/** -text` in
-  `.gitattributes`.
+- product wrappers are written LF on every platform, POSIX ones mode 755. The
+  exception is `bin\envy.bat`, written **CRLF**: cmd.exe resolves `goto`/`call
+  :label` by seeking with offsets that assume CRLF, so an LF batch with labels
+  drifts a byte per line until the search walks past the label and no `@envy`
+  directive is parsed at all. Wrappers carry no labels and are unaffected.
+  `core.autocrlf` rewriting them makes every deploy report "updated"; fix with
+  `bin/** -text` in `.gitattributes`, which also preserves envy.bat's CRLF.
 - string verbs default to PowerShell, invoked
   `powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File <temp .ps1>`;
   cmd is `cmd.exe /D /V:ON /S /C <temp .cmd>`. POSIX gets `bash -e`, so fail-fast
@@ -152,6 +200,12 @@ define SETUP pairs, must not define FETCH/STAGE/BUILD/INSTALL), `EXPORTABLE`
   `source = { dependencies = {{spec=..., source=...}}, fetch = function(tmp_dir, opts) ... end }`.
   Fetch deps are fully installed before the dependent's spec is loaded. The
   fetch function commits a file named `spec.lua` via `envy.commit_fetch`.
+  `envy.product`/`envy.package` work inside a `source.fetch` function: entries
+  are wired with `needed_by = spec_fetch` before it runs. Every
+  `source.dependencies` entry must be **strong** (`spec` + `source`), and so must
+  everything in its transitive closure. The weak pass runs at a resolution
+  barrier after every spec_fetch, including that of the consumer still waiting,
+  so nothing weak can be ordered in time.
 - setup selection: manifest entry `setup = {"pair", ...}` opts into SETUP pairs.
   Nothing runs unselected, and the selection is not part of the cache key.
 - bundles: one fetched container of many specs.
@@ -164,13 +218,25 @@ define SETUP pairs, must not define FETCH/STAGE/BUILD/INSTALL), `EXPORTABLE`
 
 ## CLI
 
-`envy <cmd>`. Global flags `--verbose -q --trace[=sinks] --cache-root` go before
-the subcommand. stdout is machine-readable only, and human output goes to
-stderr.
+`envy <cmd>`. Global flags `--verbose -q --trace[=sinks] --cache-root --project`
+go before the subcommand (`envy sync --verbose` is a parse error). stdout is
+machine-readable only, and human output goes to stderr. `--project <dir>` is
+honored by every manifest-loading command: `sync install deploy product package
+run export import use cache shell`.
 
 - `sync [queries]`: install plus deploy product scripts. The main command.
 - `install [queries]`: install only.
-- `init <project-dir> <bin-dir>`: new project, manifest plus bootstrap scripts.
+- `deploy [queries] [--strict] [--platform ...]`: deploy product scripts only,
+  no installs. Prunes marked wrappers outside the resolved graph.
+- `init <project-dir> <bin-dir> [--envy-version X.Y.Z] [--mirror URL]
+  [--pin-sums] [--deploy=bool] [--root=bool] [--platform ...]`: new project,
+  manifest plus bootstrap scripts plus `.luarc.json`, and appends `.envy/` +
+  `.envy-cache-*` to `.gitignore` (only if `<project-dir>/.git` exists; skips
+  entries already present in any equivalent git spelling, `!` negation included).
+  `--envy-version` re-execs into that release so the pin, the script stamp, and
+  the extracted types all come from it; parent-side and stripped from the child's
+  argv, so releases predating the flag still work. Downloads it from `--mirror`.
+  A dev build (0.0.0) or `ENVY_NO_REEXEC` warns and stamps itself.
 - `product [name] [--json]`: resolve a product path. Naming one installs its
   provider; no name lists all; `--json` dumps every product as one object and
   computes paths WITHOUT installing, so `sync` first if the files must exist.
@@ -181,13 +247,22 @@ stderr.
 - `git-resolve <url> <ref>`: remote ref to full sha, for pinning.
 - `hash <paths>`: sha256 lines for depot indexes.
 - `export`, `import`, `merge-depot`: depot artifact publish and consume.
-- `fetch <src> <dst>`, `extract <archive> [dst]`, `hash <paths>`,
-  `git-resolve`, `lua <script>`: standalone utilities, no manifest or project
-  required. Transports and formats are compiled in: AWS SDK (so `s3://` works
-  with ambient credentials and no AWS CLI), libgit2 (no `git` binary),
-  libarchive (tar/gz/xz/bz2/zst/zip/7z/rar/iso). Package the AWS CLI only when a
-  project wants the CLI itself.
-- `cache`: show cache location and disk usage. Also `version`, `mirror-envy`.
+- `fetch <src> <dst>`, `extract <archive> [dst] [--only PATH|GLOB]...`,
+  `hash <paths>`, `git-resolve`, `lua <script>`: standalone utilities, no
+  manifest or project required. Transports and formats are compiled in: AWS SDK
+  (so `s3://` works with ambient credentials and no AWS CLI), libgit2 (no `git`
+  binary), libarchive (tar/gz/xz/bz2/zst/zip/7z/rar/iso). Package the AWS CLI
+  only when a project wants the CLI itself.
+- `cache [--root | --user-wide-root | --local | --shared]`: cache location and
+  disk usage; flags mutually exclusive, one action per invocation. Also
+  `version`, `mirror-envy`.
+- fetch retries: transport failures are retried (`connect`, `transfer`,
+  `timeout`, HTTP 5xx and 429; every other 4xx and any malformed-URL/local error
+  is fatal). Safe because fetches are idempotent GETs and payloads are
+  sha256-verified after transport. `ENVY_FETCH_ATTEMPTS` (default 3, clamp
+  1..10), `ENVY_FETCH_RETRY_BASE_MS` (default 1000, clamp 0..60000), backoff 1x
+  4x 16x jittered ±50%, capped 60s. `s3://` excluded (AWS SDK retries itself).
+  Trace event `download_retry{url,attempt,delay_ms,reason,error}`.
 - editor support: `init` writes `.luarc.json` with three platform cache paths and
   envy's LuaCATS type definitions on `workspace.library`; `sync`/`deploy` rewrite
   stale `envy/<semver>` entries and preserve everything else. Delete the file to
@@ -198,8 +273,11 @@ root "false"`, and the superproject imports it via
 `envy.loadenv("path.to.envy")` plus `envy.extend(PACKAGES, {...})`. Commands walk
 up to the root manifest, and `--subproject` stops at the nearest.
 
-Env vars: `ENVY_CACHE_ROOT`, `ENVY_MIRROR`, `ENVY_IGNORE_DEPOT`,
-`ENVY_PROJECT_ROOT` (set by envy), `ENVY_SHELL_HOOK_DISABLE`, `ENVY_NO_REEXEC`.
+Env vars read: `ENVY_CACHE_ROOT`, `ENVY_MIRROR`, `ENVY_IGNORE_DEPOT`,
+`ENVY_NO_REEXEC`, `ENVY_FETCH_ATTEMPTS`, `ENVY_FETCH_RETRY_BASE_MS`; hook-only
+`ENVY_SHELL_HOOK_DISABLE`, `ENVY_SHELL_NO_ENTER_EXIT_ANNOUNCE`,
+`ENVY_SHELL_NO_ICON`. Written: `ENVY_PROJECT_ROOT` and `PATH`, by `envy run`, the
+shell hook, and every deployed product script.
 
 Lua API in specs: `envy.run(script|{lines}, {quiet, check, capture, interactive,
 env, cwd, shell})`, `envy.fetch(src, {dest})`, `envy.commit_fetch`,

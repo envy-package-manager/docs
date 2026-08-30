@@ -9,8 +9,8 @@ Write, refresh, and prune the project's bin directory: one wrapper script per
 `script` product, plus the `envy` bootstrap scripts. This is the other half of
 [`sync`](./sync.md).
 
-`deploy` resolves the dependency graph but installs nothing. A wrapper is four
-lines of shell that calls `envy product <name>` at run time, so the package
+`deploy` resolves the dependency graph but installs nothing. A wrapper is a
+short shell script that calls `envy product <name>` at run time, so the package
 behind it installs on first use. That makes `deploy` cheap, and makes a
 committed bin directory enough to bootstrap a machine.
 
@@ -43,6 +43,36 @@ envy deploy [<identities>...] [--manifest=<path>] [--strict] [--subproject]
 Deployment also requires `@envy deploy "true"` in the manifest header. Without
 it, `deploy` refreshes the bootstrap scripts, warns that deployment is disabled,
 and writes no wrappers.
+
+`deploy` also warns when it stamps the bootstrap scripts from a version the
+manifest does not pin. The stamped script passes the binary options only its own
+generation accepts, and it execs whatever `@envy version` names, so the mismatch
+would leave every `./bin/envy` failing on an unrecognized option. It is only
+reachable where the re-exec is skipped: a dev build, or `ENVY_NO_REEXEC`.
+
+## Bin directory placement
+
+Everything `deploy` writes resolves its project by walking up from the bin
+directory, so `deploy` checks that the walk lands back on the manifest that owns
+it.
+
+| What the walk from `@envy bin` finds | Result |
+| --- | --- |
+| The manifest being deployed | Fine, the normal case. |
+| A **different** `envy.lua` | **Error.** Every script written there would hand out another project's tools. |
+| Nothing (a `.git` in between, or no manifest above) | Warning. Those scripts fail loudly at run time, naming the anchor. |
+| A manifest not named `envy.lua`, from `--manifest ci.lua` | Warning. Discovery only ever looks for `envy.lua`, so a variant manifest is invisible to the walk by construction. |
+
+The error names the three usual causes: a `.git` between the manifest and the
+bin directory, a `..` in `@envy bin`, or a `--manifest` outside the bin
+directory's own tree.
+
+`@envy root "false"` opts out of the check entirely. It *declares* that the walk
+continues past this manifest, so its bin directory resolving the enclosing
+project is the design. Nothing deployed into a non-root bin directory names its
+own tree, which is what lets a superproject checkout restamp a nested
+submodule's committed bin directory in place, byte for byte identically to a
+standalone clone.
 
 ## Examples
 

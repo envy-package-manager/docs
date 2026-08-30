@@ -105,6 +105,25 @@ That is available on [`sync`](../reference/cli/sync.md),
 [`deploy`](../reference/cli/deploy.md), and [`use`](../reference/cli/use.md).
 `--manifest <path>` names one outright from anywhere.
 
+The global `--project <dir>` starts the walk somewhere other than your current
+directory, so you can act on the superproject from outside the tree without a
+`cd`:
+
+```console
+$ envy --project ~/src/monorepo/libs/common sync   # syncs the superproject
+```
+
+The walk still climbs to the root from there, so that is the same project
+`--project ~/src/monorepo` names. To target the component itself from outside,
+use `--manifest libs/common/envy.lua`, because `--subproject` deliberately
+ignores `--project`: "nearest to where I stand" is defined against your working
+directory, not an anchor someone passed in.
+
+This is also why running a component's committed `libs/common/bin/envy` from any
+directory acts on that component's enclosing project. Those scripts inject
+`--project` with their own directory. See
+[Manifest discovery](/concepts/projects#where-the-walk-starts).
+
 ## The deliberate hole
 
 A useful pattern: the shared component omits a package on purpose, so each

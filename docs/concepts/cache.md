@@ -32,7 +32,7 @@ deleted, moved, or rebuilt without touching a single project.
 │       └── darwin-arm64-blake3-49a9b2620de8c380/
 │           ├── envy-complete
 │           └── pkg/      # the installed package
-├── shell/
+├── shell/                    # user-wide tree only, never a project-local one
 │   ├── hook.bash
 │   ├── hook.zsh
 │   ├── hook.fish
@@ -68,7 +68,9 @@ Two of those are worth a note:
   ```
 
   So the hook your profile sources keeps up with envy without you editing
-  anything.
+  anything. `shell/` exists only in the user-wide tree. A project on its own
+  cache tree writes no hooks at all, for the reasons in
+  [Shell Hooks](./environment/shell-hooks.md#hooks-are-a-user-wide-feature).
 
 ## Content addressing
 
@@ -131,6 +133,51 @@ Both markers present at once is an error; envy never writes that state.
 
 `envy init` adds `.envy/` and `.envy-cache-*` to `.gitignore`, so a marker is
 yours alone and never travels in a commit.
+
+`envy cache --local` and `--shared` deploy envy into the tree the project is
+about to use, not the one still recorded, so switching a fresh clone to the
+shared cache costs no download when you already have that version.
+
+### A local tree reads the user-wide one
+
+A local tree never writes outside the project, which is the whole point of
+asking for one. It does *read* the user-wide tree for exactly one thing: an envy
+binary of the pinned version that is already sitting there. A version-pinned
+envy is the same bytes in every project, so re-downloading it per checkout is
+pure waste.
+
+The bootstrap scripts and the re-exec path try candidates in this order:
+
+1. `<this project's cache>/envy/<version>/envy`
+2. `<user-wide cache>/envy/<version>/envy`, only for a local tree, and only when
+   the manifest has no `@envy sha256sums`
+
+A candidate that is not a regular, non-empty, executable file is skipped rather
+than run. If neither exists, envy is downloaded to a temp directory and exec'd
+from there.
+
+Three properties are worth knowing:
+
+- **It is read-only.** The binary that ends up running still self-deploys into
+  the project's own tree, so a populated local cache stays runnable after being
+  tarred to a machine with no user-wide cache at all.
+- **A sums pin turns it off.** The lock-free fast path never re-hashes what it
+  finds, and every other project on the machine writes to the user-wide tree, so
+  a project that pins `@envy sha256sums` must not run bytes it never attested.
+  It downloads instead.
+- **It never goes the other way.** A project on the shared cache does not look
+  inside a project-local tree. A hostile clone shipping its own
+  `envy/<version>/envy` would otherwise be arbitrary code execution on the first
+  run.
+
+Everything a local run *writes* stays inside the project: package entries, spec
+entries, `envy/`, `envy/latest`, and `locks/`. Shell hooks are not written at
+all. `envy cache --shared` is the one command that writes to the user-wide tree
+on a local project's behalf, and only because it is the command that stops the
+project being local.
+
+[`envy cache --user-wide-root`](../reference/cli/cache.md) prints the second
+tree, the way `--root` prints the first.
 
 Two more directives exist for projects that need them:
 

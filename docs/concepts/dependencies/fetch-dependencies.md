@@ -125,10 +125,32 @@ mechanism changes. Two things about the fetch function do:
   Compare `needed_by = "fetch"`, which gates payload fetching only.
 - **`source.dependencies` requires `source.fetch`.** If nothing custom runs, the
   tool was not needed.
-- **Strong references only** for anything a fetch function resolves by name. A
-  fetch dependency with its own `spec` and `source` is wired before the fetch
-  runs. A bare product query or a weak reference is deferred to the resolution
-  pass, which runs after the graph is discovered and is therefore too late.
+- **Strong references only, through the whole closure.** Every
+  `source.dependencies` entry needs its own `spec` and `source`:
+
+  ```text
+  error: source.dependencies entry 'tools.jf@r1' in spec 'corp.sdk@r1' must be a
+         strong reference
+  ```
+
+  The rule extends transitively. A fetch dependency and everything it pulls in
+  run their phase ladders *during* resolution, so nothing in that closure may
+  hold an unresolved weak reference either:
+
+  ```text
+  error: source.dependencies closure must use strong dependencies: 'corp.tls@r1'
+         holds a weak reference to 'openssl' but runs outside the window where
+         weak references resolve
+  ```
+
+  The weak pass runs at a resolution barrier, after every spec fetch, including
+  the one still waiting on this function. There is no point at which a weak
+  reference could be ordered in time. The same applies to the
+  [`PACKAGE_DEPOTS`](/concepts/depots) and
+  [`DEFAULT_SHELL`](/concepts/shells) closures, which run in the same window.
+- **Products work inside the fetch function.** `source.dependencies` entries are
+  wired with `needed_by = spec_fetch` before it runs, so
+  `envy.product("jf")` and `envy.package(identity)` resolve there.
 - **Chains work.** A fetch dependency's own spec can have fetch dependencies, and
   bootstrap chains resolve bottom-up.
 - **Cycles are detected** among fetch dependencies and reported.

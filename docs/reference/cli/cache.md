@@ -18,13 +18,14 @@ That can be one package entry, a whole identity, or the entire root. The next
 ## Usage
 
 ```
-envy cache [--root | --local | --shared]
+envy cache [--root | --user-wide-root | --local | --shared]
 ```
 
 | Flag | Effect |
 | --- | --- |
 | *(none)* | Print the usage report, with the winning precedence tier named. |
 | `--root` | Print the resolved cache root and nothing else. No disk scan. |
+| `--user-wide-root` | Print the user-wide cache root and nothing else. That is the tree a project-local checkout reads to find an already-downloaded envy binary, and the only place [shell hooks](/concepts/environment/shell-hooks) live. |
 | `--local` | Use this project's own tree from now on. |
 | `--shared` | Use the user-wide cache from now on. |
 
@@ -51,6 +52,20 @@ Cache: /Users/you/src/firmware/out/.envy  (@envy cache-local)
 The suffix is one of `(--cache-root/ENVY_CACHE_ROOT)`, `(recorded by 'envy
 cache')`, `(@envy cache-mode)`, `(@envy cache-local)`, or `(default)`.
 
+`--user-wide-root` answers the other question, which only differs for a project
+on its own tree:
+
+```console
+$ envy cache --root
+/Users/you/src/firmware/out/.envy
+$ envy cache --user-wide-root
+/Users/you/Library/Caches/envy
+```
+
+A local project reads the second tree for one thing, an envy binary it would
+otherwise re-download, and never writes to it. See
+[The Cache](/concepts/cache#a-local-tree-reads-the-user-wide-one).
+
 ### Changing the mode
 
 `--local` and `--shared` record your choice as a zero-byte marker file beside the
@@ -69,6 +84,11 @@ an existing tree: relocating a multi-GB cache is slow and would race any other
 envy process holding a lock, so the old root is named and deleting it is your
 call. Both need a discoverable manifest, and they honor `--project` like every
 other manifest-aware command.
+
+Both also deploy envy into the tree the project is *about* to use rather than
+the one still recorded, so `envy cache --shared` on a fresh clone costs no
+download when you already have that version, and leaves no binary behind in the
+tree it is abandoning.
 
 ### Precedence
 

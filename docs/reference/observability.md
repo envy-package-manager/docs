@@ -141,6 +141,7 @@ version.
 | `phase_unblocked` | `unblocked_at_phase`, `dependency` |
 | `target_extended` | `old_target`, `new_target` |
 | `pkg_outcome` | `outcome`, `duration_ms`. Terminal result, one of `cache_hit`, `imported`, `installed`, `setup_complete`, `bundle_fetched`, `bundle_local`. |
+| `manifest_resolved` | `path`, `anchor`, `mode`, `nearest`. Which project the command decided it was operating on. `mode` is `explicit` (`--manifest`), `project` (`--project`), or `cwd`; `anchor` is the directory the walk started from, empty for an explicit path; `nearest` is `--subproject`. [`envy run`](./cli/run.md) emits nothing, because it replaces its own process before the trace drains. |
 
 **Cache and locking**
 
@@ -175,6 +176,7 @@ version.
 | `download_start` | `url`, `destination` |
 | `download_complete` | `url`, `bytes`, `duration_ms` |
 | `download_failed` | `url`, `error` |
+| `download_retry` | `url`, `attempt` (1-based, the attempt that failed), `delay_ms`, `reason`, `error`. `reason` is the transport classification: `connect`, `transfer`, `timeout`, or `http_status`. |
 | `download_skipped` | `url`, `reason` |
 | `git_resolve` | `url`, `ref`, `sha`, `method`, either `sha` or `ls-remote` |
 | `extract_start` | `archive`, `destination`, `strip_components` |

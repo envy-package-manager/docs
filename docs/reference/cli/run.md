@@ -44,8 +44,9 @@ envy run -- <script-path> [args...]
 | --- | --- |
 | `PATH` | The manifest's `@envy bin` directory, prepended. A missing `@envy bin`, or a bin directory that does not exist, is an error. |
 | `ENVY_PROJECT_ROOT` | The governing manifest's directory. |
-| Discovery | Anchored at the first argument's directory if that argument is an existing file, otherwise at the current directory. `--` forces the anchor to the path that follows it. |
+| Discovery | Anchored at the first argument's directory if that argument is an existing file, otherwise at the current directory. `--` forces the anchor to the path that follows it. A global `--project <dir>` outranks both. |
 | Flags | None of its own. `envy run --verbose make` passes `--verbose` to `make`. [Global flags](./index.md#global-flags) go before `run`. |
+| Tracing | `run` emits no `manifest_resolved` event: it replaces its own process with the child before the trace drains. What it resolved is visible in the child's `PATH`. |
 | Installs | Nothing directly. Whatever the child asks envy for is installed then. |
 | Exit code | Whatever the child returned. |
 
