@@ -9,19 +9,46 @@ The default way to reach a project's tools. `envy sync` deploys one small
 wrapper script per executable [product](/concepts/specs/products) into the
 project's bin directory, so `./bin/cmake` runs the cmake the manifest pins.
 
-A wrapper is four lines, and it resolves the product when called rather than
+A wrapper is a short script, and it resolves the product when called rather than
 when it was written:
 
 ```bash title="bin/cmake"
 #!/usr/bin/env bash
-# envy-managed schema "1"
-SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-exec "$("$SCRIPT_DIR/envy" product "cmake")" "$@"
+# envy-managed schema "3"
+ENVY_SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+export PATH="$ENVY_SCRIPT_DIR:$PATH"
+ENVY_PROJECT_ROOT_HOP=".."
+if [[ -n "$ENVY_PROJECT_ROOT_HOP" ]]; then
+    ENVY_PROJECT_ROOT="$(cd -P "$ENVY_SCRIPT_DIR/$ENVY_PROJECT_ROOT_HOP" && pwd -P)"
+    export ENVY_PROJECT_ROOT
+fi
+ENVY_PRODUCT="$("$ENVY_SCRIPT_DIR/envy" product "cmake")" || exit $?
+if [[ -z "$ENVY_PRODUCT" ]]; then
+    echo "envy: failed to resolve product 'cmake'" >&2
+    exit 1
+fi
+exec "$ENVY_PRODUCT" "$@"
 ```
 
 Because resolution happens at call time, wrappers never go stale. Change a
 version in the manifest, run `sync`, and the same wrapper runs the new tool. The
 first call on a fresh machine installs the package.
+
+Three details in that script are worth naming:
+
+- **Its own bin directory goes on `PATH`**, so a tool that shells out to a
+  sibling product finds it.
+- **`ENVY_PROJECT_ROOT` is stamped as a hop relative to the bin directory**, not
+  as an absolute path, so a moved or re-cloned tree still resolves. It is
+  stamped only for a root manifest. Under `@envy root "false"` the project
+  depends on where the tree is nested, no deploy-time constant is right in every
+  checkout, and the hop is left empty so the caller's value stands.
+- **`bin/envy` is called by path, and it injects `--project` with that
+  directory.** So the wrapper acts on the project it was deployed into rather
+  than on whichever project the caller happens to be standing in. Every variable
+  is `ENVY_`-prefixed because the script `exec`s its payload, and a plain
+  `SCRIPT_DIR` would leak into everything below it. See
+  [Manifest discovery](/concepts/projects#a-bin-directory-decides-its-own-project).
 
 Deployment needs `@envy deploy "true"` in the manifest header, and `@envy bin`
 names the directory. `--platform posix|windows|all` picks which flavors get
@@ -54,18 +81,32 @@ Each wrapper has a `.bat` counterpart that does the same job through `cmd`:
 
 ```bat title="bin\cmake.bat"
 @echo off
-rem envy-managed schema "1"
-for /f "delims=" %%i in ('call "%~dp0envy.bat" product "cmake"') do set "PRODUCT_PATH=%%i"
-if not defined PRODUCT_PATH (
+rem envy-managed schema "3"
+setlocal
+set "PATH=%~dp0.;%PATH%"
+set "ENVY_PROJECT_ROOT_HOP=.."
+if defined ENVY_PROJECT_ROOT_HOP (
+    for %%I in ("%~dp0%ENVY_PROJECT_ROOT_HOP%") do set "ENVY_PROJECT_ROOT=%%~fI"
+)
+set "ENVY_PRODUCT_PATH="
+for /f "delims=" %%i in ('call "%~dp0envy.bat" product "cmake"') do set "ENVY_PRODUCT_PATH=%%i"
+if not defined ENVY_PRODUCT_PATH (
     echo envy: failed to resolve product 'cmake' 1>&2
     exit /b 1
 )
-call "%PRODUCT_PATH%" %*
+call "%ENVY_PRODUCT_PATH%" %*
 exit /b %ERRORLEVEL%
 ```
 
 `%~dp0` is the script's own directory, so it finds `envy.bat` beside itself the
 way the POSIX wrapper finds `envy`. The exit code is forwarded.
+
+`setlocal` is not optional here. Without it the `set` calls mutate the *caller's*
+environment: `PATH` would grow a copy of the bin directory per invocation, and a
+sibling product reached through that `PATH` would inherit this script's
+`ENVY_PRODUCT_PATH`, pass the guard, and re-run this payload forever. It is plain
+`setlocal` rather than `EnableDelayedExpansion` so a product path containing `!`
+survives.
 
 Deploy both flavors from whatever machine you are on:
 
@@ -140,28 +181,35 @@ Two things to know:
 
 ## Line endings and file modes
 
-envy writes every script with LF endings on every platform, and gives POSIX
-scripts mode 755. Both matter to Git:
+envy writes product wrappers with LF endings on every platform, and gives POSIX
+scripts mode 755. The one exception is the `bin\envy.bat` bootstrap script,
+which is written CRLF: `cmd.exe` resolves `goto` and `call :label` by seeking
+through the file and computes those offsets as if every line ended CRLF, so an
+LF-only batch with labels drifts a byte per line until the search walks past the
+label. Product wrappers carry no labels and are unaffected.
+
+Both matter to Git:
 
 - The POSIX bootstrap and wrappers need the executable bit. `git ls-files
   --stage bin/envy` should show `100755`.
 - Git line-ending conversion fights envy. Check out a repo with
-  `core.autocrlf=true` and the `.bat` files arrive as CRLF, which envy sees as
-  changed content and rewrites on the next deploy:
+  `core.autocrlf=true` and the wrapper `.bat` files arrive as CRLF, which envy
+  sees as changed content and rewrites on the next deploy:
 
   ```console
   $ envy deploy --platform all
   deploy: 8 product script(s) (0 created, 1 updated, 7 unchanged, 0 removed)
   ```
 
-  That churn is harmless but noisy. Turn conversion off for the directory:
+  That churn is harmless but noisy. Turn conversion off for the directory, which
+  also keeps `bin\envy.bat` at the CRLF it needs:
 
   ```text title=".gitattributes"
   bin/** -text
   ```
 
-LF `.bat` files work in `cmd.exe`. envy generates them that way on purpose, so
-the same bytes are correct in the repo whichever platform wrote them.
+LF `.bat` wrappers work in `cmd.exe`. envy generates them that way on purpose,
+so the same bytes are correct in the repo whichever platform wrote them.
 
 ## What gets no script
 

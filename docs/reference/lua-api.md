@@ -119,6 +119,19 @@ envy.abspath(relative_path)  -- absolute, anchored at the calling file
 produce backslashes on Windows. Build every path with these rather than
 concatenating `"/"`, and a spec works on all three platforms unchanged.
 
+Every path envy hands a spec is native throughout: phase arguments,
+`envy.package`, `envy.product`, `envy.path.*`, `envy.abspath`, and a depot fetch
+function's `ctx.tmp_dir` and `ctx.deps`. envy assembles those from a cache root,
+manifest text, and Lua fragments, any of which may be spelled either way, so
+joining alone would yield `C:/cache/pkg\file`. Two APIs naming the same location
+always agree on spelling, so a product path and the same file reached through
+`envy.package` compare equal rather than differing by a separator.
+
+The exception is archive entry paths, which stay forward-slash on every
+platform. That is `envy.extract`'s and `envy.extract_all`'s `only` patterns, and
+[`envy extract --only`](./cli/extract.md), matching the archive formats
+themselves.
+
 `envy.abspath` is what lets a manifest name a sibling file without caring about
 your working directory:
 
@@ -281,11 +294,33 @@ BUILD = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
 end
 ```
 
+The name resolves either from an explicit `product =` on a dependency entry or,
+failing that, from the project-wide product registry. Either way a dependency
+edge is required, and its `needed_by` must already have been reached. The edge is
+what drove the provider through install; the registry only answers who provides
+the name. A provider you reach only transitively is refused.
+
 Undeclared access is an error naming both sides:
 
 ```text
 envy.product: pkg 'local.user@r1' does not declare product dependency on 'nope_txt'
 ```
+
+It also works inside a `source.fetch` function. `source.dependencies` entries are
+wired with `needed_by = spec_fetch` before the fetch runs, so their products are
+readable there:
+
+```lua
+source = {
+  dependencies = { { spec = "tools.jfrog-cli@r1", source = "jfrog.lua" } },
+  fetch = function(tmp_dir)
+    envy.run(envy.product("jf") .. " rt dl specs/ " .. tmp_dir)
+  end,
+}
+```
+
+See [Fetch Dependencies](/concepts/dependencies/fetch-dependencies) for the
+strong-reference rule that comes with it.
 
 ### `envy.package(identity)`
 

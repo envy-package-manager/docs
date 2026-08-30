@@ -16,16 +16,23 @@ of these.
 | `ENVY_MIRROR` | Where to download envy releases from. Overrides the `@envy mirror` directive. `https://` and `s3://` both work. |
 | `ENVY_IGNORE_DEPOT` | Set to skip [depot](/concepts/depots) lookups and build from source. Same as `--ignore-depot`, honored by `sync`, `install`, `package`, and `export`. |
 | `ENVY_NO_REEXEC` | Set to stop envy from re-executing into the version the manifest pins. Debugging only. |
+| `ENVY_FETCH_ATTEMPTS` | How many times a transient download failure is retried, counting the first try. Default 3, clamped to 1 through 10. See [retries](#download-retries). |
+| `ENVY_FETCH_RETRY_BASE_MS` | Base backoff between those attempts, in milliseconds. Default 1000, clamped to 0 through 60000. `0` disables the wait. |
+
+Both fetch knobs are read once per process. They exist for CI and for tests that
+cannot afford real backoff.
 
 ## Written by envy
 
 | Variable | Set by | Value |
 | --- | --- | --- |
-| `ENVY_PROJECT_ROOT` | [`envy run`](./cli/run.md) and the [shell hook](/concepts/environment/shell-hooks) | The governing manifest's directory. |
-| `PATH` | `envy run` and the shell hook | The project's bin directory, prepended. |
+| `ENVY_PROJECT_ROOT` | [`envy run`](./cli/run.md), the [shell hook](/concepts/environment/shell-hooks), and each deployed [product script](/concepts/environment/product-scripts) | The governing manifest's directory. A product script stamps it as a hop relative to its own bin directory, and only for a root manifest. |
+| `PATH` | `envy run`, the shell hook, and each deployed product script | The project's bin directory, prepended. |
 
 `envy run` sets both for the child process only. The shell hook sets both in your
-interactive shell and undoes them when you leave the project.
+interactive shell and undoes them when you leave the project. A product script
+sets them for the tool it execs, so a tool that shells out to a sibling product
+finds it.
 
 Nothing else is injected. A phase's `envy.run` inherits the ambient environment,
 plus whatever you pass in `opts.env`.
@@ -82,6 +89,27 @@ cache tree.
 1. `ENVY_MIRROR`
 2. `@envy mirror` in the manifest
 3. GitHub releases
+
+## Download retries
+
+A download that dies on the transport is retried rather than failing the run:
+DNS, connect, or TLS failures, a connection that dies mid-body, a stall below
+the minimum transfer rate, and HTTP 5xx or 429. Every other 4xx is a statement
+about the request that a replay will not change, and a malformed URL or a local
+filesystem failure is fatal immediately.
+
+Retrying is safe because everything envy fetches is an idempotent GET and every
+payload is verified against its `sha256` after transport, so a replay cannot
+launder bad bytes.
+
+Backoff is exponential and jittered: 1x, 4x, then 16x `ENVY_FETCH_RETRY_BASE_MS`,
+capped at 60 seconds, each spread over plus or minus 50%. envy runs a thread per
+request, so without the jitter a batch that all failed against one bad mirror
+would march back onto it in lockstep. `s3://` sources are not retried here,
+because the AWS SDK already retries internally.
+
+Each retry is a `download_retry` [trace event](./observability.md), and shows up
+under `--verbose` as `fetch: attempt N of M failed`.
 
 ## Variables envy respects indirectly
 
