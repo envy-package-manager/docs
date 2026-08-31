@@ -36,3 +36,7 @@ for name in "${names[@]}"; do
   rm -f "$capped"
   printf '%-26s %s\n' "$out/$name.svg" "$(du -h "$out/$name.svg" | cut -f1)"
 done
+
+# Always regenerated from every SVG present, not just the ones rendered above,
+# so a partial re-render cannot leave a stale entry behind.
+python3 dimensions.py "$out" ../src/components/Screencast/dimensions.json

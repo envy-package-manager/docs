@@ -13,6 +13,7 @@ hide_table_of_contents: true
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import Screencast from '@site/src/components/Screencast';
 
 {/* Referenced as a URL rather than imported as a component: this SVG carries an
     internal <style> block whose class selectors (.b, .c, ...) would leak into the
@@ -28,18 +29,16 @@ import TabItem from '@theme/TabItem';
 </div>
 
 {/* A real session, recorded by screencasts/record.sh and rendered by
-    screencasts/render.sh. Referenced as a URL rather than imported for the same
-    reason the mascot is: the file carries an internal <style> block whose
-    single-letter class selectors would leak into the page if svgr inlined it. */}
-<p align="center">
-  <img
-    className="screencast"
-    src={useBaseUrl('/screencasts/hero.svg')}
-    alt="A terminal session. cmake is not installed. Entering a project directory
-         and running cmake --version downloads envy, installs cmake, and runs it.
-         The second run is instant. Leaving the directory takes cmake away again."
-  />
-</p>
+    screencasts/render.sh. <Screencast> references it as a URL rather than
+    importing it, for the same reason the mascot is a URL: the file carries an
+    internal <style> block whose single-letter class selectors would leak into
+    the page if svgr inlined it. */}
+<Screencast
+  name="hero"
+  alt="A terminal session. cmake is not installed. Entering a project directory
+       and running cmake --version downloads envy, installs cmake, and runs it.
+       The second run is instant. Leaving the directory takes cmake away again."
+/>
 
 envy is an **unopinionated**, **hermetic**, **per-project**, **serverless**
 package manager.
@@ -78,9 +77,8 @@ of them touched. Switching between them is a `cd`, because the
 [shell hook](/getting-started/shell-integration) puts each project's bin
 directory on `PATH` as you arrive.
 
-<img
-  className="screencast"
-  src={useBaseUrl('/screencasts/per-project.svg')}
+<Screencast
+  name="per-project"
   alt="A terminal session. python3 -V prints the system Python, then a different
        version inside each of two project directories, then the system one again
        after leaving."
@@ -94,9 +92,8 @@ That build needs cmake and ninja, which are not installed either, and the spec
 says so in the one line `DEPENDENCIES` reveals. envy installs them first and
 hands their paths to the build.
 
-<img
-  className="screencast"
-  src={useBaseUrl('/screencasts/from-source.svg')}
+<Screencast
+  name="from-source"
   alt="A terminal session. brotli is not installed. envy sync downloads cmake and
        ninja, streams the brotli build log, and brotli --version then works."
 />
@@ -110,9 +107,8 @@ downloads and verifies them instead. A depot is a directory of archives and one
 index file on any web server, which is why the one in this recording is
 `python3 -m http.server`.
 
-<img
-  className="screencast"
-  src={useBaseUrl('/screencasts/depot.svg')}
+<Screencast
+  name="depot"
   alt="A terminal session. The depot index is three lines of sha256 and URL. envy
        sync reports each package as imported from depot instead of built."
 />
@@ -125,9 +121,8 @@ unpack five files out of it. There is no manifest, no project, and nothing
 installed to help: git, TLS, and the archive formats are all
 [compiled into the one binary](#a-standalone-toolbox).
 
-<img
-  className="screencast"
-  src={useBaseUrl('/screencasts/toolbox.svg')}
+<Screencast
+  name="toolbox"
   alt="A terminal session running envy git-resolve, envy fetch with a progress
        bar, envy hash, and envy extract with a glob, none of them inside a
        project."
@@ -141,15 +136,27 @@ installed to help: git, TLS, and the archive formats are all
 One job: give a project the tools it declares, on any machine, without disturbing
 anything else on it.
 
+**Attestable end to end, as far as you want it.** Every link in the chain can be
+pinned by content hash, envy's own binary included. The committed bootstrap
+script verifies the release against `@envy sha256sums` before it runs anything,
+a [bundle](/concepts/dependencies/bundles) from git requires a full commit
+sha, a
+[spec](/concepts/specs) carries a `sha256` or a commit sha of its own, and each
+spec's downloads are pinned in its fingerprint table. Pinning is per link, so a
+project tightens it as far as it needs and no further.
+[Supply-chain resilience](#supply-chain-resilience) has the whole chain.
+
 **Not a system package manager.** Homebrew and apt own one global set of packages
 and are built around moving you forward. envy never updates anything. A version
 is an option in a manifest, changed by editing that manifest. There is no
 `envy upgrade` and no "outdated".
 
-**Not Nix.** One executable, no daemon, no store to initialize, nothing needing
-root. The same binary and manifest work on macOS, Linux, and Windows, a real
-target rather than a WSL footnote. Packages are ordinary directories, so anything
-that takes a path can use them.
+**Alongside Nix.** Nix takes on a larger problem than envy does and takes it on
+thoroughly. envy's scope is one project's tools, and it stays small enough to
+commit: a single executable, one bootstrap script, no daemon, no store to
+initialize, nothing that needs root. macOS, Linux, and Windows are all
+first-class, running the same binary against the same manifest. Packages are
+ordinary directories, so anything that takes a path can use them.
 
 **Not Hermit.** envy takes Hermit's best idea, the committed bootstrap script,
 but a Hermit package is a descriptor while an envy [spec](/concepts/specs) is a

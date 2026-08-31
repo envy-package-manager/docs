@@ -83,17 +83,68 @@
    120 columns wide, and letting each render at its own pixel width would step
    the column of demos in and out as you switch tabs.
 
-   Two selectors because there are two ways one gets onto a page. `.screencast`
-   is what the MDX call sites set. A markdown image cannot set a class, and
-   Docusaurus rewrites its src through webpack into a hashed asset path, so
-   there is nothing in the src left to match on either -- hence "every image in
-   a doc body that is not the mascot", which is exactly the screencasts. */
-.screencast,
-.markdown img:not(.hero-splash__mascot) {
+   Two kinds of call site. `<Screencast>` wraps its image in a frame that holds
+   the aspect ratio open while the SVG loads. A markdown image cannot do that
+   and does not need to: Docusaurus rewrites its src through webpack and emits
+   width and height, so the browser reserves the box from the attributes. It
+   also cannot carry a class, and the rewritten src has nothing left to match
+   on, hence "every image in a doc body that is not the mascot or already inside
+   a frame", which is exactly the markdown-authored screencasts. */
+.screencast-frame,
+.markdown img:not(.hero-splash__mascot):not(.screencast) {
   display: block;
   width: 100%;
-  height: auto;
   margin: 0 auto;
   border-radius: 8px;
   box-shadow: 0 2px 14px rgb(0 0 0 / 22%);
+}
+
+/* The reserved box, sized by an inline aspect-ratio the component computes from
+   the SVG's own dimensions. Its background is the terminal's own, so what shows
+   before the recording arrives reads as an unlit terminal rather than a hole in
+   the page. */
+.screencast-frame {
+  position: relative;
+  overflow: hidden;
+  background-color: #282d35;
+}
+
+.screencast {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: inherit;
+}
+
+.screencast-frame__loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7em;
+  font-size: 0.9rem;
+  color: #6f7783;
+}
+
+.screencast-frame__loading::before {
+  content: '';
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: screencast-spin 0.8s linear infinite;
+}
+
+@keyframes screencast-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screencast-frame__loading::before {
+    animation-duration: 2.4s;
+  }
 }
