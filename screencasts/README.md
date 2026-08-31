@@ -102,6 +102,14 @@ always `~/work/<project>` and no path off the recording machine appears. It uses
 the pinned envy release from `.tools/`, never a local build, so what the
 recordings show is what a reader would get.
 
+`demo_cold_cache` empties the cache directories rather than removing them, for
+the same reason. envy prints a one-time "caching packages in `<path>`" notice
+when `<root>/packages` is missing, and the path it would name here is this
+machine's throwaway `/tmp` tree. An empty `packages/` is still a cold cache, so
+the recordings stay honest without putting that path on screen. A reader running
+these steps on a machine that has never run envy will see the notice; nothing
+else differs.
+
 ## Pinned versions
 
 `lib/common.sh` pins the envy release the demo projects use and the
