@@ -100,8 +100,10 @@ To enable envy autocompletion, add the following to workspace.library:
   "${env:USERPROFILE}/AppData/Local/envy/envy/0.1.10"
 ```
 
-If your project sets a custom cache root with `@envy cache-posix` or
-`@envy cache-win`, the generated paths follow it.
+The generated list covers both the project-local tree and every platform
+default, because `.luarc.json` is committed and has to resolve on a machine that
+chose either one. If your project sets `@envy cache-local`, that entry replaces
+the default local path.
 
 ## Globals
 

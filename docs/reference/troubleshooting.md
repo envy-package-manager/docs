@@ -38,11 +38,12 @@ a dynamically resolved version. Add the version or drop the pin.
 **No manifest**
 
 ```text
-error: manifest not found (discovery failed)
+error: manifest not found (discovery from /Users/you/tmp)
 ```
 
-You are outside a project, or every candidate directory up the tree lacks
-`envy.lua`. Pass `--manifest <path>`, or run from inside the project.
+You are outside a project, or every candidate directory above the anchor lacks
+`envy.lua`. The message names the directory the walk started from. Pass
+`--project <dir>`, `--manifest <path>`, or run from inside the project.
 
 ## Fetching
 
@@ -69,6 +70,24 @@ spec. A URL whose contents changed is the shape of a supply-chain problem.
 
 The `FETCH` entry has no `sha256`. Without one, envy cannot prove the file in the
 cache is the file you asked for, so it fetches again. Add the hash.
+
+**A flaky network fails the run**
+
+envy already retries a download that dies on the transport: connect, TLS, and
+DNS failures, a connection dropped mid-body, a stall, and HTTP 5xx or 429. Three
+attempts by default, with exponential jittered backoff. A 404 or a 403 is not
+retried, because a replay will not change the answer.
+
+If the failure survives that, raise the attempt count rather than re-running the
+whole build:
+
+```bash
+ENVY_FETCH_ATTEMPTS=6 envy sync
+```
+
+`--verbose` shows each retry as `fetch: attempt N of M failed`, and `--trace`
+emits a `download_retry` event carrying the classification. See
+[Download retries](./environment-variables.md#download-retries).
 
 **A git source will not resolve**
 
@@ -161,8 +180,19 @@ Nested checkouts. Print what the hook thinks:
 echo "$ENVY_PROJECT_ROOT"
 ```
 
-Discovery walks up from the current directory and stops at the first manifest
-that is a root. A component manifest with `@envy root "false"` defers upward. See
+Discovery walks up from an anchor and stops at the first manifest that is a
+root. A component manifest with `@envy root "false"` defers upward. Ask envy
+which project it picked and what anchored the choice:
+
+```bash
+envy --trace=stderr product 2>&1 | grep manifest_resolved
+```
+
+Note that a bin directory decides its own project: `../other/bin/cmake` and
+`../other/bin/envy sync` act on `../other`, not on the directory you are
+standing in, because those scripts inject `--project`. To force a different
+answer, pass `--project <dir>` yourself, or `--subproject` for the nearest
+manifest to the current directory. See
 [Manifest discovery](/concepts/projects#manifest-discovery).
 
 **`run: exec failed: No such file or directory`**
@@ -191,9 +221,29 @@ the next `sync`, and nothing outside the cache points into it except through
 
 **Moving the cache**
 
-Set `ENVY_CACHE_ROOT`, or `@envy cache-posix` and `@envy cache-win` for a
-project-specific location. Copying an existing cache to the new root is optional
-and only saves re-downloading.
+Set `ENVY_CACHE_ROOT` for an absolute location, or `envy cache --local` to move
+this project's packages into a tree inside it (`@envy cache-local` makes that the
+project's default). Copying an existing cache to the new root is optional and
+only saves re-downloading.
+
+**`envy shell` says the hook file is missing**
+
+Hooks live only in the user-wide cache. A project on its own tree
+(`@envy cache-local`, or `envy cache --local`) writes none, by design. Run any
+envy command in a project on the user-wide cache, or set `ENVY_CACHE_ROOT`.
+`envy cache --user-wide-root` prints the tree the hook would live in. If an
+older envy left a `shell/` directory inside the project, `envy shell` names it so
+you can delete it. See
+[Shell Hooks](/concepts/environment/shell-hooks#hooks-are-a-user-wide-feature).
+
+**A project-local cache re-downloads envy on every clone**
+
+It should not: a local tree with no `@envy sha256sums` borrows an
+already-downloaded envy binary out of the user-wide tree before falling back to
+the network. A sums pin deliberately turns that off, because the fast path never
+re-hashes what it finds and the user-wide tree is written by every other project
+on the machine. That is the tradeoff a pin buys. See
+[The Cache](/concepts/cache#a-local-tree-reads-the-user-wide-one).
 
 **Network filesystems**
 

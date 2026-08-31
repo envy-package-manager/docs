@@ -33,9 +33,18 @@ stdout: [`product`](./product.md), [`package`](./package.md),
 `version --licenses`. Piping never captures decoration.
 
 **Manifest-aware commands find the manifest by
-[discovery](/concepts/projects#manifest-discovery)**, walking up from the current
-directory to the project root. `--manifest` names one directly, and
-`--subproject` stops the walk at the nearest one.
+[discovery](/concepts/projects#manifest-discovery)**, walking up to the project
+root from the directory the anchor names. Anchor precedence is `--manifest`,
+which names a file outright and skips the walk, then the global `--project
+<dir>`, then the current directory. `--subproject` means "the manifest nearest
+to where I stand", so it anchors on the current directory even under
+`--project`, and stops the walk at the first manifest it finds.
+
+The bootstrap and wrapper scripts in a project's bin directory inject
+`--project <their own directory>` ahead of your arguments. That is what lets
+`../other-project/bin/uv run ./script.py` operate on the other project rather
+than on whatever project your shell is standing in. The option takes the last
+value, so a `--project` you type still wins.
 
 **Manifest-aware commands re-exec into the pinned envy.** If the manifest's
 `@envy version` names a version other than the running binary, envy downloads
@@ -93,6 +102,7 @@ fails instead of silently doing less.
 | `-q`, `--quiet` | Warnings and errors only. |
 | `--trace[=<sinks>]` | Structured machinery events for the scheduler, cache, locks, and IO. Comma-separated sinks: `stderr` for human-readable text, `file:<path>` for JSONL. Bare `--trace` means `stderr`. Independent of log level. See [Logging & Tracing](../observability.md). |
 | `--cache-root <path>` | Override the cache root. Env: `ENVY_CACHE_ROOT`. |
+| `--project <dir>` | Walk up from `<dir>` instead of the current directory to find the manifest. Honored by every command that loads one: `sync`, `install`, `deploy`, `product`, `package`, `run`, `export`, `import`, `use`, `cache`, and `shell`. Repeatable, last value wins. The directory must exist. |
 | `-v`, `--version` | Print version info. Alias for [`envy version`](./version.md). |
 | `-h`, `--help` | Print help. Works per subcommand: `envy sync --help`. |
 

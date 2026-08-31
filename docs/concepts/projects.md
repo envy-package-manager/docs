@@ -41,7 +41,9 @@ batch, and they read the directives as text to learn which envy to download.
 | `deploy "true\|false"` | no (default: off) | Whether `sync`/`deploy` write [product wrapper scripts](./environment/product-scripts.md) into the bin dir. |
 | `root "true\|false"` | no (default: true) | Superproject boundary. `false` means discovery keeps searching upward. See [discovery](#manifest-discovery). |
 | `mirror "<url>"` | no | Where to download envy releases from, `https://` or `s3://`. `ENVY_MIRROR` overrides it. |
-| `cache-posix "<path>"` / `cache-win "<path>"` | no | Cache-root override for this project, per platform family. Relative paths anchor to the manifest's directory. |
+| `cache-local "<path>"` | no | Keep this project's packages in a tree inside it, relative to the manifest. See [The Cache](./cache.md#where-the-root-lives). |
+| `cache-mode "local\|shared"` | no | Override what `cache-local`'s presence implies. |
+| `state-dir "<path>"` | no | Where `envy cache --local/--shared` records your override. |
 
 Header rules:
 
@@ -218,9 +220,7 @@ the [cache](./cache.md).
 
 ## Manifest discovery
 
-Commands that need a manifest walk up from where they start: the current
-directory, or the directory of the script passed to
-[`envy run`](../reference/cli/run.md). At each level:
+Commands that need a manifest walk up from an anchor directory. At each level:
 
 1. If `envy.lua` exists, envy reads its header. `@envy root "true"`, or no
    `root` directive, stops the walk. That manifest is the project.
@@ -234,12 +234,61 @@ is the only candidate. Checked out inside a superproject, the superproject's
 manifest wins, and the component's packages arrive through composition instead
 of a second project.
 
-`--subproject` on `sync`, `deploy`, and `use` skips the walk and uses the
-nearest `envy.lua`. `--manifest <path>` names one directly.
+### Where the walk starts
+
+The anchor is chosen by this precedence, most specific first:
+
+| Anchor | Set by | Notes |
+| --- | --- | --- |
+| The manifest itself | `--manifest <path>` | No walk at all. Per-command. |
+| A named directory | `--project <dir>` | Global flag, so it goes before the subcommand: `envy --project ~/proj sync`. Last value wins. |
+| The current directory | default | Also what `--subproject` anchors on, by definition. |
+
+`--subproject` means "the manifest nearest to where I stand", so it ignores an
+injected `--project` and stops the walk at the first `envy.lua` it finds,
+`@envy root` and all. [`envy run`](../reference/cli/run.md) additionally infers
+an anchor from the script it is given, either the path after a `--` sentinel or
+a first argument that names an existing file, and `--project` outranks both.
+
+Which project won is a [trace](../reference/observability.md) event rather than
+a log line:
+
+```console
+$ envy --trace sync
+manifest_resolved path=/Users/you/src/app/envy.lua anchor=/Users/you/src/app/bin mode=project nearest=false
+```
+
+`mode` is `explicit` for `--manifest`, `project` for `--project`, or `cwd`.
+`nearest` is `--subproject`. [`envy run`](../reference/cli/run.md) emits nothing,
+because it replaces its own process with the child before the trace drains. What
+it resolved is visible in the `PATH` the child inherits.
+
+### A bin directory decides its own project
+
+The bootstrap script and every deployed wrapper inject `--project <their own
+directory>` ahead of your arguments. Without that, a wrapper answered for
+whichever project the caller happened to be standing in:
+
+```bash
+cd ~/unrelated
+~/src/firmware/bin/uv run ./script.py   # uv, PATH, and ENVY_PROJECT_ROOT from ~/src/firmware
+```
+
+Wrapper scripts also prepend their own bin directory to `PATH`, so a tool that
+shells out to a sibling product finds it, and export `ENVY_PROJECT_ROOT`. That
+last one is stamped as a path relative to the bin directory, so a moved or
+re-cloned tree still resolves, and only for a root manifest. Under
+`@envy root "false"` the project depends on where the tree is nested, no
+deploy-time constant is right in every checkout, and the caller's value stands.
+
+Because those scripts resolve their project by walking up from the bin
+directory, [`envy deploy`](../reference/cli/deploy.md) checks that the walk
+lands back on the manifest that owns them. See
+[what deploy refuses](../reference/cli/deploy.md#bin-directory-placement).
 
 One rule keeps everything consistent. The shell hook, the bootstrap script in
-the bin directory, and envy itself all resolve the same manifest from the same
-directory. The `PATH` you get therefore belongs to the project envy is about to
+the bin directory, the deployed wrappers, and envy itself all resolve the same
+manifest. The `PATH` you get therefore belongs to the project envy is about to
 act on.
 
 ## Superprojects and subprojects
@@ -299,7 +348,7 @@ it is per-platform except where you say so:
 | Concern | Where it belongs |
 | --- | --- |
 | A package only some platforms need | `platforms = { "windows" }` on the entry, or `PLATFORMS` in the spec |
-| A different cache location per OS family | `@envy cache-posix` and `@envy cache-win` |
+| Packages kept inside the project rather than the user-wide cache | `@envy cache-local` |
 | A different interpreter for string verbs | [`DEFAULT_SHELL`](./shells.md), usually a function that branches on `envy.PLATFORM` |
 | A per-platform download URL or hash | inside the spec's `FETCH`, keyed on `envy.PLATFORM_ARCH` |
 

@@ -56,9 +56,13 @@ Three Windows notes:
 - `cmd.exe` has no hook. Use the committed `bin\envy.bat` and `bin\<tool>.bat`
   wrappers there, or `envy run`.
 
-envy maintains the hook file itself, in the cache. Any earlier envy command has
-already created it. If it is missing, `envy shell` says so and tells you to run
-any envy command first.
+envy maintains the hook file itself, in the user-wide cache. Any earlier envy
+command has already created it. If it is missing, `envy shell` says so and tells
+you what to run. Note that hooks live only in the user-wide cache: a project on
+its own cache tree (`@envy cache-local`, or `envy cache --local`) writes none.
+If every project you have is local, run one envy command in a project on the
+user-wide cache, or set `ENVY_CACHE_ROOT`. See
+[Shell Hooks](/concepts/environment/shell-hooks#hooks-are-a-user-wide-feature).
 
 ## What it does
 
@@ -117,8 +121,9 @@ envy rewrites the hook file during self-deploy, so it tracks envy's version
 without you touching your profile. Restart your shell when a new envy version
 ships a new hook.
 
-The `source` line points into the cache, so moving or deleting the cache breaks
-it. `envy shell` warns about this when you are on a non-default cache root.
+The `source` line points into the user-wide cache, so moving or deleting that
+cache breaks it. `envy shell` warns about this when you are on a `--cache-root`
+or `ENVY_CACHE_ROOT` override.
 
 ## When to skip it
 

@@ -9,11 +9,16 @@ Print the line to add to your shell profile to enable
 [shell hooks](/concepts/environment/shell-hooks), which manage `PATH` per
 project as you `cd` around.
 
-This command does not create the hook file. envy maintains it in the cache during
-self-deploy, so any earlier envy command has already put it there. `shell` finds
-the one for your shell and prints how to source it. The hook is
+This command does not create the hook file. envy maintains it in the user-wide
+cache during self-deploy, so any earlier envy command has already put it there.
+`shell` finds the one for your shell and prints how to source it. The hook is
 pure shell: no envy process runs on `cd`, and it updates itself across envy
 versions.
+
+The hook root is `--cache-root` or `ENVY_CACHE_ROOT` if set, otherwise the
+platform default. No project setting moves it, and a project on its own cache
+tree writes no hooks at all. See
+[Shell Hooks](/concepts/environment/shell-hooks#hooks-are-a-user-wide-feature).
 
 ## Usage
 
@@ -32,8 +37,12 @@ It is not a bare line for redirection, so copy it rather than appending the
 command's output to your profile. The path uses `$HOME`, or PowerShell's
 `${env:...}` syntax, so it stays portable across machines.
 
-If the hook file is missing, `shell` says so and tells you to run any envy
-command first, which triggers self-deploy.
+If the hook file is missing, `shell` says so. On a normal project that means
+running any envy command, which triggers self-deploy. On a project using its own
+cache tree it means running one in a project on the user-wide cache, or setting
+`ENVY_CACHE_ROOT`, because a local tree never populates hooks. `shell` also names
+a stale project-local `shell/` directory an older envy left behind, so you can
+delete it once your profile points at the real one.
 
 ## Examples
 
@@ -79,9 +88,16 @@ any machine regardless of where the profile directory lives.
 envy --cache-root /opt/envy-cache shell zsh
 ```
 
-The printed path points into whichever cache root is in effect. envy also warns
-that moving or deleting that cache breaks shell integration, because the hook
-lives inside it.
+The printed path points into whichever user-wide cache root is in effect. Only
+an override earns the warning that moving or deleting that cache breaks shell
+integration, because the platform default is not somewhere you lose by accident.
+
+[`envy cache --user-wide-root`](./cache.md) prints the same root without the
+surrounding instructions:
+
+```bash
+ls "$(envy cache --user-wide-root)/shell"
+```
 
 ## See also
 

@@ -24,9 +24,9 @@ envy shell zsh
 # Then restart your shell or run the command directly.
 ```
 
-Paste the line into your profile and restart. envy maintains the hook file in the
-cache, one per supported shell: bash, zsh, fish, and PowerShell. See
-[`envy shell`](../../reference/cli/shell.md).
+Paste the line into your profile and restart. envy maintains the hook file in
+the user-wide cache, one per supported shell: bash, zsh, fish, and PowerShell.
+See [`envy shell`](../../reference/cli/shell.md).
 
 ## The contract
 
@@ -98,15 +98,35 @@ be placed deliberately rather than prepended.
 `ENVY_PROJECT_ROOT` is the hook's output rather than its input. Scripts can read
 it to find the project without walking the tree themselves.
 
+## Hooks are a user-wide feature
+
+Your profile sources one path for every directory the shell ever visits, so no
+per-project setting moves it. The hook root is `--cache-root` or
+`ENVY_CACHE_ROOT` if set, otherwise the platform default. It is never a
+project's own cache tree.
+
+A project on a local cache tree (`@envy cache-local`, or
+[`envy cache --local`](../../reference/cli/cache.md)) therefore does not merely
+put its hooks somewhere else. It writes **no** hooks at all. A copy inside the
+project would never be the one your shell loads, and `rm -rf` on the build
+directory would take it. Writing to the user-wide tree instead would break the
+one promise a local cache makes, which is that running the project touches
+nothing outside it.
+
+So if every project you have is local, you have no hooks, and `envy shell` says
+so rather than suggesting a command that cannot produce them. Run any envy
+command in a project on the user-wide cache, or set `ENVY_CACHE_ROOT`.
+
 ## Updating
 
-The hook file lives in the cache, and envy rewrites it during self-deploy, so it
-follows envy's version without you editing your profile. When a new envy version
-ships a new hook, restart your shell to pick it up.
+The hook file lives in the user-wide cache, and envy rewrites it during
+self-deploy, so it follows envy's version without you editing your profile. When
+a new envy version ships a new hook, restart your shell to pick it up.
 
-Moving or deleting the cache breaks the `source` line, since that is where the
-hook lives. `envy shell` warns about this when you are using a non-default cache
-root.
+Moving or deleting that cache breaks the `source` line, since that is where the
+hook lives. `envy shell` warns about this when you are on a `--cache-root` or
+`ENVY_CACHE_ROOT` override. To force a refresh, delete `<user-wide
+cache>/shell/` and run an envy command in a project that is not on a local tree.
 
 ## When not to use hooks
 
