@@ -199,7 +199,12 @@ end
 ```
 
 The dependency edge is what makes `envy.product` legal, and what guarantees cmake
-is installed before `BUILD` runs.
+is installed before `BUILD` runs. On a machine with neither tool, that is one
+`sync`:
+
+![A terminal session. brotli is not installed. envy sync downloads cmake and
+ninja, streams the brotli build log, and brotli --version then
+works.](/screencasts/from-source.svg)
 
 ## 7. Mark it exportable
 

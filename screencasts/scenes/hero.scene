@@ -1,0 +1,22 @@
+-- The whole pitch in five commands: a tool that is not installed, a project
+-- that declares it, and a machine that is unchanged on either side.
+!home /tmp/envy-screencast/home
+!cols 88
+!rows 22
+!wpm 290
+!settle 0.55
+!outro 2.2
+!setup bash scenes/hero.setup.sh
+
+# a machine with no cmake, and a repo that was just cloned
+$ cmake --version
+~ 0.7
+$ cd work/blinky
+~ 0.5
+$ cmake --version
+~ 1.1
+$ cmake --version
+~ 1.0
+$ cd ~
+~ 0.5
+$ cmake --version

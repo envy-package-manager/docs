@@ -9,6 +9,10 @@ envy is serverless until you decide otherwise. A depot is an optional store of
 prebuilt packages, keyed by the same hashes the [cache](./cache.md) uses. With
 one configured, a `sync` that would have built a compiler downloads it instead.
 
+![A terminal session. The depot index is three lines of sha256 and URL, and envy
+sync reports each package as imported from depot rather than
+built.](/screencasts/depot.svg)
+
 Depots are an accelerator and never a requirement. With no depot configured
 everything builds from source. With one configured but unreachable, envy warns
 and builds from source. A depot cannot change what you get, only how long it

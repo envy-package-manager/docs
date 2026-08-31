@@ -85,6 +85,10 @@ bin directory to `PATH`, sets `ENVY_PROJECT_ROOT`, and adds a 🦝 marker to the
 prompt. Leaving undoes all of it. Switching between projects does both in one
 step.
 
+![A terminal session. python3 -V prints the system Python, then a different
+version inside each of two project directories, then the system one again after
+leaving.](/screencasts/per-project.svg)
+
 The messages go to stderr, so a piped command is unaffected.
 
 ## It costs nothing
