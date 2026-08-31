@@ -1,0 +1,21 @@
+-- Two projects, two pythons, one machine, and a system python that neither of
+-- them touched. The whole switch is a cd.
+!home /tmp/envy-screencast/home
+!cols 88
+!rows 18
+!wpm 290
+!settle 0.5
+!outro 2.2
+!setup bash scenes/per-project.setup.sh
+
+# the mac's own python, and two projects that wanted a different one
+$ python3 -V
+~ 0.6
+$ cd work/service-a
+$ python3 -V
+~ 1.0
+$ cd ../service-b
+$ python3 -V
+~ 1.0
+$ cd ~
+$ python3 -V

@@ -74,3 +74,26 @@
   font-weight: var(--ifm-font-weight-semibold);
   color: var(--ifm-color-emphasis-700);
 }
+
+/* Terminal screencasts. Each is an animated SVG with a baked-in dark terminal
+   palette, so it does not follow the site's color mode; the rounded corners and
+   the shadow are what keep it from looking pasted onto a light page.
+
+   `width: 100%` rather than the SVG's intrinsic size: the recordings are 88 to
+   120 columns wide, and letting each render at its own pixel width would step
+   the column of demos in and out as you switch tabs.
+
+   Two selectors because there are two ways one gets onto a page. `.screencast`
+   is what the MDX call sites set. A markdown image cannot set a class, and
+   Docusaurus rewrites its src through webpack into a hashed asset path, so
+   there is nothing in the src left to match on either -- hence "every image in
+   a doc body that is not the mascot", which is exactly the screencasts. */
+.screencast,
+.markdown img:not(.hero-splash__mascot) {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 14px rgb(0 0 0 / 22%);
+}

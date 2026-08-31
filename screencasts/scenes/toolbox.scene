@@ -1,0 +1,21 @@
+-- envy with no project, no manifest, and nothing installed to help it: the
+-- fetching, hashing and unpacking are all compiled into the one binary.
+!home /tmp/envy-screencast/home
+!cwd scratch
+!path $HOME/.local/bin
+!cols 96
+!rows 18
+!wpm 290
+!settle 0.55
+!outro 2.2
+!setup bash scenes/toolbox.setup.sh
+
+# no project here. envy is just a binary on PATH
+$ envy git-resolve https://github.com/google/brotli.git v1.1.0
+~ 1.0
+$ envy fetch https://github.com/google/brotli/archive/refs/tags/v1.1.0.tar.gz b.tgz
+~ 0.8
+$ envy hash b.tgz
+~ 1.2
+$ envy extract b.tgz src --only '*/c/include/brotli/*'
+$ ls src/brotli-1.1.0/c/include/brotli

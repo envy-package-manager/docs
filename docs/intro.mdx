@@ -11,6 +11,8 @@ hide_table_of_contents: true
 ---
 
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 {/* Referenced as a URL rather than imported as a component: this SVG carries an
     internal <style> block whose class selectors (.b, .c, ...) would leak into the
@@ -25,14 +27,17 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
   <p className="hero-splash__tagline">what's yours... is mine.</p>
 </div>
 
-{/* Hermit-style animated terminal capture (see cashapp/hermit's
-    static/screencasts/using.svg). The current SVG is a hand-drawn placeholder;
-    regenerate with asciinema + svg-term per the comment inside the file. */}
+{/* A real session, recorded by screencasts/record.sh and rendered by
+    screencasts/render.sh. Referenced as a URL rather than imported for the same
+    reason the mascot is: the file carries an internal <style> block whose
+    single-letter class selectors would leak into the page if svgr inlined it. */}
 <p align="center">
   <img
-    src={useBaseUrl('/screencasts/envy-sync.svg')}
-    alt="Animated terminal capture of envy sync"
-    width="720"
+    className="screencast"
+    src={useBaseUrl('/screencasts/hero.svg')}
+    alt="A terminal session. cmake is not installed. Entering a project directory
+         and running cmake --version downloads envy, installs cmake, and runs it.
+         The second run is instant. Leaving the directory takes cmake away again."
   />
 </p>
 
@@ -58,6 +63,78 @@ script downloads the build your project pins.
 An optional [package depot](/concepts/depots) lets CI publish prebuilt artifacts
 that everyone else's `sync` downloads instead of building. An accelerator you can
 add, never a requirement.
+
+## See it work
+
+Four real sessions, recorded end to end against the public
+[first-party specs](https://github.com/envy-package-manager/package-specs). The
+elapsed times on screen are the ones the machine actually took.
+
+<Tabs lazy queryString="demo">
+  <TabItem value="per-project" label="One machine, many toolchains" default>
+
+Two projects that need two different pythons, and a machine python that neither
+of them touched. Switching between them is a `cd`, because the
+[shell hook](/getting-started/shell-integration) puts each project's bin
+directory on `PATH` as you arrive.
+
+<img
+  className="screencast"
+  src={useBaseUrl('/screencasts/per-project.svg')}
+  alt="A terminal session. python3 -V prints the system Python, then a different
+       version inside each of two project directories, then the system one again
+       after leaving."
+/>
+
+  </TabItem>
+  <TabItem value="from-source" label="Builds what nobody ships">
+
+Google publishes no brotli binaries, so the [spec](/concepts/specs) builds one.
+That build needs cmake and ninja, which are not installed either, and the spec
+says so in the one line `DEPENDENCIES` reveals. envy installs them first and
+hands their paths to the build.
+
+<img
+  className="screencast"
+  src={useBaseUrl('/screencasts/from-source.svg')}
+  alt="A terminal session. brotli is not installed. envy sync downloads cmake and
+       ninja, streams the brotli build log, and brotli --version then works."
+/>
+
+  </TabItem>
+  <TabItem value="depot" label="Or downloads what CI built">
+
+The same project on a machine with a [depot](/concepts/depots) configured.
+Nothing is built: the index says the artifacts already exist, so `sync`
+downloads and verifies them instead. A depot is a directory of archives and one
+index file on any web server, which is why the one in this recording is
+`python3 -m http.server`.
+
+<img
+  className="screencast"
+  src={useBaseUrl('/screencasts/depot.svg')}
+  alt="A terminal session. The depot index is three lines of sha256 and URL. envy
+       sync reports each package as imported from depot instead of built."
+/>
+
+  </TabItem>
+  <TabItem value="toolbox" label="No project required">
+
+Resolve a tag to a commit without cloning, download the tarball, hash it, and
+unpack five files out of it. There is no manifest, no project, and nothing
+installed to help: git, TLS, and the archive formats are all
+[compiled into the one binary](#a-standalone-toolbox).
+
+<img
+  className="screencast"
+  src={useBaseUrl('/screencasts/toolbox.svg')}
+  alt="A terminal session running envy git-resolve, envy fetch with a progress
+       bar, envy hash, and envy extract with a glob, none of them inside a
+       project."
+/>
+
+  </TabItem>
+</Tabs>
 
 ## Why envy?
 

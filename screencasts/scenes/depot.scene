@@ -1,0 +1,20 @@
+-- The same project as from-source, on a machine that has a depot. Nothing is
+-- built: the index says the artifacts already exist, so sync downloads them.
+!home /tmp/envy-screencast/home
+!cwd work/codec
+!cols 120
+!rows 18
+!wpm 290
+!settle 0.55
+!outro 2.2
+!setup bash scenes/depot.setup.sh
+!teardown pkill -f "http.server 8181"
+
+# a depot is a directory of archives and one index file, on any web server
+$ curl -s http://localhost:8181/packages.txt
+~ 1.8
+$ grep PACKAGE_DEPOTS envy.lua
+~ 1.2
+$ envy sync
+~ 1.2
+$ brotli --version
