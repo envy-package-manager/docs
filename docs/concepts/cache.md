@@ -228,20 +228,24 @@ $ envy cache | head -1
 Cache: /Users/you/src/firmware/out/.envy  (@envy cache-local)
 ```
 
-### The first time a tree is used
+### The first time a local tree is used
 
-Before any packages land, envy says where they are about to go:
+A project-local tree gets a notice before any packages land:
 
 ```console
 $ envy sync
-envy: caching packages in /Users/you/Library/Caches/envy
-        shared with your other envy projects; deleting this project will not remove them
-        keep them in this project instead: ./bin/envy cache --local
+Caching packages in /Users/you/src/firmware/out/.envy
+  These packages live inside the project, so deleting it deletes them.
+  To share one cache across all your projects, run: ./bin/envy cache --shared
 ```
 
-It is a notice, not a prompt — nothing blocks, and CI is unaffected. It stops
-once the tree holds packages and comes back after you delete it, so it is always
-telling you something true.
+The shared cache gets no notice. It is the default and it outlives any one
+project, so naming it tells you nothing you can act on.
+
+It is a notice, not a prompt. Nothing blocks, and CI is unaffected. It goes to
+stderr, which keeps `envy cache --root` parseable and lets `-q` silence it. It
+stops once the tree holds packages and comes back after you delete the tree, so
+it is always telling you something true.
 
 ### Moving it for CI
 

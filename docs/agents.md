@@ -71,7 +71,8 @@ and scripts use the explicit path.
   relative to the bin dir, and only for a root manifest (`root "false"` leaves it
   empty and the caller's value stands). The `.bat` twin needs `setlocal`, or PATH
   and the product path leak into the calling cmd.exe and a sibling product
-  re-runs the first payload forever. Wrapper/bootstrap schema is `3`.
+  re-runs the first payload forever. Wrapper/bootstrap schema is `4` (POSIX
+  wrappers run `set -Eeuo pipefail`; a bump restamps every wrapper once).
 - **manifest discovery**: walk up from an anchor. Precedence `--manifest <path>`
   (no walk) > global `--project <dir>` > CWD. `--subproject` means "nearest to
   where I stand", so it anchors on CWD even under `--project`, and stops at the
@@ -103,6 +104,9 @@ and scripts use the explicit path.
   (`~/Library/Caches/envy`, `$XDG_CACHE_HOME/envy`, `%LOCALAPPDATA%\envy`).
   Layout `envy/<ver>/{envy,envy.lua}` + `envy/latest`, `packages/`, `specs/`,
   `shell/`, `locks/`; entry key `identity/<platform>-<arch>-blake3-<hash>`.
+  First-run notice ("Caching packages in ...") fires for LOCAL trees only, on
+  stderr, keyed on `packages/` not existing, never a prompt. The shared default
+  is silent.
 - **a local tree reads the user-wide one, never writes to it**. Launchers and
   reexec try `<project cache>/envy/<ver>/envy`, then `<user-wide>/envy/<ver>/envy`.
   The second is tried only for a LOCAL tree with **no** `@envy sha256sums` (the fast
@@ -139,13 +143,15 @@ First-class, not a port. Same manifest, same specs, same cache layout.
   per-flavor, so a plain `sync` on macOS does NOT restamp `envy.bat`. Use
   `--platform all` in a cross-platform repo. A host-only deploy does not prune
   the other flavor.
-- product wrappers are written LF on every platform, POSIX ones mode 755. The
-  exception is `bin\envy.bat`, written **CRLF**: cmd.exe resolves `goto`/`call
-  :label` by seeking with offsets that assume CRLF, so an LF batch with labels
-  drifts a byte per line until the search walks past the label and no `@envy`
-  directive is parsed at all. Wrappers carry no labels and are unaffected.
-  `core.autocrlf` rewriting them makes every deploy report "updated"; fix with
-  `bin/** -text` in `.gitattributes`, which also preserves envy.bat's CRLF.
+- scripts get the newlines their TARGET needs, not the host's: **CRLF for every
+  `.bat`** (`envy.bat` and the wrappers), LF otherwise, POSIX ones mode 755.
+  cmd.exe resolves `goto`/`call :label` by seeking with offsets that assume CRLF,
+  so an LF batch with labels drifts a byte per line until the search walks past
+  the label and no `@envy` directive is parsed at all. envy renormalizes both
+  directions. A committed bin dir is byte-identical in every checkout.
+  `core.autocrlf` rewriting the POSIX scripts makes every deploy report
+  "updated"; fix with `bin/** -text` in `.gitattributes`. `*.bat eol=crlf` is
+  also compatible now.
 - string verbs default to PowerShell, invoked
   `powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File <temp .ps1>`;
   cmd is `cmd.exe /D /V:ON /S /C <temp .cmd>`. POSIX gets `bash -e`, so fail-fast
@@ -252,7 +258,12 @@ run export import use cache shell`.
   manifest or project required. Transports and formats are compiled in: AWS SDK
   (so `s3://` works with ambient credentials and no AWS CLI), libgit2 (no `git`
   binary), libarchive (tar/gz/xz/bz2/zst/zip/7z/rar/iso). Package the AWS CLI
-  only when a project wants the CLI itself.
+  only when a project wants the CLI itself. `mirror-envy` to an `s3://`
+  destination resolves credentials BEFORE downloading, failing with
+  `no usable AWS credentials` plus the SDK's per-provider reason (expired SSO
+  token being the usual one). S3 error hints: 501 = unsigned write, 301 /
+  `PermanentRedirect` = wrong region (SDK defaults `us-east-1`), 403 = no
+  `s3:PutObject`, `NoSuchBucket` = envy never creates buckets.
 - `cache [--root | --user-wide-root | --local | --shared]`: cache location and
   disk usage; flags mutually exclusive, one action per invocation. Also
   `version`, `mirror-envy`.
