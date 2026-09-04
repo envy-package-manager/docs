@@ -25,7 +25,7 @@ reasoning behind it.
 
 Never pin a branch or a tag. Resolve it to a sha at authoring time:
 
-```console
+```shell-session
 $ envy git-resolve https://github.com/envy-package-manager/package-specs main
 ded36a39bbf13744f5a0e539f2f4741fecb61dd0
 ```
@@ -50,21 +50,25 @@ a script.
 
 ## Updating a tool version
 
-Edit the option and sync:
+Edit the option and install:
 
 ```diff
 -  { spec = "envy.cmake@r0", bundle = "envy", options = { version = "4.4.0" } },
 +  { spec = "envy.cmake@r0", bundle = "envy", options = { version = "4.5.0" } },
 ```
 
-```console
-$ envy sync
+```shell-session
+$ envy install
 [envy.cmake@r0] installed (8.4s)
-deploy: 3 product script(s) (0 created, 0 updated, 3 unchanged, 0 removed)
 ```
 
 The old version is still in the cache under its own entry, so a revert is
 instant. Nothing was overwritten, because the version is part of the identity.
+
+`install` rather than `sync` because a version bump changes no product names, and
+a wrapper resolves its package at call time. The existing `bin/cmake` runs 4.5.0
+without being rewritten. Reach for `sync` when the new version *adds* or renames
+a product, which is the case that needs a wrapper written or pruned.
 
 If the spec keeps a fingerprint table, a version it has no hash for is rejected
 before anything downloads, and the error lists the versions it does know. That is
@@ -74,7 +78,7 @@ usually the signal to update the spec, not the manifest.
 
 Advance the ref, and every spec from that bundle moves together:
 
-```console
+```shell-session
 $ envy git-resolve https://github.com/envy-package-manager/package-specs main
 c1a4f9f2c1d5b8e47a03f6c2d9b1e4a7f0c3d8b5e
 ```
@@ -88,7 +92,7 @@ spec you take from it.
 [`envy use`](../reference/cli/use.md) rewrites the version and refreshes the
 checksum pin in one step:
 
-```console
+```shell-session
 $ envy use 0.2.1
 envy.lua: @envy version "0.2.0" -> "0.2.1"
 envy.lua: @envy sha256sums "a17e9c4f..." -> "3f9c2d1b..."
@@ -110,7 +114,7 @@ One `@envy sha256sums` value covers every platform, because it pins the release'
 The bootstrap scripts are the part that is per platform. A plain `sync` restamps
 only the host's flavor, so use `--platform all` when both are committed:
 
-```console
+```shell-session
 $ envy sync --platform all
 Updated bootstrap script
 ```
@@ -127,7 +131,7 @@ The one failure `use` exists for: a manifest naming a version whose checksum pin
 is wrong. Nothing else can fix it, because everything else re-execs into the envy
 that cannot be downloaded.
 
-```console
+```shell-session
 $ envy use 0.2.0
 envy.lua: @envy sha256sums "0000..." -> "a17e9c4f..."
 ```

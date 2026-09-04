@@ -71,7 +71,7 @@ Highest to lowest:
    [`envy cache --local/--shared`](/reference/cli/cache).
 3. `@envy cache-mode` in the manifest.
 4. `@envy cache-local` being present at all, which means local. Relative to the
-   manifest's directory; nothing is expanded.
+   manifest's directory, with no expansion of any kind.
 5. The platform default.
 
 | Platform | Default |

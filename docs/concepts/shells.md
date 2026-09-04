@@ -208,7 +208,7 @@ for src in pathlib.Path("templates").glob("*.in"):
   dependencies`, because that closure can be needed before the resolution pass
   that would settle it.
 
-:::caution The bootstrap exception
+:::warning[The bootstrap exception]
 The `DEPENDS` closure supplies the shell, so it cannot consume it. The
 interpreter package and everything it depends on run their own string verbs under
 the platform built-in, transitively. Without that carve-out, installing Python

@@ -22,7 +22,7 @@ generator:
 
 The table form is for humans:
 
-```console
+```shell-session
 $ ./bin/envy product
 cmake            CMake.app/Contents/bin/cmake  envy.cmake@r0{version="4.4.0"}
 cpack            CMake.app/Contents/bin/cpack  envy.cmake@r0{version="4.4.0"}
@@ -34,7 +34,7 @@ ninja            ninja                         envy.ninja@r0{version="1.13.2"}
 
 `--json` is for generators. One process gives you every path:
 
-```console
+```shell-session
 $ ./bin/envy -q product --json
 {
   "cmake": "/Users/you/Library/Caches/envy/packages/envy.cmake@r0/darwin-arm64-blake3-49a9b2620de8c380/pkg/CMake.app/Contents/bin/cmake",
@@ -88,7 +88,7 @@ next build uses the new paths.
 
 Configuring and building with the project's own CMake and Ninja:
 
-```console
+```shell-session
 $ ./bin/cmake -S . -B out -G Ninja -DCMAKE_MAKE_PROGRAM="$(./bin/envy -q product ninja)"
 -- The CXX compiler identification is AppleClang 21.0.0.21000101
 -- Configuring done (0.9s)
@@ -164,7 +164,7 @@ nothing rebuilds.
 
 ## Make
 
-```make title="Makefile"
+```makefile title="Makefile"
 ENVY := ./bin/envy
 CMAKE := $(shell $(ENVY) -q product cmake)
 NINJA := $(shell $(ENVY) -q product ninja)
@@ -185,19 +185,21 @@ running one process per variable.
 ## One wrapper instead of two steps
 
 The patterns above assume packages are installed. Rather than asking everyone to
-remember `envy sync`, put it in a committed wrapper next to the envy bootstrap
-script:
+remember that, put it in a committed wrapper next to the envy bootstrap script:
 
 ```bash title="bin/build"
 #!/usr/bin/env bash
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-"$root/bin/envy" sync
+"$root/bin/envy" install
 exec "$(./bin/envy -q product ninja)" -C "$root/out" "$@"
 ```
 
-`sync` is fast when everything is cached, so paying it on every build is cheaper
-than debugging a stale one. Ship a `bin/build.bat` alongside it for Windows. envy
+`install` rather than `sync`: this wrapper reaches its tools through
+`envy product`, so it needs the packages and not the bin directory, and a build
+that rewrites committed files would show up in everyone's `git status`. It is
+fast when everything is cached, so paying it on every build is cheaper than
+debugging a stale one. Ship a `bin/build.bat` alongside it for Windows. envy
 will not touch either file, because it only manages scripts carrying its own
 marker. See [Product Scripts](/concepts/environment/product-scripts#taking-ownership-of-a-name).
 
@@ -226,7 +228,7 @@ envy_tools = exec_script("//gntools/envy_tools.py",
                          envy_inputs)
 ```
 
-```make title="Makefile"
+```makefile title="Makefile"
 ENVY := ./bin/envy
 ifeq ($(OS),Windows_NT)
 ENVY := bin/envy.bat
@@ -244,7 +246,7 @@ string(REPLACE "\\" "/" cmake_path "${raw_path}")
 
 If you ship the wrapper-script pattern above, ship a `.bat` twin next to it:
 
-```bat title="bin\build.bat"
+```batch title="bin\build.bat"
 @echo off
 call "%~dp0envy.bat" sync || exit /b %ERRORLEVEL%
 for /f "delims=" %%i in ('call "%~dp0envy.bat" -q product ninja') do set "NINJA=%%i"

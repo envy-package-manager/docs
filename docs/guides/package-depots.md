@@ -16,7 +16,7 @@ A depot only pays for itself where source builds or slow downloads hurt. Measure
 before committing:
 
 ```bash
-ENVY_CACHE_ROOT=/tmp/cold-cache ENVY_IGNORE_DEPOT=1 time envy sync
+ENVY_CACHE_ROOT=/tmp/cold-cache ENVY_IGNORE_DEPOT=1 time envy install
 ```
 
 That is the worst case every new checkout and every CI runner pays. If it is
@@ -54,7 +54,7 @@ holds.
 
 ### 2. Export
 
-```console
+```shell-session
 $ mkdir -p /tmp/depot
 $ envy export -o /tmp/depot > /tmp/depot/packages.txt
 [envy.doctest-cpp@r0] cache hit
@@ -65,7 +65,7 @@ $ envy export -o /tmp/depot > /tmp/depot/packages.txt
 
 The archives land in the output directory and the index goes to stdout:
 
-```console
+```shell-session
 $ cat /tmp/depot/packages.txt
 864655da611af3c9048156db2ee6355d5e62907f5acdb1acac8e762370e8c019  /tmp/depot/envy.cmake@r0-darwin-arm64-blake3-49a9b2620de8c380.tar.zst
 08a76597e21dc9f50033668d830d4ecb892f672de0d5d6d0277295463715bb16  /tmp/depot/envy.ninja@r0-darwin-arm64-blake3-846f6979e3402fea.tar.zst
@@ -102,8 +102,8 @@ PACKAGE_DEPOTS = { "s3://acme-envy-packages/packages.txt" }
 
 Then prove it works from a cache that cannot possibly have the packages:
 
-```console
-$ ENVY_CACHE_ROOT=/tmp/verify-cache envy sync
+```shell-session
+$ ENVY_CACHE_ROOT=/tmp/verify-cache envy install
 [envy.doctest-cpp@r0] imported from depot (0.0s)
 [envy.ninja@r0] imported from depot (0.0s)
 [[envy.cmake@r0]] verifying SHA256....
@@ -220,7 +220,7 @@ Four ways to answer "why did that not hit":
 
 **Compare the key.** The cache entry directory name is the archive name:
 
-```console
+```shell-session
 $ envy -q package cmake
 /Users/you/Library/Caches/envy/packages/envy.cmake@r0/darwin-arm64-blake3-49a9b2620de8c380/pkg
 ```
@@ -231,7 +231,7 @@ revision, or a weak dependency changed since the export.
 
 **Read the trace.** Every lookup is recorded:
 
-```console
+```shell-session
 $ envy --trace=file:trace.jsonl sync
 $ grep depot_check trace.jsonl
 {"seq":12,"ts":"...","tid":1,"event":"depot_check","spec":"local.demo@r1","sha":"4b80ccd91d719bdb","result":"miss"}
@@ -241,16 +241,16 @@ $ grep depot_check trace.jsonl
 
 **Expect silence on a miss.** A miss just builds:
 
-```console
-$ ENVY_CACHE_ROOT=/tmp/c3 envy sync
+```shell-session
+$ ENVY_CACHE_ROOT=/tmp/c3 envy install
 [local.demo@r1] installed (0.0s)
 ```
 
 **Expect a warning on a broken depot.** An unreachable index, a failed download,
 or a hash mismatch all warn and fall back:
 
-```console
-$ envy sync
+```shell-session
+$ envy install
 warning: depot: failed to fetch manifest https://depot.invalid/packages.txt: curl_easy_perform failed: Couldn't resolve host name
 [local.demo@r1] installed (0.1s)
 ```

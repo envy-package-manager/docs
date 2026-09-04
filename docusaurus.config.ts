@@ -120,7 +120,22 @@ const config: Config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
-      additionalLanguages: ['lua', 'bash', 'powershell', 'json', 'makefile'],
+      // Every language any fence in docs/ names. A missing one is not an error:
+      // the block renders monochrome, which reads as a styling bug rather than a
+      // config gap. 'ignore' covers ```gitignore, 'shell-session' covers the
+      // terminal transcripts.
+      additionalLanguages: [
+        'lua',
+        'bash',
+        'powershell',
+        'json',
+        'makefile',
+        'batch',
+        'cmake',
+        'diff',
+        'ignore',
+        'shell-session',
+      ],
     },
   } satisfies Preset.ThemeConfig,
 };

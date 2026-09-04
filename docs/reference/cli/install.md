@@ -55,11 +55,13 @@ in the manifest does not invalidate the layer.
 ### To prefetch everything before going offline
 
 ```bash
-envy install && envy sync
+envy install
 ```
 
-`install` does the downloading. The later `sync` is then local-only and just
-deploys wrappers.
+That is the whole step. The committed wrappers already work, and they resolve
+their package out of the cache at call time, so nothing else has to happen before
+the plane takes off. Add a `sync` only if you also edited the manifest, since
+that is the case where a wrapper has to be written or pruned.
 
 ### To check that a spec still builds from source
 

@@ -24,7 +24,7 @@ envy lua <script>
 
 ## What is in scope
 
-The same environment a spec's phase functions see:
+Everything a spec can call that does not need a package behind it:
 
 | Name | Purpose |
 | --- | --- |
@@ -32,15 +32,28 @@ The same environment a spec's phase functions see:
 | `envy.stdout` | Raw stdout, for scripts whose output is data. |
 | `envy.PLATFORM`, `envy.ARCH`, `envy.PLATFORM_ARCH`, `envy.EXE_EXT` | Host identification, as specs see it. |
 | `envy.template` | `{{placeholder}}` substitution, with a hard error on a missing value. |
-| `envy.extend`, `envy.loadenv` | Table extension and environment-file loading. |
+| `envy.extend`, `envy.loadenv`, `envy.abspath` | Table extension, and paths and modules resolved against the calling file. |
 | `envy.path.join`, `.basename`, `.dirname`, `.stem`, `.extension` | Path manipulation, plus `envy.copy`, `envy.move`, `envy.remove`, `envy.exists`, `envy.is_file`, and `envy.is_dir`. |
 | `envy.run` | Run a shell script, one string or an array of lines, the way a phase verb does. Returns `{exit_code, stdout, stderr}`. Options include `capture`, `check`, `cwd`, `env`, `shell`, `quiet`. |
-| `envy.fetch`, `envy.extract` | The download and archive verbs. |
-| `envy.package`, `envy.product`, `envy.options` | Resolution helpers. |
+| `envy.extract`, `envy.extract_all`, `envy.verify_hash` | The archive and hashing verbs. |
 | `ENVY_SHELL.BASH`, `.SH`, `.CMD`, `.POWERSHELL` | Shell constants for string verbs. |
 
-`envy.import` is not in scope. It composes manifests, and `envy lua` runs a
-script rather than loading a manifest.
+## What is not
+
+There is no package and no phase, so the four calls that need one fail rather
+than guessing:
+
+| Call | What you get |
+| --- | --- |
+| `envy.product`, `envy.package` | `not in phase context (missing pkg)`. Both authorize against a dependency edge, and a bare script has none. |
+| `envy.commit_fetch` | `can only be called from FETCH phase with cache lock active`. |
+| `envy.loadenv_spec` | `can only be called within phase functions, not at global scope`. |
+
+`envy.fetch` needs no phase, but it does need `{ dest = <dir> }`, since there is
+no `tmp_dir` to default to.
+
+`envy.import` is not installed at all. It composes manifests, and `envy lua`
+runs a script rather than loading a manifest.
 
 A Lua error exits non-zero with the message and traceback, formatted the way a
 failing spec's error is.

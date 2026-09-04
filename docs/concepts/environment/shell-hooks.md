@@ -39,7 +39,7 @@ Inside a project:
 Outside, all three are removed. Switching directly between two projects removes
 the first project's bin directory and adds the second's, in one step.
 
-```console
+```shell-session
 $ cd ~/work/firmware
 envy: entering firmware — tools added to PATH
 $ which cmake
@@ -66,19 +66,35 @@ bootstrap script, and envy. They share one rule. A directive-shaped comment down
 inside `PACKAGES` therefore cannot make the hook put one project's bin
 directory on `PATH` while envy resolves another's.
 
-## No performance cost
+## Almost no performance cost
 
-The hook never runs envy. It is shell script all the way down, and it avoids
-subshells on purpose. The manifest header is parsed with the shell's own regex
-support rather than `head` and `grep`. Results come back through `REPLY` rather
-than through `$(...)`. A fork costs a millisecond or two, and a `cd` should not.
+The hook never runs envy, and it never shells out to `head` or `grep` to read a
+manifest header. bash, zsh and PowerShell each parse it with their own regex
+support, over one pass of the file. The zsh hook goes furthest and returns
+through `REPLY`, so a `cd` forks nothing at all. bash uses a handful of `$(...)`
+substitutions, and fish calls `sed` and `realpath`. A fork costs a millisecond
+or two either way.
 
 So the hook can run on every directory change without anyone noticing.
 
 ## The prompt marker
 
-The 🦝 prefix appears only in a UTF-8 locale. In anything else the hook skips it,
-and the enter and leave messages use `--` in place of the em dash.
+The 🦝 prefix appears only where the terminal can render it: a UTF-8 locale on
+bash, zsh and fish, or a UTF-8 locale *or* console output encoding under
+PowerShell. In anything else the hook skips the marker, and the enter and leave
+messages use `--` in place of the em dash.
+
+PowerShell says so once per session rather than leaving you to guess, because
+that is the case with something to do about it:
+
+```text
+envy: raccoon icon hidden -- console is not UTF-8. Add [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() above the hook line in your profile, or set ENVY_SHELL_NO_ICON=1 to silence.
+```
+
+The nudge fires on the first project you enter and not again, and never at all
+when `ENVY_SHELL_NO_ICON=1` says you did not want the marker. The PowerShell
+hook re-checks the encoding on every prompt, so flipping it takes effect without
+re-sourcing anything.
 
 If your prompt is managed by a theme that rewrites `PROMPT` on every command, the
 hook re-applies the marker before each prompt and reorders itself to run last.

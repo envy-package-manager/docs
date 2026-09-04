@@ -254,7 +254,7 @@ a first argument that names an existing file, and `--project` outranks both.
 Which project won is a [trace](../reference/observability.md) event rather than
 a log line:
 
-```console
+```shell-session
 $ envy --trace sync
 manifest_resolved path=/Users/you/src/app/envy.lua anchor=/Users/you/src/app/bin mode=project nearest=false
 ```

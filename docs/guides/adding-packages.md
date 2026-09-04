@@ -185,7 +185,7 @@ an entry most contributors never see.
 
 ## Verifying the result
 
-```console
+```shell-session
 $ envy sync
 [envy.cmake@r0] installed (8.2s)
 deploy: 3 product script(s) (3 created, 0 updated, 0 unchanged, 0 removed)
@@ -207,7 +207,7 @@ Commit the manifest and the new wrappers together. On a cross-platform repo, add
 `--platform all` so the `.bat` twins are written and committed too, whichever
 machine you happen to be on:
 
-```console
+```shell-session
 $ envy sync --platform all
 deploy: 6 product script(s) (3 created, 0 updated, 3 unchanged, 0 removed)
 ```

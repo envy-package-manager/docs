@@ -104,14 +104,14 @@ built the wrong thing.
 
 By default, commands anywhere in the tree act on the root:
 
-```console
+```shell-session
 $ cd libs/common
-$ ../.envy sync            # syncs the whole superproject
+$ ./bin/envy sync          # syncs the whole superproject
 ```
 
 `--subproject` stops discovery at the nearest manifest instead:
 
-```console
+```shell-session
 $ cd libs/common
 $ envy sync --subproject   # syncs only this component, into its own bin dir
 ```
@@ -124,7 +124,7 @@ The global `--project <dir>` starts the walk somewhere other than your current
 directory, so you can act on the superproject from outside the tree without a
 `cd`:
 
-```console
+```shell-session
 $ envy --project ~/src/monorepo/libs/common sync   # syncs the superproject
 ```
 
@@ -232,7 +232,7 @@ Because discovery never resolves an imported manifest, it produces no
 `manifest_resolved` event. The record that it took part in a run is
 `manifest_imported`:
 
-```console
+```shell-session
 $ envy --trace=file:t.jsonl sync
 $ grep manifest_imported t.jsonl
 {"seq":2,"ts":"2026-09-04T00:33:52.167Z","tid":0,"event":"manifest_imported","path":"/src/app/libs/common/envy.lua","importer":"/src/app/envy.lua"}

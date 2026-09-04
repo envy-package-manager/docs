@@ -13,7 +13,7 @@ prefix.
 
 Ask envy for the line, then paste it into your profile:
 
-```console
+```shell-session
 $ envy shell zsh
 Add this line to ~/.zshrc:
 
@@ -37,7 +37,7 @@ than redirecting the command into your profile.
 On Windows the shell is `powershell`, the profile is `$PROFILE`, and the hook is
 dot-sourced rather than `source`d:
 
-```console
+```shell-session
 > envy shell powershell
 Add this line to $PROFILE:
 
@@ -66,7 +66,7 @@ user-wide cache, or set `ENVY_CACHE_ROOT`. See
 
 ## What it does
 
-```console
+```shell-session
 $ cd ~/work/firmware
 envy: entering firmware — tools added to PATH
 $ which cmake
@@ -93,9 +93,10 @@ The messages go to stderr, so a piped command is unaffected.
 
 ## What it costs
 
-Close to nothing. The hook is pure shell. envy is never invoked at shell startup
-or on `cd`, and the hook avoids subshells, so entering a directory does not fork
-anything.
+Close to nothing. The hook is pure shell, and envy is never invoked at shell
+startup or on `cd`. The manifest header is read with the shell's own regex
+support rather than by piping through `head` and `grep`, so a `cd` costs at most
+a fork or two, and on zsh none at all.
 
 It also resolves manifests by the same rules envy itself uses, so the tools on
 your `PATH` always belong to the project envy would act on. See
@@ -109,8 +110,11 @@ your `PATH` always belong to the project envy would act on. See
 | `ENVY_SHELL_NO_ENTER_EXIT_ANNOUNCE=1` | Keep the `PATH` management, drop the messages. |
 | `ENVY_SHELL_NO_ICON=1` | Keep everything, drop the prompt marker. |
 
-The marker also stays off outside a UTF-8 locale, where the enter and leave
-messages use `--` in place of the em dash.
+The marker also stays off where the terminal cannot render it, and there the
+enter and leave messages use `--` in place of the em dash. On PowerShell that
+means a non-UTF-8 locale *and* a non-UTF-8 console encoding, and the hook prints
+a one-time line naming the `[Console]::OutputEncoding` fix. See
+[the prompt marker](/concepts/environment/shell-hooks#the-prompt-marker).
 
 Powerlevel10k users get a `prompt_envy` segment instead of a prepended marker, so
 they can position it themselves.

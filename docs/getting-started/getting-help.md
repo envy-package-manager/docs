@@ -10,7 +10,7 @@ enough, there are two dials and one contract.
 
 ## Make envy talk
 
-```console
+```shell-session
 $ envy --verbose sync
 [2026-08-22 14:36:54.734] [DBG] Loading manifest (221 bytes)
 [2026-08-22 14:36:54.734] [DBG] [envy.cmake@r0] spec: cache-managed

@@ -68,9 +68,10 @@ package manager.
   it.
 - **Hermetic.** One `envy.lua` pins the whole toolchain, envy included, by
   version and checksum. Clone the repo and run a tool.
-- **Per-project.** Every project declares its own world, into a shared
+- **Per-project.** Every project declares its own world, into a
   content-addressed [cache](/concepts/cache), so ten projects pinning one
-  compiler store it once.
+  compiler store it once. A project that wants its packages inside its own tree
+  says so in one line.
 - **Serverless.** No registry, no daemon, no server. Specs fetch bits from
   wherever they already live and verify them.
 
@@ -114,15 +115,15 @@ hands their paths to the build.
 
 <Screencast
   name="from-source"
-  alt="A terminal session. brotli is not installed. envy sync downloads cmake and
-       ninja, streams the brotli build log, and brotli --version then works."
+  alt="A terminal session. brotli is not installed. envy install downloads cmake
+       and ninja, streams the brotli build log, and brotli --version then works."
 />
 
   </TabItem>
   <TabItem value="depot" label="Or downloads what CI built">
 
 The same project on a machine with a [depot](/concepts/depots) configured.
-Nothing is built: the index says the artifacts already exist, so `sync`
+Nothing is built: the index says the artifacts already exist, so `install`
 downloads and verifies them instead. A depot is a directory of archives and one
 index file on any web server, which is why the one in this recording is
 `python3 -m http.server`.
@@ -130,7 +131,7 @@ index file on any web server, which is why the one in this recording is
 <Screencast
   name="depot"
   alt="A terminal session. The depot index is three lines of sha256 and URL. envy
-       sync reports each package as imported from depot instead of built."
+       install reports each package as imported from depot instead of built."
 />
 
   </TabItem>
@@ -243,7 +244,7 @@ Ruckus is a raccoon. Raccoons take shiny things that are not theirs and have no
 idea what any of them do. Neither does envy. A compiler, a udev rule, and a
 license-gated vendor blob are all just shiny things to it.
 
-:::tip Are you an AI coding agent?
+:::tip[Are you an AI coding agent?]
 
 Read **[envy for agents](/agents)**, a one-page, maximally dense summary of
 everything on this site.

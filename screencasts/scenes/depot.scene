@@ -1,5 +1,7 @@
 -- The same project as from-source, on a machine that has a depot. Nothing is
--- built: the index says the artifacts already exist, so sync downloads them.
+-- built: the index says the artifacts already exist, so install downloads them.
+-- `install`, not `sync`: the bin dir is already committed and deploying it again
+-- writes nothing, so `sync` would be claiming work it does not do.
 !home /tmp/envy-screencast/home
 !cwd work/codec
 !cols 120
@@ -15,6 +17,6 @@ $ curl -s http://localhost:8181/packages.txt
 ~ 1.8
 $ grep PACKAGE_DEPOTS envy.lua
 ~ 1.2
-$ envy sync
+$ envy install
 ~ 1.2
 $ brotli --version

@@ -62,8 +62,8 @@ Two of those are worth a note:
   carries its own version number internally, and any envy command rewrites a
   hook that is older than the one it ships:
 
-  ```console
-  $ envy sync
+  ```shell-session
+  $ envy install
   Shell hook updated (zsh) — restart your shell
   ```
 
@@ -120,16 +120,16 @@ envy uses `.envy/cache` beside the manifest.
 
 Whichever the project declares, you can override it for your own checkout:
 
-```console
+```shell-session
 $ envy cache --local     # keep this project's packages inside the project
-$ envy cache --shared    # use the user-wide cache instead
+$ envy cache --shared    # use the shared cache instead
 ```
 
 That writes a zero-byte marker file next to the manifest, `.envy-cache-local`
 or `.envy-cache-shared`, and the marker outranks the manifest from then on. The
 marker exists only when your choice *differs* from what the project declares, so
 `envy cache --local` on a project that already defaults local just clears it.
-Both markers present at once is an error; envy never writes that state.
+Both markers present at once is an error. envy never writes that state.
 
 `envy init` adds `.envy/` and `.envy-cache-*` to `.gitignore`, so a marker is
 yours alone and never travels in a commit.
@@ -215,7 +215,7 @@ Highest first:
 4. `@envy cache-local` being present at all, which means local.
 5. Otherwise shared: the platform default.
 
-Tiers 2–5 all resolve relative to the manifest's directory, never the working
+Tiers 2 through 5 all resolve relative to the manifest's directory, never the working
 directory, so one manifest names one cache tree from wherever you run. envy reads
 the directives out of the manifest as text and never runs its Lua to get them, so
 a broken manifest above your working directory cannot break a cache lookup. Under
@@ -223,7 +223,7 @@ a broken manifest above your working directory cannot break a cache lookup. Unde
 
 `envy cache` tells you which tier won:
 
-```console
+```shell-session
 $ envy cache | head -1
 Cache: /Users/you/src/firmware/out/.envy  (@envy cache-local)
 ```
@@ -232,8 +232,8 @@ Cache: /Users/you/src/firmware/out/.envy  (@envy cache-local)
 
 A project-local tree gets a notice before any packages land:
 
-```console
-$ envy sync
+```shell-session
+$ envy install
 Caching packages in /Users/you/src/firmware/out/.envy
   These packages live inside the project, so deleting it deletes them.
   To share one cache across all your projects, run: ./bin/envy cache --shared
@@ -310,7 +310,7 @@ There is no `envy cache clean`. Everything is reconstructible from the manifest,
 so deletion is the cleanup tool. [`envy cache`](../reference/cli/cache.md) shows
 what is worth deleting:
 
-```console
+```shell-session
 $ envy cache
 Cache: /Users/you/Library/Caches/envy  (default)
 

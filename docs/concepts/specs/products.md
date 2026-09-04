@@ -20,7 +20,7 @@ PRODUCTS = {
 Values are relative to the package directory. envy resolves them against `pkg/`
 when queried.
 
-:::caution A product is not necessarily a script
+:::warning[A product is not necessarily a script]
 Executable products get [wrapper scripts](../environment/product-scripts.md)
 deployed. But a product can be any named value: a header path for a header-only
 library, a shared library, a data directory, an apt package name. Mark those
