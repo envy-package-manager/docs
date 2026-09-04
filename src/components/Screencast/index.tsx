@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 
 import dimensions from './dimensions.json';
@@ -28,8 +28,21 @@ interface Props {
  */
 export default function Screencast({name, alt}: Props): React.ReactElement {
   const [loaded, setLoaded] = useState(false);
+  const img = useRef<HTMLImageElement>(null);
   const src = useBaseUrl(`/screencasts/${name}.svg`);
   const [width, height] = dimensions[name];
+
+  // The panel that is open on arrival is server-rendered, so the browser starts
+  // its SVG long before React hydrates and usually finishes it first. That
+  // `load` fired against markup with no handler on it yet, and the one attached
+  // below never hears anything, which left the spinner turning on top of a
+  // recording that was already playing. Ask the element directly once, after
+  // hydration. Panels opened by a tab click mount later and take the event.
+  useEffect(() => {
+    if (img.current?.complete) {
+      setLoaded(true);
+    }
+  }, []);
 
   return (
     <span className="screencast-frame" style={{aspectRatio: `${width} / ${height}`}}>
@@ -37,6 +50,7 @@ export default function Screencast({name, alt}: Props): React.ReactElement {
         <span className="screencast-frame__loading">loading the recording</span>
       )}
       <img
+        ref={img}
         className="screencast"
         src={src}
         alt={alt}
