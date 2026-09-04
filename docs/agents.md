@@ -27,7 +27,7 @@ and scripts use the explicit path.
 - manifest `envy.lua`: header comment directives `-- @envy key "value"` before
   the first code line, plus globals `PACKAGES` (required), `BUNDLES`,
   `PACKAGE_DEPOTS`, `DEFAULT_SHELL`. Manifest is real Lua: conditionals,
-  `envy.loadenv()`, `envy.extend()` all legal.
+  `envy.import()`, `envy.extend()` all legal.
 - shells: string verbs, and strings returned from function verbs, run under
   `DEFAULT_SHELL`. Default bash on POSIX, PowerShell on Windows. Built-ins
   `ENVY_SHELL.BASH|SH|CMD|POWERSHELL`, platform-validated, wrong platform is an
@@ -281,8 +281,27 @@ run export import use cache shell`.
 
 Superprojects: nested `envy.lua` manifests compose. A sub-manifest sets `@envy
 root "false"`, and the superproject imports it via
-`envy.loadenv("path.to.envy")` plus `envy.extend(PACKAGES, {...})`. Commands walk
+`envy.import("libs/common")` plus `envy.extend(PACKAGES, {...})`. Commands walk
 up to the root manifest, and `--subproject` stops at the nearest.
+
+`envy.import(path)` (**0.3.0+**, MANIFEST SCOPE ONLY, not in specs or `envy lua`)
+runs another manifest in a sandbox and returns its globals. Path is relative to
+the calling manifest; a directory appends `envy.lua`. An imported entry stays
+tied to its own file: relative `source` anchors on the IMPORTED manifest's dir,
+and `bundle = "alias"` resolves against ITS `BUNDLES` first, then the root's (no
+re-export needed; two components may reuse an alias). Declarer stays the
+superproject, so project root, SETUP cwd and custom-fetch cache keys name the
+root. Only `PACKAGES`/`BUNDLES` are tagged; splice other globals by hand
+(`PACKAGE_DEPOTS = sub.PACKAGE_DEPOTS`). Imported file sees `ENVY_IMPORTER` =
+importer's absolute path, `nil` standalone: `if not ENVY_IMPORTER then` is the
+standalone-only gate that replaced env-var gates. Nesting fine, cycles error.
+**Imported header is INERT** (`bin`, `deploy`, `cache-*`, `state-dir`, `mirror`,
+`sha256sums`, `root` all do nothing; one tree, one cache root, one binary per run,
+all from the root header). Sole exception: imported `@envy version` NEWER than
+the root pin errors, older warns. Discovery never sees the file, so no
+`manifest_resolved` names it; `manifest_imported{path,importer}` is the record.
+Pre-0.3.0 this was `envy.loadenv`, which needed `envy.abspath` on every component
+source path and a manual `BUNDLES = sub.BUNDLES`; both traps were silent.
 
 Env vars read: `ENVY_CACHE_ROOT`, `ENVY_MIRROR`, `ENVY_IGNORE_DEPOT`,
 `ENVY_NO_REEXEC`, `ENVY_FETCH_ATTEMPTS`, `ENVY_FETCH_RETRY_BASE_MS`; hook-only
@@ -295,6 +314,7 @@ env, cwd, shell})`, `envy.fetch(src, {dest})`, `envy.commit_fetch`,
 `envy.verify_hash`, `envy.extract`, `envy.extract_all(src, dst, {strip, only})`,
 `envy.copy/move/remove/exists`, `envy.path.*`, `envy.abspath`,
 `envy.template(str, vars)`, `envy.product(name)`, `envy.package(identity)`,
-`envy.options(schema)`, `envy.loadenv`, `envy.loadenv_spec(identity, module)`
+`envy.options(schema)`, `envy.loadenv` (helper files; NOT manifest composition,
+see `envy.import`), `envy.loadenv_spec(identity, module)`
 (returns a module's globals out of a declared dependency), and constants `envy.PLATFORM`
 (`darwin|linux|windows`), `envy.ARCH`, `envy.PLATFORM_ARCH`, `envy.EXE_EXT`.

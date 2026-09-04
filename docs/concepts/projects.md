@@ -71,7 +71,8 @@ Three helpers are available in manifest code:
 | Helper | What it does |
 | --- | --- |
 | `envy.abspath("p")` | Resolves `p` against the directory of the file that calls it, not the current directory. A subproject manifest uses it to name its own spec files, so the paths still work when a superproject includes the file. |
-| `envy.loadenv("a.b")` | Loads `<caller's dir>/a/b.lua` in a sandbox and returns its globals as a table. Used to reuse one manifest from another. |
+| `envy.import("libs/common")` | Runs another manifest in a sandbox and returns its globals. Its entries keep resolving paths and bundle aliases against it. Needs envy 0.3.0. |
+| `envy.loadenv("a.b")` | Loads `<caller's dir>/a/b.lua` in a sandbox and returns its globals as a table. For shared helper files. |
 | `envy.extend(t, ...)` | Appends the array items of each argument onto `t`. Use it to add entries to an inherited `PACKAGES` list. |
 
 ## Package entries
@@ -298,12 +299,10 @@ instead of letting each component form its own project.
 
 ```lua title="libs/firmware-common/envy.lua"
 -- @envy schema "1"
--- @envy version "0.2.0"
+-- @envy version "0.3.0"
 -- @envy bin "bin"
 -- @envy deploy "true"
 -- @envy root "false"          -- a component, not a project boundary
-
-local specs = envy.abspath("envy") .. "/"
 
 BUNDLES = { envy = { identity = "envy.package-specs@r3",
                      source = "https://github.com/envy-package-manager/package-specs.git",
@@ -311,34 +310,35 @@ BUNDLES = { envy = { identity = "envy.package-specs@r3",
 
 PACKAGES = {
   { spec = "envy.cmake@r0", bundle = "envy", options = { version = "4.4.0" } },
-  { spec = "acme.armgcc@r1", source = specs .. "acme.armgcc.lua",
+  { spec = "acme.armgcc@r1", source = "envy/acme.armgcc.lua",
     options = { version = "15.2.rel1" } },
 }
 ```
 
 ```lua title="envy.lua (the superproject root)"
 -- @envy schema "1"
--- @envy version "0.2.0"
+-- @envy version "0.3.0"
 -- @envy bin "bin"
 -- @envy deploy "true"
 -- @envy root "true"
 
-local fwc = envy.loadenv("libs.firmware-common.envy")
-
-BUNDLES = fwc.BUNDLES
-PACKAGES = fwc.PACKAGES
+local fwc = envy.import("libs/firmware-common")
 
 -- Same toolchain as the component, plus one thing only the top level needs.
-envy.extend(PACKAGES, {
-  { spec = "acme.releasetool@r0", source = envy.abspath("envy/acme.releasetool.lua") },
+PACKAGES = envy.extend(fwc.PACKAGES, {
+  { spec = "acme.releasetool@r0", source = "envy/acme.releasetool.lua" },
 })
 ```
 
-The component's `envy.lua` works both as a manifest on its own and as a module
-the root imports. `envy.abspath` anchors its spec paths to its own directory in
-either case. From inside `libs/firmware-common`, `envy sync` syncs the whole
-superproject, and `envy sync --subproject` syncs only that component into only
-its bin directory.
+The component's `envy.lua` works both as a manifest on its own and as a file the
+root imports. Its `source` paths and its `bundle` aliases resolve against
+`libs/firmware-common` in either case, so the root does not re-export `BUNDLES`.
+From inside `libs/firmware-common`, `envy sync` syncs the whole superproject, and
+`envy sync --subproject` syncs only that component into only its bin directory.
+
+The imported header is inert. The root header alone decides the envy version, the
+cache tree, and the bin directory a run uses. See
+[The bootstrap boundary](../guides/monorepos.md#the-bootstrap-boundary).
 
 ## One manifest, three platforms
 

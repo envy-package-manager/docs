@@ -142,6 +142,7 @@ version.
 | `target_extended` | `old_target`, `new_target` |
 | `pkg_outcome` | `outcome`, `duration_ms`. Terminal result, one of `cache_hit`, `imported`, `installed`, `setup_complete`, `bundle_fetched`, `bundle_local`. |
 | `manifest_resolved` | `path`, `anchor`, `mode`, `nearest`. Which project the command decided it was operating on. `mode` is `explicit` (`--manifest`), `project` (`--project`), or `cwd`; `anchor` is the directory the walk started from, empty for an explicit path; `nearest` is `--subproject`. [`envy run`](./cli/run.md) emits nothing, because it replaces its own process before the trace drains. |
+| `manifest_imported` | `path`, `importer`. One [`envy.import`](./lua-api.md#envyimportpath): the manifest read, and the file that read it. Discovery never sees an imported manifest, so this is the only record that it took part in the run. |
 
 **Cache and locking**
 

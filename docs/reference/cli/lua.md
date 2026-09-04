@@ -39,6 +39,9 @@ The same environment a spec's phase functions see:
 | `envy.package`, `envy.product`, `envy.options` | Resolution helpers. |
 | `ENVY_SHELL.BASH`, `.SH`, `.CMD`, `.POWERSHELL` | Shell constants for string verbs. |
 
+`envy.import` is not in scope. It composes manifests, and `envy lua` runs a
+script rather than loading a manifest.
+
 A Lua error exits non-zero with the message and traceback, formatted the way a
 failing spec's error is.
 

@@ -41,6 +41,18 @@ moves together.
 | `ref` | Required for a git source. A full commit sha. |
 | `sha256` | Integrity pin for an archive source. |
 
+An alias is scoped to the manifest that wrote it. An entry pulled in with
+[`envy.import`](/reference/lua-api#envyimportpath) resolves `bundle = "envy"`
+against the imported manifest's `BUNDLES` first, then the importing one's. A
+superproject does not re-export a component's `BUNDLES`, and two components can
+use the same alias for different bundles. An alias that matches neither table
+reports both:
+
+```text
+Bundle alias 'envy' not found in the BUNDLES table of this manifest or of the
+manifest that declared it, for spec 'acme.tool@r0'
+```
+
 An entry can also carry an inline declaration instead of an alias, which is worth
 it only for a one-off:
 
@@ -326,7 +338,9 @@ Four rules govern `envy.loadenv_spec`:
   says so.
 - **Bundle aliases are file-scoped.** A spec's `DEPENDENCIES` resolves
   `bundle = "acme"` against that spec's own `BUNDLES` table rather than the
-  manifest's. A spec that pulls from a bundle declares that bundle itself.
+  manifest's. A spec that pulls from a bundle declares that bundle itself. The
+  same rule covers imported manifests, where an entry resolves against the
+  `BUNDLES` of the manifest that declared it.
 
 ## See also
 

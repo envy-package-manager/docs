@@ -53,7 +53,7 @@ Rules:
 | `PACKAGE_DEPOTS` | array | Depot index URIs, or `{ DEPENDS, FETCH }` tables. |
 | `DEFAULT_SHELL` | constant, table, or function | Shell for string verbs. See [Shells & Scripts](/concepts/shells). |
 
-Manifests are Lua, so `envy.loadenv`, `envy.extend`, and `envy.abspath` are all
+Manifests are Lua, so `envy.import`, `envy.extend`, and `envy.abspath` are all
 available. See [Lua API](./lua-api.md).
 
 ## Package entry fields

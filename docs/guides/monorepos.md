@@ -26,13 +26,11 @@ A shared component carries a real manifest, marked as a component:
 
 ```lua title="libs/common/envy.lua"
 -- @envy schema "1"
--- @envy version "0.2.0"
+-- @envy version "0.3.0"
 -- @envy sha256sums "a17e9c4f...c93f"
 -- @envy bin "bin"
 -- @envy deploy "true"
 -- @envy root "false"
-
-local specs = envy.abspath("envy") .. "/"
 
 BUNDLES = {
   envy = {
@@ -45,7 +43,7 @@ BUNDLES = {
 PACKAGES = {
   { spec = "envy.cmake@r0", bundle = "envy", options = { version = "4.4.0" } },
   { spec = "envy.ninja@r0", bundle = "envy", options = { version = "1.13.2" } },
-  { spec = "acme.protoc@r0", source = specs .. "acme.protoc.lua",
+  { spec = "acme.protoc@r0", source = "envy/acme.protoc.lua",
     options = { version = "33.5" } },
 }
 ```
@@ -54,36 +52,53 @@ The root imports it and adds what only the top level needs:
 
 ```lua title="envy.lua"
 -- @envy schema "1"
--- @envy version "0.2.0"
+-- @envy version "0.3.0"
 -- @envy sha256sums "a17e9c4f...c93f"
 -- @envy bin "bin"
 -- @envy deploy "true"
 -- @envy root "true"
 
-local common = envy.loadenv("libs.common.envy")
+local common = envy.import("libs/common")
 
-BUNDLES = common.BUNDLES
-PACKAGES = common.PACKAGES
-
-envy.extend(PACKAGES, {
-  { spec = "acme.releasetool@r0", source = envy.abspath("envy/acme.releasetool.lua") },
+PACKAGES = envy.extend(common.PACKAGES, {
+  { spec = "acme.releasetool@r0", source = "envy/acme.releasetool.lua" },
 })
 ```
 
-`envy.loadenv("libs.common.envy")` loads `libs/common/envy.lua` in a sandbox and
-returns its globals. `envy.extend` appends to the list you inherited.
+[`envy.import`](../reference/lua-api.md#envyimportpath) runs
+`libs/common/envy.lua` in a sandbox and returns its globals. `envy.extend`
+appends to the list you inherited. It needs **envy 0.3.0 or newer**.
 
-## Why `envy.abspath` matters here
+## Paths and aliases follow the file that wrote them
 
-The component's spec paths use `envy.abspath`, which resolves against the
-directory of the file that calls it. That is what lets one file serve two roles:
+An imported entry keeps resolving against the manifest that declared it:
 
-- Run `envy sync` inside `libs/common` and it is a manifest, resolving
-  `envy/acme.protoc.lua` inside `libs/common`.
-- Import it from the root and it is a module, still resolving that same path.
+- `source = "envy/acme.protoc.lua"` in the component means
+  `libs/common/envy/acme.protoc.lua`, whether you sync the component on its own
+  or import it from the root.
+- `bundle = "envy"` in the component resolves against the component's own
+  `BUNDLES`. The root does not re-export it, and it can define its own `envy`
+  alias pointing somewhere else.
 
-A plain relative string would resolve against the working directory and break in
-one of those two cases.
+Everything else names the superproject: the project root, the `SETUP` working
+directory, and custom-fetch cache keys. The component supplies declarations, not
+a second project.
+
+:::note[Upgrading from `envy.loadenv`]
+
+Before 0.3.0, composing manifests meant `envy.loadenv`, which returns a plain
+table with no such tie. Two things were needed to make it work, and both go away:
+
+- Component spec paths had to be wrapped in `envy.abspath`, because a plain
+  relative string would resolve against the root manifest. Now `"envy/x.lua"` is
+  enough.
+- The root had to re-export `BUNDLES = common.BUNDLES`, or every
+  `bundle = "alias"` in the component failed to resolve. Now it does not.
+
+Both traps were silent in the direction that matters: the manifest loaded and
+built the wrong thing.
+
+:::
 
 ## Working on a component
 
@@ -137,32 +152,37 @@ PACKAGES = {
 ```
 
 ```lua title="envy.lua"
-PACKAGES = common.PACKAGES
-
-envy.extend(PACKAGES, {
-  { spec = "acme.armgcc@r1", source = envy.abspath("libs/common/envy/acme.armgcc.lua"),
+PACKAGES = envy.extend(common.PACKAGES, {
+  { spec = "acme.armgcc@r1", source = "libs/common/envy/acme.armgcc.lua",
     options = { version = "15.2.rel1" } },
 })
 ```
 
 The spec still lives with the component, so there is one definition. Only the
-version choice moves up.
+version choice moves up. This entry is the root's own, so its `source` anchors on
+the root manifest.
 
 ## Standalone-only entries
 
 A component sometimes needs a package that the superproject supplies another way.
-Gate it on an environment variable rather than duplicating the manifest:
+Gate it on `ENVY_IMPORTER`, which is set only when another manifest imported this
+one:
 
 ```lua title="libs/common/envy.lua"
-if os.getenv("ACME_COMMON_STANDALONE") then
+if not ENVY_IMPORTER then
   envy.extend(PACKAGES, {
-    { spec = "acme.armgcc@r1", source = specs .. "acme.armgcc.lua",
+    { spec = "acme.armgcc@r1", source = "envy/acme.armgcc.lua",
       options = { version = "15.2.rel1" } },
   })
 end
 ```
 
-CI for the component sets it, and the superproject does not.
+Syncing the component on its own takes that branch. Importing it from the root
+does not, so the root's own compiler pin stands. `ENVY_IMPORTER` holds the
+absolute path of the importing manifest, and is `nil` otherwise.
+
+Before 0.3.0 this needed an environment variable that CI had to set, which made
+the component's package list depend on the caller's environment.
 
 ## Each manifest pins its own envy
 
@@ -171,12 +191,55 @@ different envy versions. Keep them equal in practice, and remember
 [`envy use`](../reference/cli/use.md) edits one manifest at a time:
 
 ```bash
-envy use 0.2.1
-cd libs/common && envy use 0.2.1 --subproject
+envy use 0.3.0
+cd libs/common && envy use 0.3.0 --subproject
 ```
 
-A CI check that greps every `envy.lua` for the version is cheap and catches
-drift.
+Under `envy.import` the root pin is what runs, and envy checks the two against
+each other:
+
+| Imported `@envy version` | Result |
+| --- | --- |
+| Equal to the root pin, or absent | Nothing |
+| Older than the root pin | Warning, and the run continues |
+| Newer than the root pin | Error |
+
+The check needs a pin on both sides. A root manifest with no `@envy version`
+compares against nothing, so an imported pin is ignored.
+
+Newer is an error because bootstrap already chose the binary from the root
+header, so the request cannot be satisfied by the time the import runs.
+
+## The bootstrap boundary
+
+An imported manifest is a file the root reads. It is not a second project envy
+joins, and its header does nothing:
+
+| Directive in an imported manifest | Effect |
+| --- | --- |
+| `bin`, `deploy` | None. Products deploy into the root's bin directory. |
+| `cache-local`, `cache-mode`, `state-dir` | None. One cache tree per run, from the root header. |
+| `version`, `sha256sums`, `mirror` | None, beyond the version check above. The launchers read the root header only. |
+| `root` | None. Discovery never sees the file. |
+
+One run means one tree, one cache root, and one envy binary, all decided from the
+root header before any Lua runs.
+
+That header still matters when the component is synced on its own, which is the
+point of a component carrying a full manifest rather than a fragment. Both roles
+read the same file, and which directives apply is what changes.
+
+Because discovery never resolves an imported manifest, it produces no
+`manifest_resolved` event. The record that it took part in a run is
+`manifest_imported`:
+
+```console
+$ envy --trace=file:t.jsonl sync
+$ grep manifest_imported t.jsonl
+{"seq":2,"ts":"2026-09-04T00:33:52.167Z","tid":0,"event":"manifest_imported","path":"/src/app/libs/common/envy.lua","importer":"/src/app/envy.lua"}
+```
+
+See [Logging & Tracing](../reference/observability.md).
 
 ## Each manifest has its own bin directory
 
@@ -200,5 +263,6 @@ bootstrap.
 ## See also
 
 - [Manifest Discovery](/concepts/projects#manifest-discovery) for the exact walk.
+- [`envy.import`](../reference/lua-api.md#envyimportpath) for the full signature.
 - [Projects & Manifests](/concepts/projects) for the composition helpers.
 - [`envy sync --subproject`](../reference/cli/sync.md)
