@@ -58,8 +58,8 @@ Three Windows notes:
 
 envy maintains the hook file itself, in the user-wide cache. Any earlier envy
 command has already created it. If it is missing, `envy shell` says so and tells
-you what to run. Note that hooks live only in the user-wide cache: a project on
-its own cache tree (`@envy cache-local`, or `envy cache --local`) writes none.
+you what to run. Hooks live only in the user-wide cache, so a project on its own
+cache tree (`@envy cache-local`, or `envy cache --local`) writes none.
 If every project you have is local, run one envy command in a project on the
 user-wide cache, or set `ENVY_CACHE_ROOT`. See
 [Shell Hooks](/concepts/environment/shell-hooks#hooks-are-a-user-wide-feature).
@@ -91,10 +91,10 @@ leaving.](/screencasts/per-project.svg)
 
 The messages go to stderr, so a piped command is unaffected.
 
-## It costs nothing
+## What it costs
 
-The hook is pure shell. envy is never invoked at shell startup or on `cd`, and
-the hook avoids subshells deliberately, so entering a directory does not fork
+Close to nothing. The hook is pure shell. envy is never invoked at shell startup
+or on `cd`, and the hook avoids subshells, so entering a directory does not fork
 anything.
 
 It also resolves manifests by the same rules envy itself uses, so the tools on
@@ -113,7 +113,7 @@ The marker also stays off outside a UTF-8 locale, where the enter and leave
 messages use `--` in place of the em dash.
 
 Powerlevel10k users get a `prompt_envy` segment instead of a prepended marker, so
-it can be positioned deliberately.
+they can position it themselves.
 
 ## Updating
 

@@ -28,8 +28,7 @@ Rules:
   first line of code ends the header, and a `-- @envy` comment below it is just a
   comment.
 - The last occurrence of a key wins.
-- Unknown keys are ignored, which is what makes a newer manifest readable by an
-  older envy.
+- Unknown keys are ignored, so an older envy can still read a newer manifest.
 - `cache-local` and `state-dir` are relative literals anchored to the manifest's
   directory, never to your working directory. No expansion of any kind: `..`, a
   leading separator, a drive letter, `~`, `$VAR` and `%VAR%` are all rejected. An
@@ -53,7 +52,7 @@ Rules:
 | `PACKAGE_DEPOTS` | array | Depot index URIs, or `{ DEPENDS, FETCH }` tables. |
 | `DEFAULT_SHELL` | constant, table, or function | Shell for string verbs. See [Shells & Scripts](/concepts/shells). |
 
-Manifests are Lua, so `envy.loadenv`, `envy.extend`, and `envy.abspath` are all
+Manifests are Lua, so `envy.import`, `envy.extend`, and `envy.abspath` are all
 available. See [Lua API](./lua-api.md).
 
 ## Package entry fields

@@ -27,7 +27,7 @@ and scripts use the explicit path.
 - manifest `envy.lua`: header comment directives `-- @envy key "value"` before
   the first code line, plus globals `PACKAGES` (required), `BUNDLES`,
   `PACKAGE_DEPOTS`, `DEFAULT_SHELL`. Manifest is real Lua: conditionals,
-  `envy.loadenv()`, `envy.extend()` all legal.
+  `envy.import()`, `envy.extend()` all legal.
 - shells: string verbs, and strings returned from function verbs, run under
   `DEFAULT_SHELL`. Default bash on POSIX, PowerShell on Windows. Built-ins
   `ENVY_SHELL.BASH|SH|CMD|POWERSHELL`, platform-validated, wrong platform is an
@@ -71,7 +71,8 @@ and scripts use the explicit path.
   relative to the bin dir, and only for a root manifest (`root "false"` leaves it
   empty and the caller's value stands). The `.bat` twin needs `setlocal`, or PATH
   and the product path leak into the calling cmd.exe and a sibling product
-  re-runs the first payload forever. Wrapper/bootstrap schema is `3`.
+  re-runs the first payload forever. Wrapper/bootstrap schema is `4` (POSIX
+  wrappers run `set -Eeuo pipefail`; a bump restamps every wrapper once).
 - **manifest discovery**: walk up from an anchor. Precedence `--manifest <path>`
   (no walk) > global `--project <dir>` > CWD. `--subproject` means "nearest to
   where I stand", so it anchors on CWD even under `--project`, and stops at the
@@ -103,6 +104,9 @@ and scripts use the explicit path.
   (`~/Library/Caches/envy`, `$XDG_CACHE_HOME/envy`, `%LOCALAPPDATA%\envy`).
   Layout `envy/<ver>/{envy,envy.lua}` + `envy/latest`, `packages/`, `specs/`,
   `shell/`, `locks/`; entry key `identity/<platform>-<arch>-blake3-<hash>`.
+  First-run notice ("Caching packages in ...") fires for LOCAL trees only, on
+  stderr, keyed on `packages/` not existing, never a prompt. The shared default
+  is silent.
 - **a local tree reads the user-wide one, never writes to it**. Launchers and
   reexec try `<project cache>/envy/<ver>/envy`, then `<user-wide>/envy/<ver>/envy`.
   The second is tried only for a LOCAL tree with **no** `@envy sha256sums` (the fast
@@ -126,7 +130,7 @@ and scripts use the explicit path.
 
 ## windows
 
-First-class, not a port. Same manifest, same specs, same cache layout.
+Supported target, not a port. Same manifest, same specs, same cache layout.
 
 - bootstrap `bin\envy.bat` (batch, parses the `@envy` header itself, walks up for
   the root manifest, honors `ENVY_CACHE_ROOT`/`ENVY_MIRROR`). Wrappers are
@@ -139,13 +143,15 @@ First-class, not a port. Same manifest, same specs, same cache layout.
   per-flavor, so a plain `sync` on macOS does NOT restamp `envy.bat`. Use
   `--platform all` in a cross-platform repo. A host-only deploy does not prune
   the other flavor.
-- product wrappers are written LF on every platform, POSIX ones mode 755. The
-  exception is `bin\envy.bat`, written **CRLF**: cmd.exe resolves `goto`/`call
-  :label` by seeking with offsets that assume CRLF, so an LF batch with labels
-  drifts a byte per line until the search walks past the label and no `@envy`
-  directive is parsed at all. Wrappers carry no labels and are unaffected.
-  `core.autocrlf` rewriting them makes every deploy report "updated"; fix with
-  `bin/** -text` in `.gitattributes`, which also preserves envy.bat's CRLF.
+- scripts get the newlines their TARGET needs, not the host's: **CRLF for every
+  `.bat`** (`envy.bat` and the wrappers), LF otherwise, POSIX ones mode 755.
+  cmd.exe resolves `goto`/`call :label` by seeking with offsets that assume CRLF,
+  so an LF batch with labels drifts a byte per line until the search walks past
+  the label and no `@envy` directive is parsed at all. envy renormalizes both
+  directions. A committed bin dir is byte-identical in every checkout.
+  `core.autocrlf` rewriting the POSIX scripts makes every deploy report
+  "updated"; fix with `bin/** -text` in `.gitattributes`. `*.bat eol=crlf` is
+  also compatible now.
 - string verbs default to PowerShell, invoked
   `powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File <temp .ps1>`;
   cmd is `cmd.exe /D /V:ON /S /C <temp .cmd>`. POSIX gets `bash -e`, so fail-fast
@@ -252,7 +258,12 @@ run export import use cache shell`.
   manifest or project required. Transports and formats are compiled in: AWS SDK
   (so `s3://` works with ambient credentials and no AWS CLI), libgit2 (no `git`
   binary), libarchive (tar/gz/xz/bz2/zst/zip/7z/rar/iso). Package the AWS CLI
-  only when a project wants the CLI itself.
+  only when a project wants the CLI itself. `mirror-envy` to an `s3://`
+  destination resolves credentials BEFORE downloading, failing with
+  `no usable AWS credentials` plus the SDK's per-provider reason (expired SSO
+  token being the usual one). S3 error hints: 501 = unsigned write, 301 /
+  `PermanentRedirect` = wrong region (SDK defaults `us-east-1`), 403 = no
+  `s3:PutObject`, `NoSuchBucket` = envy never creates buckets.
 - `cache [--root | --user-wide-root | --local | --shared]`: cache location and
   disk usage; flags mutually exclusive, one action per invocation. Also
   `version`, `mirror-envy`.
@@ -270,8 +281,27 @@ run export import use cache shell`.
 
 Superprojects: nested `envy.lua` manifests compose. A sub-manifest sets `@envy
 root "false"`, and the superproject imports it via
-`envy.loadenv("path.to.envy")` plus `envy.extend(PACKAGES, {...})`. Commands walk
+`envy.import("libs/common")` plus `envy.extend(PACKAGES, {...})`. Commands walk
 up to the root manifest, and `--subproject` stops at the nearest.
+
+`envy.import(path)` (**0.3.0+**, MANIFEST SCOPE ONLY, not in specs or `envy lua`)
+runs another manifest in a sandbox and returns its globals. Path is relative to
+the calling manifest; a directory appends `envy.lua`. An imported entry stays
+tied to its own file: relative `source` anchors on the IMPORTED manifest's dir,
+and `bundle = "alias"` resolves against ITS `BUNDLES` first, then the root's (no
+re-export needed; two components may reuse an alias). Declarer stays the
+superproject, so project root, SETUP cwd and custom-fetch cache keys name the
+root. Only `PACKAGES`/`BUNDLES` are tagged; splice other globals by hand
+(`PACKAGE_DEPOTS = sub.PACKAGE_DEPOTS`). Imported file sees `ENVY_IMPORTER` =
+importer's absolute path, `nil` standalone: `if not ENVY_IMPORTER then` is the
+standalone-only gate that replaced env-var gates. Nesting fine, cycles error.
+**Imported header is INERT** (`bin`, `deploy`, `cache-*`, `state-dir`, `mirror`,
+`sha256sums`, `root` all do nothing; one tree, one cache root, one binary per run,
+all from the root header). Sole exception: imported `@envy version` NEWER than
+the root pin errors, older warns. Discovery never sees the file, so no
+`manifest_resolved` names it; `manifest_imported{path,importer}` is the record.
+Pre-0.3.0 this was `envy.loadenv`, which needed `envy.abspath` on every component
+source path and a manual `BUNDLES = sub.BUNDLES`; both traps were silent.
 
 Env vars read: `ENVY_CACHE_ROOT`, `ENVY_MIRROR`, `ENVY_IGNORE_DEPOT`,
 `ENVY_NO_REEXEC`, `ENVY_FETCH_ATTEMPTS`, `ENVY_FETCH_RETRY_BASE_MS`; hook-only
@@ -284,6 +314,7 @@ env, cwd, shell})`, `envy.fetch(src, {dest})`, `envy.commit_fetch`,
 `envy.verify_hash`, `envy.extract`, `envy.extract_all(src, dst, {strip, only})`,
 `envy.copy/move/remove/exists`, `envy.path.*`, `envy.abspath`,
 `envy.template(str, vars)`, `envy.product(name)`, `envy.package(identity)`,
-`envy.options(schema)`, `envy.loadenv`, `envy.loadenv_spec(identity, module)`
+`envy.options(schema)`, `envy.loadenv` (helper files; NOT manifest composition,
+see `envy.import`), `envy.loadenv_spec(identity, module)`
 (returns a module's globals out of a declared dependency), and constants `envy.PLATFORM`
 (`darwin|linux|windows`), `envy.ARCH`, `envy.PLATFORM_ARCH`, `envy.EXE_EXT`.

@@ -110,9 +110,8 @@ envy git-resolve https://github.com/acme/specs refs/heads/main
 | `Bundle alias 'x' not found in BUNDLES table for spec '...'` | The alias is missing, or declared in a different manifest. | Declare it in the manifest that owns the entry. |
 | `... cycle detected: a@r1 -> b@r1 -> a@r1` | A dependency loop. Fetch dependencies can form one too. | Break the loop, usually by lowering a `needed_by`. |
 
-An ambiguous weak reference is worth understanding rather than working around. It
-means the project genuinely provides two candidates, and envy refuses to guess
-which one you meant. See
+An ambiguous weak reference means the project provides two candidates, and envy
+refuses to guess which one you meant. See
 [Resolution](/concepts/dependencies/resolution#weak-reference-outcomes).
 
 ## Spec authoring
@@ -188,7 +187,7 @@ which project it picked and what anchored the choice:
 envy --trace=stderr product 2>&1 | grep manifest_resolved
 ```
 
-Note that a bin directory decides its own project: `../other/bin/cmake` and
+A bin directory decides its own project: `../other/bin/cmake` and
 `../other/bin/envy sync` act on `../other`, not on the directory you are
 standing in, because those scripts inject `--project`. To force a different
 answer, pass `--project <dir>` yourself, or `--subproject` for the nearest
@@ -240,9 +239,9 @@ you can delete it. See
 
 It should not: a local tree with no `@envy sha256sums` borrows an
 already-downloaded envy binary out of the user-wide tree before falling back to
-the network. A sums pin deliberately turns that off, because the fast path never
+the network. A sums pin turns that off, because the fast path never
 re-hashes what it finds and the user-wide tree is written by every other project
-on the machine. That is the tradeoff a pin buys. See
+on the machine. That is the tradeoff a pin makes. See
 [The Cache](/concepts/cache#a-local-tree-reads-the-user-wide-one).
 
 **Network filesystems**
@@ -271,8 +270,9 @@ Same for wrappers. `bin\cmake.bat` only exists if someone ran
 **Every deploy reports scripts as updated, and Git shows the whole bin directory
 as modified**
 
-Git line-ending conversion. envy writes LF, `core.autocrlf` rewrites to CRLF on
-checkout, and envy writes them back:
+Git line-ending conversion. envy writes CRLF for `.bat` and LF for everything
+else, `core.autocrlf` rewrites the POSIX scripts to CRLF on checkout, and envy
+writes them back:
 
 ```console
 $ envy deploy --platform all
@@ -280,6 +280,8 @@ deploy: 8 product script(s) (0 created, 1 updated, 7 unchanged, 0 removed)
 ```
 
 Turn conversion off for the directory with `bin/** -text` in `.gitattributes`.
+`*.bat eol=crlf` is compatible with what envy writes. See
+[Line endings and file modes](/concepts/environment/product-scripts#line-endings-and-file-modes).
 
 **The shell hook does nothing in PowerShell**
 
@@ -350,6 +352,49 @@ falls back to source. The same happens on a download failure or a hash mismatch.
 
 Set `ENVY_IGNORE_DEPOT=1` in the publish job. Otherwise it imports from the depot
 and exports what it just imported.
+
+## S3
+
+envy has the AWS SDK compiled in, so `s3://` sources, mirrors, and depots use
+your ambient credentials and region config. There is no AWS CLI in the loop. See
+[`AWS_*`](./environment-variables.md).
+
+**`no usable AWS credentials`**
+
+```text
+error: mirror-envy: no usable AWS credentials
+  SSOCredentialsProvider: Cached Token expired at 2026-08-14T18:22:03Z
+  Hint: run 'aws sso login' (honoring AWS_PROFILE), or set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
+```
+
+The indented lines are the AWS SDK's own account of why each provider it tried
+failed, tagged with the provider's name. An expired SSO session is the usual
+one, and `aws sso login` is the fix.
+
+`envy mirror-envy` resolves credentials up front when the destination is
+`s3://`, before it downloads anything, so this fails in a second rather than
+after six archives.
+
+**`unrecognized S3 error code NotImplemented (HTTP 501)` on an upload**
+
+S3 answers an unsigned write with `NotImplemented`. Either the session expired
+partway through the run, in which case `aws sso login` and retry, or the
+endpoint is an S3-compatible one that does not implement the operation.
+
+**`PermanentRedirect`, or `AuthorizationHeaderMalformed`, or HTTP 301**
+
+The bucket is in a different region. The SDK falls back to `us-east-1` when no
+region is configured, so a bucket elsewhere fails as a redirect rather than as
+"region not set". Set `AWS_REGION` or a profile region.
+
+**HTTP 403 on an upload**
+
+The credentials resolved, but they lack `s3:PutObject` on that prefix. Check the
+bucket policy, or the role the profile assumes.
+
+**`NoSuchBucket`**
+
+envy never creates buckets. Create it first.
 
 ## Getting help
 

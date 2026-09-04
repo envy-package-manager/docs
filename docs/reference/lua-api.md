@@ -16,6 +16,7 @@ Your editor has all of this as hover documentation. See
 | --- | --- | --- | --- |
 | constants, `path.*`, `template`, `extend`, logging | yes | yes | pure |
 | `abspath`, `loadenv` | yes | yes | resolves against the calling file |
+| `import` | manifest top level only | no | not installed in specs or `envy lua` |
 | `copy`, `move`, `remove`, `exists`, `is_file`, `is_dir` | yes | yes | relative paths anchor to `stage_dir` in phases |
 | `run`, `extract`, `extract_all` | yes | yes | |
 | `fetch` | no | `FETCH` only | |
@@ -269,8 +270,8 @@ Moves files from `tmp_dir` into the durable fetch directory, verifying hashes on
 the way. Argument forms: a filename, a `{ filename, sha256 }` table, or an array
 of either.
 
-Anything left in `tmp_dir` is discarded. Committing is what makes a download
-survive to the next phase and to the next run.
+Anything left in `tmp_dir` is discarded. Committing is what carries a download
+into the next phase and the next run.
 
 ### `envy.verify_hash(path, sha256)`
 
@@ -353,22 +354,93 @@ a half-built package.
 
 ## Composition
 
-### `envy.loadenv(module)`
+### `envy.import(path)`
 
-Loads a Lua file next to the calling file and returns its globals. Dots are path
-separators, so `"libs.common.envy"` means `libs/common/envy.lua`. This is how one
-manifest reuses another:
+Runs another manifest in a sandbox and returns its globals. Requires **envy
+0.3.0 or newer**. This is how a superproject composes a component's package list:
 
 ```lua title="envy.lua"
-local common = envy.loadenv("libs.common.envy")
+local common = envy.import("libs/common")
 
-PACKAGES = {}
-envy.extend(PACKAGES, common.PACKAGES, {
-  { spec = "local.mytool@r1", source = envy.abspath("envy/mytool.lua") },
+PACKAGES = envy.extend(common.PACKAGES, {
+  { spec = "local.mytool@r1", source = "envy/mytool.lua" },
 })
 ```
 
-See [Monorepos](../guides/monorepos.md).
+`path` is relative to the calling manifest. A directory appends `envy.lua`, so
+`envy.import("libs/common")` and `envy.import("libs/common/envy.lua")` are the
+same call.
+
+What comes back is a table of every global the imported manifest assigned, which
+is `PACKAGES` and `BUNDLES` and anything else it set. Only `PACKAGES` and
+`BUNDLES` carry import bookkeeping. Assign the rest yourself:
+
+```lua
+PACKAGE_DEPOTS = common.PACKAGE_DEPOTS
+```
+
+An imported entry stays tied to the file that wrote it:
+
+- **Relative `source` paths resolve against the imported manifest's directory.**
+  A component's `source = "envy/protoc.lua"` means `libs/common/envy/protoc.lua`
+  no matter who imports it. `envy.abspath` is no longer needed for this.
+- **`bundle = "alias"` resolves against the imported `BUNDLES` first**, then the
+  root's. Re-exporting `BUNDLES` is unnecessary, and two components can use the
+  same alias for different bundles.
+
+Everything else names the superproject: the project root, the `SETUP` working
+directory, and custom-fetch cache keys. The imported manifest supplies
+declarations, not a second project.
+
+The imported file sees `ENVY_IMPORTER`, the absolute path of the manifest that
+imported it. It is `nil` when the file runs as a manifest on its own, which is
+how a component gates an entry only it needs:
+
+```lua title="libs/common/envy.lua"
+if not ENVY_IMPORTER then
+  envy.extend(PACKAGES, {
+    { spec = "acme.armgcc@r1", source = "envy/acme.armgcc.lua" },
+  })
+end
+```
+
+Nesting works, and a cycle is an error naming the chain:
+
+```text
+error: Failed to execute manifest script: envy.import: 'nope' not found (resolved to /src/app/nope)
+error: Failed to execute manifest script: envy.import: import cycle: /src/a/envy.lua -> /src/b/envy.lua -> /src/a/envy.lua
+```
+
+The imported header is otherwise inert. The one thing envy reads from it is
+`@envy version`, and only when the root manifest pins one too. Newer than the
+root pin is an error, because bootstrap already chose the binary:
+
+```text
+error: Failed to execute manifest script: envy.import: /src/sub/envy.lua requires envy 0.4.0, but the root manifest pins 0.3.0
+warning: envy.import: /src/sub/envy.lua pins envy 0.2.5; the root manifest pins 0.3.0
+```
+
+See [The bootstrap boundary](/guides/monorepos#the-bootstrap-boundary).
+
+### `envy.loadenv(module)`
+
+Loads a Lua file next to the calling file and returns its globals. Dots are path
+separators, so `"libs.common.helpers"` means `libs/common/helpers.lua`. Use it
+for shared helper files:
+
+```lua title="envy.lua"
+local versions = envy.loadenv("envy.versions")
+
+PACKAGES = {
+  { spec = "envy.cmake@r0", bundle = "envy", options = { version = versions.cmake } },
+}
+```
+
+**To compose one manifest from another, use
+[`envy.import`](#envyimportpath) instead.** `loadenv` hands back a plain table,
+so an imported entry's relative `source` paths would resolve against the wrong
+directory and its bundle aliases would not resolve at all. Both are silent, and
+both are what `envy.import` exists to fix.
 
 ## Options
 

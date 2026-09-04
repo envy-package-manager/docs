@@ -94,8 +94,8 @@ end
 ```
 
 Most projects want the cache-managed version of a tool instead. Reach for a
-user-managed spec when the thing genuinely belongs to the machine, such as a
-driver, a service, or a system SDK.
+user-managed spec when the thing belongs to the machine, such as a driver, a
+service, or a system SDK.
 
 ## What envy still provides
 

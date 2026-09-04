@@ -17,7 +17,7 @@ project pinning that `SHA256SUMS` would then be attesting garbage.
 
 The checksum file itself is copied byte for byte rather than regenerated. Any
 reformatting would change the file's own hash and make the pin mirror-specific.
-Copying it verbatim is what makes one `@envy sha256sums` pin work against the
+Copying it verbatim is what lets one `@envy sha256sums` pin work against the
 mirror and against upstream.
 
 ## Usage
@@ -54,6 +54,26 @@ advances it.
 
 For an S3 destination, archives are staged in a private temporary directory and
 removed after upload. Use a local destination to keep the staged bytes.
+
+## S3 credentials
+
+An `s3://` destination needs credentials that can write to the prefix. envy uses
+the AWS SDK's own resolution, so a profile, an SSO session, or
+`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` all work, and no AWS CLI is
+involved.
+
+envy resolves them before downloading anything:
+
+```text
+error: mirror-envy: no usable AWS credentials
+  SSOCredentialsProvider: Cached Token expired at 2026-08-14T18:22:03Z
+  Hint: run 'aws sso login' (honoring AWS_PROFILE), or set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
+```
+
+The indented lines are the SDK's account of why each provider it tried failed.
+Checking up front means an expired session costs a second rather than six
+archive downloads and one opaque S3 error per object. See
+[S3 troubleshooting](../troubleshooting.md#s3).
 
 ## Examples
 

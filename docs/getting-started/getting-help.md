@@ -63,7 +63,7 @@ Human output goes to stderr. stdout carries only machine-readable answers, from
 `product`, `package`, `hash`, `export`, `merge-depot`, `git-resolve`, `cache`, and
 `version --licenses`.
 
-That is what makes this safe:
+That separation is what lets this work:
 
 ```bash
 CMAKE="$(envy product cmake)"     # never captures progress or warnings

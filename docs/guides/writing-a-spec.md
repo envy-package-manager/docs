@@ -198,8 +198,8 @@ BUILD = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
 end
 ```
 
-The dependency edge is what makes `envy.product` legal, and what guarantees cmake
-is installed before `BUILD` runs. On a machine with neither tool, that is one
+The dependency edge makes `envy.product` legal, and guarantees cmake is
+installed before `BUILD` runs. On a machine with neither tool, that is one
 `sync`:
 
 ![A terminal session. brotli is not installed. envy sync downloads cmake and

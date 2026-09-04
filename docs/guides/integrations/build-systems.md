@@ -82,9 +82,9 @@ add_executable(tests tests.cpp)
 target_include_directories(tests PRIVATE "${doctest_dir}")
 ```
 
-`string(JSON)` needs CMake 3.19. The `CMAKE_CONFIGURE_DEPENDS` line is what makes
-this correct over time: bump a version in `envy.lua` and CMake reconfigures, so
-the next build uses the new paths.
+`string(JSON)` needs CMake 3.19. The `CMAKE_CONFIGURE_DEPENDS` line keeps this
+correct over time. Bump a version in `envy.lua` and CMake reconfigures, so the
+next build uses the new paths.
 
 Configuring and building with the project's own CMake and Ninja:
 

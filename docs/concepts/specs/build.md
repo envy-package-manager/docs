@@ -151,9 +151,8 @@ end
 
 A project that wants one dialect everywhere sets
 [`DEFAULT_SHELL`](../shells.md#default_shell), which is the manifest-wide version
-of option 2. Note that `check`, on by default, is arranged differently per
-platform: bash gets `-e`, while envy injects fail-fast into generated PowerShell
-and cmd scripts. See
+of option 2. `check`, on by default, works differently per platform: bash gets
+`-e`, while envy injects fail-fast into generated PowerShell and cmd scripts. See
 [How each built-in is invoked](../shells.md#how-each-built-in-is-invoked).
 
 ## Failure

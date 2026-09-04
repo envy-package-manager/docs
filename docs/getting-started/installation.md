@@ -28,9 +28,9 @@ first. The first call does the work:
    release into the user-wide cache.
 3. envy installs cmake, and cmake runs.
 
-Later calls skip straight to the last step. Note that the first call installs
-only what that tool needs, not the whole manifest, so trying one tool in an
-unfamiliar repo is cheap.
+Later calls skip straight to the last step. The first call installs only what
+that tool needs, not the whole manifest, so trying one tool in an unfamiliar
+repo is cheap.
 
 [`envy sync`](/reference/cli/sync) exists for maintaining the bin directory after
 a manifest edit, and for installing everything up front rather than on demand.
@@ -79,7 +79,7 @@ cache is always safe. See [The Cache](/concepts/cache).
 
 ## Supported platforms
 
-macOS, Linux, and Windows, on arm64 and x86_64. Windows is a first-class target
+macOS, Linux, and Windows, on arm64 and x86_64. Windows is a supported target
 rather than a WSL footnote, with its own `bin\envy.bat` bootstrap script and
 `.bat` wrappers.
 

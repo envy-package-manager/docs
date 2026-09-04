@@ -76,8 +76,8 @@ verification before running anything:
 3. It looks up the platform archive's entry inside that now-trusted `SHA256SUMS`,
    downloads the archive, and verifies it too.
 
-One pin therefore covers all six platform archives, which is what makes a single
-`@envy sha256sums` value practical in a cross-platform repo. It also means a
+One pin therefore covers all six platform archives, so a single
+`@envy sha256sums` value works in a cross-platform repo. It also means a
 mirror cannot tamper undetected: republishing requires producing a `SHA256SUMS`
 whose hash matches a value already committed to your git history.
 

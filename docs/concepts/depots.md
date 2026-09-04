@@ -53,8 +53,8 @@ envy derives the lookup key from the archive filename, so the index needs no
 schema beyond that naming. The platform and architecture are part of that name,
 which is why one index serves every platform: a Windows machine looks for
 `...-windows-x86_64-blake3-<hash>.tar.zst` and never sees the macOS entry. Lines it cannot parse are skipped with a warning, and
-so is an index it cannot download, which is what makes an unreachable depot a
-slowdown rather than a failure.
+so is an index it cannot download, so an unreachable depot is a slowdown rather
+than a failure.
 
 ## The exact-match rule
 
@@ -62,9 +62,9 @@ A hit requires the identity, the options, and the platform to match exactly,
 because the key is the same content hash that names the cache entry. There is no
 "close enough" and no version negotiation.
 
-That is worth internalizing in both directions. A depot can never hand you the
-wrong bits. And a depot miss is not a bug: bump one option and you have named a
-package nobody has published yet, so it builds locally.
+That cuts both ways. A depot can never hand you the wrong bits. And a depot miss
+is not a bug: bump one option and you have named a package nobody has published
+yet, so it builds locally.
 
 ## Which packages a depot can serve
 
