@@ -13,7 +13,7 @@ largest first, with a total.
 There is no `envy cache clean`. Everything in the cache is reconstructible from
 the manifest, so reclaiming space is `rm -rf` on whatever row you no longer want.
 That can be one package entry, a whole identity, or the entire root. The next
-`sync` rebuilds what the project needs.
+[`install`](./install.md) rebuilds what the project needs.
 
 ## Usage
 
@@ -29,14 +29,14 @@ envy cache [--root | --user-wide-root | --local | --shared]
 | `--local` | Use this project's own tree from now on. |
 | `--shared` | Use the user-wide cache from now on. |
 
-The flags are mutually exclusive; one action per invocation.
+The flags are mutually exclusive, so one invocation performs one action.
 
 ### Reading the root
 
 `--root` prints one line on stdout and skips the usage walk, which makes it the
 right thing to script against:
 
-```console
+```shell-session
 $ envy cache --root
 /Users/you/src/firmware/out/.envy
 ```
@@ -44,7 +44,7 @@ $ envy cache --root
 The bare report names the tier that decided, because the failure mode worth
 catching is two things disagreeing about where the cache is:
 
-```console
+```shell-session
 $ envy cache | head -1
 Cache: /Users/you/src/firmware/out/.envy  (@envy cache-local)
 ```
@@ -55,7 +55,7 @@ cache')`, `(@envy cache-mode)`, `(@envy cache-local)`, or `(default)`.
 `--user-wide-root` answers the other question, which only differs for a project
 on its own tree:
 
-```console
+```shell-session
 $ envy cache --root
 /Users/you/src/firmware/out/.envy
 $ envy cache --user-wide-root
@@ -72,7 +72,7 @@ otherwise re-download, and never writes to it. See
 manifest, `.envy-cache-local` or `.envy-cache-shared`, which outranks whatever
 the manifest declares:
 
-```console
+```shell-session
 $ envy cache --shared
 Cache: /Users/you/Library/Caches/envy  (recorded by 'envy cache')
 Previous: /Users/you/src/firmware/out/.envy (no longer used; remove it when convenient)
@@ -165,7 +165,7 @@ envy cache | head -1
 
 ```bash
 rm -rf "$(envy cache --root)/packages/envy.cmake@r0"
-envy sync
+envy install
 ```
 
 Nothing outside the cache points into it by absolute path, so the only cost is
@@ -182,18 +182,21 @@ Remove-Item -Recurse -Force "$env:LOCALAPPDATA\envy"
 ```
 
 This deletes installed packages, cached envy versions, and downloaded specs. The
-next `sync` in any project restores what that project needs.
+next `install` in any project restores what that project needs, and the committed
+bin directory is untouched either way.
 
 ### To keep a project's packages inside the project
 
 ```bash
 envy cache --local
-envy sync
+envy install
 ```
 
 Everything the project downloads now lives under its own tree, so deleting the
 project reclaims all of it. `envy cache --shared` puts you back on the user-wide
-cache. Neither command copies anything; the next `sync` populates the new root.
+cache. Neither command copies anything, and the next `install` populates the new
+root. The wrappers in the bin directory need no attention: they resolve their
+package at call time, so they follow the cache root without being rewritten.
 
 ### To retire old envy versions only
 

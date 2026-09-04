@@ -29,7 +29,7 @@ before the subcommand.
 
 Default output is one line per package:
 
-```console
+```shell-session
 $ envy sync
 [envy.cmake@r0] cache hit
 [envy.ninja@r0] imported from depot (0.4s)
@@ -39,7 +39,7 @@ deploy: 4 product script(s) (4 created, 0 updated, 0 unchanged, 0 removed)
 
 `--verbose` adds the reasoning behind each of those lines:
 
-```console
+```shell-session
 $ envy --verbose sync
 [2026-08-22 14:58:45.135] [DBG] Loading manifest (123 bytes)
 [2026-08-22 14:58:45.135] [DBG] [local.fstr@r1] spec: cache-managed
@@ -102,7 +102,7 @@ POSIX-looking path is never mistaken for a flag either.
 
 The stderr form is one event per line:
 
-```console
+```shell-session
 $ envy --trace sync
 trace_start schema=2
 spec_registered spec=local.fstr@r1 key=local.fstr@r1
@@ -141,7 +141,7 @@ version.
 | `phase_unblocked` | `unblocked_at_phase`, `dependency` |
 | `target_extended` | `old_target`, `new_target` |
 | `pkg_outcome` | `outcome`, `duration_ms`. Terminal result, one of `cache_hit`, `imported`, `installed`, `setup_complete`, `bundle_fetched`, `bundle_local`. |
-| `manifest_resolved` | `path`, `anchor`, `mode`, `nearest`. Which project the command decided it was operating on. `mode` is `explicit` (`--manifest`), `project` (`--project`), or `cwd`; `anchor` is the directory the walk started from, empty for an explicit path; `nearest` is `--subproject`. [`envy run`](./cli/run.md) emits nothing, because it replaces its own process before the trace drains. |
+| `manifest_resolved` | `path`, `anchor`, `mode`, `nearest`. Which project the command decided it was operating on. `mode` is `explicit` (`--manifest`), `project` (`--project`), or `cwd`. `anchor` is the directory the walk started from, empty for an explicit path. `nearest` is `--subproject`. [`envy run`](./cli/run.md) emits nothing, because it replaces its own process before the trace drains. |
 | `manifest_imported` | `path`, `importer`. One [`envy.import`](./lua-api.md#envyimportpath): the manifest read, and the file that read it. Discovery never sees an imported manifest, so this is the only record that it took part in the run. |
 
 **Cache and locking**
@@ -197,7 +197,7 @@ previous trace and the difference tells you which option or dependency moved.
 
 **What waited on what?**
 
-```console
+```shell-session
 $ grep -E 'phase_(blocked|unblocked)' t.jsonl
 {"seq":41,...,"event":"phase_blocked","spec":"local.user@r1","blocked_at_phase":"build","waiting_for":"local.tool@r1","target_phase":"export"}
 {"seq":48,...,"event":"phase_unblocked","spec":"local.user@r1","unblocked_at_phase":"build","dependency":"local.tool@r1"}
@@ -214,7 +214,7 @@ byte that entered the cache.
 
 **Was my `envy.product` call legal?**
 
-```console
+```shell-session
 $ grep lua_ctx_product_access t.jsonl
 {...,"target":"hello_txt","provider":"local.tool@r1","current_phase":"build","needed_by":"build","allowed":true,"reason":"/tmp/cache/packages/local.tool@r1/darwin-arm64-blake3-7d319775cb50aa49/pkg/hello.txt"}
 ```
@@ -223,8 +223,8 @@ $ grep lua_ctx_product_access t.jsonl
 when it is `false`. A denial is also a hard error, so you will see it without the
 trace:
 
-```console
-$ envy sync
+```shell-session
+$ envy install
 error: Lua error in local.user@r1:
   envy.product: pkg 'local.user@r1' does not declare product dependency on 'nope_txt'
 Stack traceback:
@@ -236,7 +236,7 @@ Declared in: /tmp/project/envy.lua
 
 **What did deploy actually change?**
 
-```console
+```shell-session
 $ grep deploy_script t.jsonl
 {...,"event":"deploy_script","product":"cmake","platform":"posix","action":"unchanged"}
 ```

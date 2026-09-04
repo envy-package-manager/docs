@@ -81,8 +81,9 @@ share nothing, the package never instantiates: no error, no scripts, no work.
 | `{ "linux", "darwin" }` | `{ "darwin" }` | macOS only |
 | `{ "linux" }` | `{ "darwin" }` | nowhere |
 
-Naming an excluded package explicitly is different. `envy sync acme.apt@r0` on
-macOS is an error, because you asked for something specific that cannot happen.
+Naming an excluded package explicitly is different. `envy install acme.apt@r0`
+on macOS is an error, because you asked for something specific that cannot
+happen.
 A filter that does less is fine. A query that silently does nothing is not.
 
 ## Switching inside a spec

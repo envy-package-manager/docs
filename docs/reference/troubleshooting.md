@@ -82,7 +82,7 @@ If the failure survives that, raise the attempt count rather than re-running the
 whole build:
 
 ```bash
-ENVY_FETCH_ATTEMPTS=6 envy sync
+ENVY_FETCH_ATTEMPTS=6 envy install
 ```
 
 `--verbose` shows each retry as `fetch: attempt N of M failed`, and `--trace`
@@ -258,7 +258,7 @@ The bootstrap scripts are per platform, and a plain `sync` restamps only the hos
 flavor. Whoever last bumped the pin on macOS or Linux left the `.bat` behind. Fix
 it from any machine:
 
-```console
+```shell-session
 $ envy sync --platform all
 Updated bootstrap script
 ```
@@ -274,7 +274,7 @@ Git line-ending conversion. envy writes CRLF for `.bat` and LF for everything
 else, `core.autocrlf` rewrites the POSIX scripts to CRLF on checkout, and envy
 writes them back:
 
-```console
+```shell-session
 $ envy deploy --platform all
 deploy: 8 product script(s) (0 created, 1 updated, 7 unchanged, 0 removed)
 ```

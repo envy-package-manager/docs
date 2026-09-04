@@ -71,8 +71,10 @@ and scripts use the explicit path.
   relative to the bin dir, and only for a root manifest (`root "false"` leaves it
   empty and the caller's value stands). The `.bat` twin needs `setlocal`, or PATH
   and the product path leak into the calling cmd.exe and a sibling product
-  re-runs the first payload forever. Wrapper/bootstrap schema is `4` (POSIX
-  wrappers run `set -Eeuo pipefail`; a bump restamps every wrapper once).
+  re-runs the first payload forever. Wrapper schema is `4`, stamped as
+  `envy-managed schema "4"` (POSIX wrappers run `set -Eeuo pipefail`; a bump
+  restamps every wrapper once). The bootstrap scripts carry no schema number and
+  are rewritten whenever their content changes.
 - **manifest discovery**: walk up from an anchor. Precedence `--manifest <path>`
   (no walk) > global `--project <dir>` > CWD. `--subproject` means "nearest to
   where I stand", so it anchors on CWD even under `--project`, and stops at the
@@ -230,8 +232,15 @@ machine-readable only, and human output goes to stderr. `--project <dir>` is
 honored by every manifest-loading command: `sync install deploy product package
 run export import use cache shell`.
 
-- `sync [queries]`: install plus deploy product scripts. The main command.
-- `install [queries]`: install only.
+- `sync [queries]`: install plus deploy product scripts. Needed only when the
+  bin dir must change: a manifest edit that added/removed/renamed a **product**,
+  after `use` (restamps bootstrap + `.luarc.json`), `--platform all`, or
+  restoring a cleaned bin dir.
+- `install [queries]`: install only, no work-tree writes. **The right command
+  for anything that just wants bytes**: warming a CI/Docker cache, prefetching,
+  benchmarking a cold cache, proving a spec still builds, bumping a version
+  option, repopulating after a cache wipe or an `envy cache --local/--shared`.
+  Wrappers resolve their package at call time, so none of those need a deploy.
 - `deploy [queries] [--strict] [--platform ...]`: deploy product scripts only,
   no installs. Prunes marked wrappers outside the resolved graph.
 - `init <project-dir> <bin-dir> [--envy-version X.Y.Z] [--mirror URL]
@@ -245,7 +254,7 @@ run export import use cache shell`.
   A dev build (0.0.0) or `ENVY_NO_REEXEC` warns and stamps itself.
 - `product [name] [--json]`: resolve a product path. Naming one installs its
   provider; no name lists all; `--json` dumps every product as one object and
-  computes paths WITHOUT installing, so `sync` first if the files must exist.
+  computes paths WITHOUT installing, so `install` first if the files must exist.
 - `package <identity>`: install and print the package dir path.
 - `run <cmd...>`: exec cmd with project bin on PATH and `ENVY_PROJECT_ROOT` set.
 - `shell <bash|zsh|fish|powershell>`: print the shell-hook source line.

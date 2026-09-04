@@ -236,9 +236,10 @@ fails loudly:
 extract tool.tar.gz: 'only' entries matched no archive contents: "bin/**"
 ```
 
-envy handles tar with gzip, bzip2, xz, and zstd, plus zip, 7z, dmg, pkg, and
-plain files. You rarely need to care which, which matters most on Windows, where
-upstream ships a `.zip` and the same two lines of Lua unpack it.
+envy handles `tar` with gzip, bzip2, xz, zstd, or lzma, plus `zip`, `7z`,
+`rar`, `iso`, and bare compressed streams such as a lone `.gz`. You rarely need
+to care which, which matters most on Windows, where upstream ships a `.zip` and
+the same two lines of Lua unpack it.
 
 ## Fetching
 
@@ -298,8 +299,8 @@ end
 The name resolves either from an explicit `product =` on a dependency entry or,
 failing that, from the project-wide product registry. Either way a dependency
 edge is required, and its `needed_by` must already have been reached. The edge is
-what drove the provider through install; the registry only answers who provides
-the name. A provider you reach only transitively is refused.
+what drove the provider through install, and the registry only answers who
+provides the name. A provider you reach only transitively is refused.
 
 Undeclared access is an error naming both sides:
 

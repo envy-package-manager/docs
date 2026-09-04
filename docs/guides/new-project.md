@@ -13,16 +13,18 @@ throwaway envy binary, once.
 Download any envy release to a scratch location and run
 [`envy init`](../reference/cli/init.md):
 
-```console
+```shell-session
 $ /tmp/envy init . ./bin --deploy=true --pin-sums
-Fetching SHA256SUMS for https://github.com/envy-package-manager/envy/releases/download/v0.2.0/SHA256SUMS
-Created envy
+Fetching SHA256SUMS for https://github.com/envy-package-manager/envy/releases/download/v0.3.0/SHA256SUMS
+Created ./bin/envy
 Created ./envy.lua
 Created ./.luarc.json
+Updated ./.gitignore
+
 Initialized envy project.
 Next steps:
   1. Edit ./envy.lua to add packages
-  2. Run envy sync
+  2. Run ./bin/envy sync
 ```
 
 Two positional arguments: where the manifest goes, and where the bin directory
@@ -52,6 +54,7 @@ envy.lua        the manifest, header stamped from your flags
 bin/envy        POSIX bootstrap script
 bin/envy.bat    Windows bootstrap script, with --platform windows or all
 .luarc.json     editor config for spec authoring
+.gitignore      gets `.envy/` and `.envy-cache-*` appended, inside a git repo
 ```
 
 The manifest starts nearly empty:
@@ -59,9 +62,9 @@ The manifest starts nearly empty:
 ```lua title="envy.lua"
 -- envy.lua - Project manifest
 -- @envy schema "1"
--- @envy version "0.2.0"
--- @envy sha256sums "a17e9c4f...c93f"
+-- @envy version "0.3.0"
 -- @envy bin "bin"
+-- @envy sha256sums "a17e9c4f...c93f"
 -- @envy deploy "true"
 -- @envy root "true"
 
@@ -92,7 +95,7 @@ PACKAGES = {
 
 Then sync:
 
-```console
+```shell-session
 $ envy sync
 [envy.package-specs@r3] fetched (1.4s)
 [envy.cmake@r0] installed (8.2s)

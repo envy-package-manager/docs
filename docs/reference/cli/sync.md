@@ -43,7 +43,12 @@ envy sync [<queries>...] [--manifest=<path>] [--strict] [--subproject]
 `@envy bin` is required, because `sync` has nowhere to deploy without it. envy
 creates the bin directory if it is missing. Deployment also needs
 `@envy deploy "true"`. Without it, packages install and `sync` warns that
-deployment is off.
+deployment is off, which is [`install`](./install.md) with a warning attached.
+
+Reach for `sync` when the bin directory has to change: after a manifest edit that
+touched a product, after [`envy use`](./use.md), or to restore a directory you
+cleaned. A version bump, a cache wipe, and a switch to a project-local cache all
+leave the wrappers correct, because a wrapper resolves its package at call time.
 
 ## Examples
 
@@ -54,10 +59,12 @@ envy sync
 ```
 
 Running a tool would install it on demand, so this is for when you want the
-whole manifest resolved now: before going offline, before timing a build, or in
-a CI job that should fail at install rather than mid-compile. The committed
-`bin/envy` bootstrap script downloads the pinned envy, which installs every
-package and deploys a wrapper per product.
+whole manifest resolved now. The committed `bin/envy` bootstrap script downloads
+the pinned envy, which installs every package and deploys a wrapper per product.
+
+If all you want is the packages, [`install`](./install.md) is the smaller
+command: going offline, timing a build, warming a CI or Docker cache. `sync`
+earns its deploy half when the manifest edit changed which products exist.
 
 ### To pick up a package you just added to the manifest
 
@@ -98,7 +105,7 @@ flavors you name, so `--platform posix` never touches `.bat` files.
 ### To sync only the component you are standing in
 
 ```bash
-cd libs/firmware && ../.envy sync --subproject
+cd libs/firmware && envy sync --subproject
 ```
 
 In a [superproject](/concepts/projects#manifest-discovery), discovery normally
@@ -106,7 +113,7 @@ walks up to the manifest marked `@envy root "true"`. `--subproject` stops at the
 nearest manifest instead, syncing that component's packages into that
 component's bin directory.
 
-### To verify a build from source, ignoring prebuilt artifacts
+### To rebuild from source rather than from the depot
 
 ```bash
 envy sync --ignore-depot
@@ -114,8 +121,11 @@ envy sync --ignore-depot
 
 Or set `ENVY_IGNORE_DEPOT=1` in the environment, which is the usual form in CI.
 Every package rebuilds through its full pipeline instead of downloading from the
-depot. This checks that a spec still builds, not just that someone once
-published it.
+depot.
+
+For the nightly that only proves a spec has not rotted, use
+[`envy install --ignore-depot`](./install.md). It answers the same question
+without writing anything into the work tree.
 
 ### To catch a name collision instead of skipping it
 

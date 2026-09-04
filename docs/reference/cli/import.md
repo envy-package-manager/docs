@@ -58,7 +58,7 @@ envy import exports/envy.cmake@r0-darwin-arm64-blake3-49a9b2620de8c380.tar.zst
 ```
 
 No manifest is consulted, so this works on a machine with no envy project at all.
-Use it to pre-warm a shared cache or a container image.
+Use it to pre-warm a cache or a container image.
 
 ### To install a whole project from a USB stick
 

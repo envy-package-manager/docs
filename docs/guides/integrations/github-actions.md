@@ -40,9 +40,11 @@ Note what is missing. There is no `envy sync` step. `./bin/cmake` is a
 cmake on demand. Anything the build touches installs the same way, so the job
 lists the tools it runs rather than a provisioning sequence.
 
-Add an explicit `./bin/envy sync` step for either of two reasons. One, you want
-the install to be its own timed step that fails on its own. Two, a later step
-reads the bin directory instead of invoking a wrapper.
+Add an explicit install step for either of two reasons. One, you want the
+install to be its own timed step that fails on its own, which is
+`./bin/envy install`. Two, a later step reads the bin directory rather than
+invoking a wrapper through it, which is `./bin/envy sync` because only `sync`
+writes those scripts. Reach for `install` unless you need the second.
 
 ## Caching the envy cache
 

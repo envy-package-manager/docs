@@ -119,7 +119,7 @@ manifest.
 ### To retarget one component of a superproject
 
 ```bash
-cd libs/firmware && ../.envy use 0.2.0 --subproject
+cd libs/firmware && envy use 0.2.0 --subproject
 # or, from anywhere:
 envy use 0.2.0 --manifest libs/firmware/envy.lua
 ```

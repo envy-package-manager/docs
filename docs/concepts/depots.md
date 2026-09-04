@@ -7,10 +7,11 @@ title: Package Depots
 
 envy is serverless until you decide otherwise. A depot is an optional store of
 prebuilt packages, keyed by the same hashes the [cache](./cache.md) uses. With
-one configured, a `sync` that would have built a compiler downloads it instead.
+one configured, an install that would have built a compiler downloads it
+instead.
 
 ![A terminal session. The depot index is three lines of sha256 and URL, and envy
-sync reports each package as imported from depot rather than
+install reports each package as imported from depot rather than
 built.](/screencasts/depot.svg)
 
 Depots are an accelerator and never a requirement. With no depot configured
@@ -26,7 +27,7 @@ One line in the manifest:
 PACKAGE_DEPOTS = { "s3://acme-envy-packages/packages.txt" }
 ```
 
-That is the whole consumer side. The next `sync` checks the index before
+That is the whole consumer side. The next install checks the index before
 building anything, and a hit is downloaded, verified against its recorded
 sha256, and unpacked.
 

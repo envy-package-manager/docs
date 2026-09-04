@@ -31,8 +31,8 @@ envy init <project-dir> <bin-dir> [--envy-version=<x.y.z>] [--mirror=<url>]
 | `--envy-version <x.y.z>` | Initialize the project at this release instead of the running binary's. See [below](#initializing-at-another-version). |
 | `--mirror <url>` | Stamp `@envy mirror`, an `https://` or `s3://` prefix to download envy releases from instead of GitHub. Validated before anything is written. Also where `--envy-version` downloads from, since the flag's value is the mirror the project is about to get. |
 | `--pin-sums` | Fetch the release's `SHA256SUMS`, hash it, and stamp `@envy sha256sums`, so bootstrap verifies every envy binary it downloads. Runs after the `--envy-version` handoff, so the pin describes the version actually stamped. |
-| `--deploy true\|false` | Stamp `@envy deploy`. `true` enables [product script](/concepts/environment/product-scripts) deployment. Omitting the flag leaves the directive absent, which means disabled. |
-| `--root true\|false` | Stamp `@envy root`. Use `false` for a component manifest inside a larger tree. Omitting the flag leaves the directive absent, which is treated as a root. |
+| `--deploy true\|false` | Stamp `@envy deploy`. `true` enables [product script](/concepts/environment/product-scripts) deployment. Defaults to `true`, so a bare `init` stamps `@envy deploy "true"`. Pass `false` for a project that reaches its tools some other way. |
+| `--root true\|false` | Stamp `@envy root`. Defaults to `true`. Use `false` for a component manifest inside a larger tree. |
 | `--platform posix\|windows\|all` | Which bootstrap flavors to write. Defaults to the current OS. |
 
 ## What it writes
@@ -44,6 +44,10 @@ envy init <project-dir> <bin-dir> [--envy-version=<x.y.z>] [--mirror=<url>]
 | `<bin-dir>/envy.bat` | Windows bootstrap script. | yes |
 | `<project-dir>/.luarc.json` | Points lua-language-server at envy's type definitions for spec authoring. | yes |
 | `<project-dir>/.gitignore` | Gets `.envy/` and `.envy-cache-*` appended, so a [cache mode marker](/concepts/cache#picking-the-other-one) and a default local cache tree stay out of commits. Created if absent. | yes |
+
+Both `@envy deploy` and `@envy root` are always stamped, because both default
+to `true`. A hand-written manifest that omits them behaves differently: an absent
+`deploy` means deployment is off, and an absent `root` is treated as a root.
 
 Nothing you already have is overwritten. An existing `envy.lua` is left alone
 with a note, and an existing `.luarc.json` is left alone with the library paths

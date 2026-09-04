@@ -8,7 +8,7 @@ title: First Steps
 A tour from a fresh clone to running project tools, and then the three commands
 worth knowing.
 
-:::note How examples are written
+:::note[How examples are written]
 
 Examples throughout this manual call tools by bare name, `envy sync` and
 `cmake --version`, which assumes the [shell hook](./shell-integration.md) is
@@ -26,7 +26,7 @@ CI jobs use, since no interactive shell is involved.
 
 In a project that is already set up, there is nothing to do first:
 
-```console
+```shell-session
 $ git clone https://github.com/acme/firmware && cd firmware
 $ cmake --version
 [envy.cmake@r0] installed (8.2s)
@@ -42,22 +42,31 @@ Only what that tool needed was installed, not the whole manifest. See
 
 ## Install everything at once
 
-`sync` is the command for when on-demand is not what you want:
+When on-demand is not what you want, `install` fills the cache and stops there:
 
-```console
-$ envy sync
+```shell-session
+$ envy install
 [envy.cmake@r0] installed (8.2s)
 [envy.ninja@r0] installed (1.1s)
 [envy.python@r1] installed (31.4s)
+```
+
+One line per package. Reach for it before going offline, and in CI when you want
+the job to fail at install rather than mid-compile.
+
+`sync` is the same thing plus the bin directory, so it adds a summary line:
+
+```shell-session
+$ envy sync
+[envy.cmake@r0] cache hit
+[envy.ninja@r0] cache hit
+[envy.python@r1] cache hit
 deploy: 12 product script(s) (0 created, 0 updated, 12 unchanged, 0 removed)
 ```
 
-One line per package, then one summary line for the bin directory. Reach for it
-before going offline, after editing the manifest, and in CI when you want the job
-to fail at install rather than mid-compile.
-
-`sync` is idempotent and incremental. Running it again installs nothing and
-prints the same deploy summary with everything unchanged.
+Run that one after editing the manifest, which is when a wrapper has to be
+written or pruned. Both are idempotent and incremental, and running either again
+installs nothing.
 
 ## The three verbs
 
@@ -70,9 +79,15 @@ They are not synonyms.
 | [`envy sync`](../reference/cli/sync.md) | installs | written, refreshed, pruned |
 
 `install` is for warming a cache without touching the work tree, which is what
-you want in a Docker layer or a CI cache step. `deploy` is for restoring a bin
-directory you cleaned, or picking up a product a spec just added, without
-reinstalling anything.
+you want in a Docker layer, a CI cache step, or anything you would rather not
+see in `git status`. `deploy` is for restoring a bin directory you cleaned, or
+picking up a product a spec just added, without reinstalling anything. `sync` is
+for a manifest edit, when both halves apply.
+
+The bin directory is the whole distinction. A wrapper resolves its package at
+call time, so a version bump, a cache wipe, or a switch to a project-local cache
+changes nothing about the wrappers and needs no `sync`. Adding, removing, or
+renaming a *product* does.
 
 ## Three ways to run project tools
 
@@ -90,7 +105,7 @@ work.
 
 ## Asking envy questions
 
-```console
+```shell-session
 $ envy product                      # every product, and who provides it
 cmake          bin/cmake     envy.cmake@r0{version="4.4.0"}
 ctest          bin/ctest     envy.cmake@r0{version="4.4.0"}
@@ -115,13 +130,13 @@ Cache: /Users/you/Library/Caches/envy
 Queries select manifest entries by identity:
 
 ```bash
-envy sync envy.cmake@r0     # this entry and its dependencies
+envy install envy.cmake@r0  # this entry and its dependencies
 envy install python         # matches any namespace and revision
 ```
 
-See [query forms](../reference/cli/index.md#package-queries). One caveat worth
-knowing early: a filtered `sync` prunes wrappers outside the filtered subgraph,
-so follow it with a bare `sync` when you are done iterating.
+See [query forms](../reference/cli/index.md#package-queries). Prefer `install`
+while iterating. A filtered `sync` prunes wrappers outside the filtered subgraph,
+so if you do use one, follow it with a bare `sync` when you are done.
 
 ## What is safe
 

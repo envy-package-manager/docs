@@ -25,7 +25,7 @@ first. The first call does the work:
 1. `bin/cmake` is a committed [wrapper script](/concepts/environment/product-scripts)
    that asks `bin/envy` where cmake is.
 2. `bin/envy` is a committed bootstrap script. It downloads the pinned envy
-   release into the user-wide cache.
+   release into the cache.
 3. envy installs cmake, and cmake runs.
 
 Later calls skip straight to the last step. The first call installs only what
@@ -64,7 +64,8 @@ along with the product wrappers `sync` deploys later.
 
 ## Where envy keeps its data
 
-One user-wide cache, shared by every project on the machine:
+One cache, shared by every project on the machine unless a project asks for its
+own tree:
 
 | Platform | Default location |
 | --- | --- |

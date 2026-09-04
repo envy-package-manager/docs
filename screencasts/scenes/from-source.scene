@@ -1,5 +1,7 @@
 -- No prebuilt brotli exists for any platform, so the spec builds one. It needs
 -- cmake and ninja, which are not installed either, and says so in one line.
+-- `install`, not `sync`: setup already deployed bin/, the way a clone of a real
+-- repo arrives, so the scene is about packages landing and nothing else.
 !home /tmp/envy-screencast/home
 !cols 96
 !rows 20
@@ -15,6 +17,6 @@ $ cd work/codec
 # google ships no brotli binaries. this line is why cmake is about to show up
 $ grep DEPENDENCIES envy/local.brotli@r0.lua
 ~ 1.6
-$ envy sync
+$ envy install
 ~ 1.2
 $ brotli --version

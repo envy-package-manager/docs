@@ -29,7 +29,7 @@ PACKAGES = {
 }
 ```
 
-```console
+```shell-session
 $ envy sync
 [local.ripgrep@r0] installed (1.9s)
 deploy: 1 product script(s) (1 created, 0 updated, 0 unchanged, 0 removed)
@@ -77,7 +77,7 @@ An unhashed download is a reproducibility hole, and it is also slow: envy
 re-fetches an unverified file on every attempt rather than trusting it. Get the
 hashes and put them in a table:
 
-```console
+```shell-session
 $ envy fetch https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-aarch64-apple-darwin.tar.gz /tmp/rg.tar.gz
 $ envy hash /tmp/rg.tar.gz
 24ad76777745fbff131c8fbc466742b011f925bfa4fffa2ded6def23b5b937be  rg.tar.gz
@@ -200,9 +200,9 @@ end
 
 The dependency edge makes `envy.product` legal, and guarantees cmake is
 installed before `BUILD` runs. On a machine with neither tool, that is one
-`sync`:
+`install`:
 
-![A terminal session. brotli is not installed. envy sync downloads cmake and
+![A terminal session. brotli is not installed. envy install downloads cmake and
 ninja, streams the brotli build log, and brotli --version then
 works.](/screencasts/from-source.svg)
 

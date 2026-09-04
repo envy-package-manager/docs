@@ -88,7 +88,7 @@ summary of what the project's tool surface gained or lost.
 
 Each wrapper has a `.bat` counterpart that does the same job through `cmd`:
 
-```bat title="bin\cmake.bat"
+```batch title="bin\cmake.bat"
 @echo off
 rem envy-managed schema "4"
 setlocal
@@ -119,7 +119,7 @@ survives.
 
 Deploy both flavors from whatever machine you are on:
 
-```console
+```shell-session
 $ envy deploy --platform all
 deploy: 8 product script(s) (4 created, 0 updated, 4 unchanged, 0 removed)
 ```
@@ -212,7 +212,7 @@ Two things matter to Git:
   `core.autocrlf=true` and the POSIX scripts arrive as CRLF, which envy sees as
   changed content and rewrites on the next deploy:
 
-  ```console
+  ```shell-session
   $ envy deploy --platform all
   deploy: 8 product script(s) (0 created, 1 updated, 7 unchanged, 0 removed)
   ```

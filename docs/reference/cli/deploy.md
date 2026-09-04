@@ -119,7 +119,7 @@ into an error instead of a skip.
 ### To deploy only one component of a superproject
 
 ```bash
-cd tools/codegen && ../.envy deploy --subproject
+cd tools/codegen && envy deploy --subproject
 ```
 
 :::warning
