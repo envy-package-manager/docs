@@ -15,6 +15,26 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Screencast from '@site/src/components/Screencast';
 
+{/* Deliberately above the splash rather than below it: the project's maturity is
+    the first thing a first-time reader needs, and anything under the mascot is
+    below the fold on a phone. */}
+<div className="status-banner" role="note">
+  <p className="status-banner__eyebrow">Pre-1.0</p>
+  <p className="status-banner__headline">envy is under active development</p>
+  <div className="status-banner__body">
+
+Call it somewhere between late alpha and early beta. Everything on this site
+describes what envy actually does today, and it does work, but expect rough
+edges: bugs, missing pieces, and breaking changes to the CLI, the manifest
+format, and the [Lua API](/reference/lua-api) between versions.
+
+Nothing here is stable yet. [Pin a version](/concepts/reproducibility), read the
+release notes before you move off it, and please
+[file what you find](https://github.com/envy-package-manager/envy/issues).
+
+  </div>
+</div>
+
 {/* Referenced as a URL rather than imported as a component: this SVG carries an
     internal <style> block whose class selectors (.b, .c, ...) would leak into the
     page's global scope if svgr inlined it. */}
