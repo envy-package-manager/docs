@@ -9,8 +9,7 @@ Live at <https://envy-package-manager.github.io/docs/>.
 > and output captured from a real binary. Verify behavior claims the same way
 > before changing them.
 >
-> Two assets are still stand-ins: `static/screencasts/envy-sync.svg` and the
-> Open Graph card.
+> One asset is still a stand-in: the Open Graph card.
 >
 > `docs/agents.md` is a maximal-density summary of the whole site. Update it
 > whenever behavior changes.
@@ -117,13 +116,28 @@ required check never reports and PRs block forever.
 
 ## Publishing
 
-Push to `main` → `.github/workflows/deploy.yml` builds and deploys.
+`.github/workflows/deploy.yml` builds and deploys, and it is **manual only**:
+Actions → Deploy to GitHub Pages → Run workflow.
+
+Nothing publishes itself. Merging to `main` does not deploy, and there is no tag
+trigger. main is the living head where the docs get drafted and refined, and
+none of that belongs on the site until someone decides it does. This is docs,
+not code: the decision to publish is a judgment call, so it is a button.
+
+Publishing is restricted to `main` by the deployment rule on the `github-pages`
+environment. A dispatch from a feature branch is refused by GitHub before
+anything is built.
 
 **One-time repo setup:** Settings → Pages → Source → **GitHub Actions**. Without
-that, the deploy job fails.
+that, the deploy job fails. Already done for this repo.
 
 Do not use `npm run deploy` (Docusaurus's `gh-pages` push). This site publishes
 via the Pages artifact API; the two approaches conflict.
+
+The site is not versioned. One set of docs, describing current envy, replaced
+wholesale on each publish. If envy ever needs docs for versions people are still
+pinned to, Docusaurus has [versioning][versioning] and `docs:version` cuts the
+first snapshot from `docs/` as it stands.
 
 ### Changing the URL
 
@@ -139,3 +153,4 @@ actually served, or every asset 404s.
 For a custom domain, also add `static/CNAME` containing the bare hostname.
 
 [docusaurus]: https://docusaurus.io/docs
+[versioning]: https://docusaurus.io/docs/versioning

@@ -1,8 +1,17 @@
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [main]
+  # Manual only. Nothing here publishes itself.
+  #
+  # main is the living head: the docs get drafted and refined there
+  # continuously, and none of that belongs on the site until someone decides it
+  # does. So there is no push trigger and no tag trigger. Publish when the docs
+  # are worth publishing, from Actions -> Deploy to GitHub Pages -> Run
+  # workflow, picking the ref to publish.
+  #
+  # Publishing is restricted to `main` by the deployment rule on the
+  # github-pages environment, not by a check in this file. A dispatch from a
+  # feature branch is refused by GitHub before anything is built.
   workflow_dispatch:
 
 # GITHUB_TOKEN needs these to publish a Pages artifact. `actions: read` is

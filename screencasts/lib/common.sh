@@ -14,7 +14,7 @@ TOOLS_DIR="$SCREENCASTS_DIR/.tools"
 
 # The envy release the demo projects pin, and the package-specs commit their
 # bundles pin. Both are real and public; bump them together when they move.
-ENVY_VERSION="0.2.1"
+ENVY_VERSION="0.3.0"
 SPECS_REPO="https://github.com/envy-package-manager/package-specs.git"
 SPECS_REF="ded36a39bbf13744f5a0e539f2f4741fecb61dd0"
 
