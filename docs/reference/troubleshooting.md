@@ -110,9 +110,8 @@ envy git-resolve https://github.com/acme/specs refs/heads/main
 | `Bundle alias 'x' not found in BUNDLES table for spec '...'` | The alias is missing, or declared in a different manifest. | Declare it in the manifest that owns the entry. |
 | `... cycle detected: a@r1 -> b@r1 -> a@r1` | A dependency loop. Fetch dependencies can form one too. | Break the loop, usually by lowering a `needed_by`. |
 
-An ambiguous weak reference is worth understanding rather than working around. It
-means the project genuinely provides two candidates, and envy refuses to guess
-which one you meant. See
+An ambiguous weak reference means the project provides two candidates, and envy
+refuses to guess which one you meant. See
 [Resolution](/concepts/dependencies/resolution#weak-reference-outcomes).
 
 ## Spec authoring
@@ -188,7 +187,7 @@ which project it picked and what anchored the choice:
 envy --trace=stderr product 2>&1 | grep manifest_resolved
 ```
 
-Note that a bin directory decides its own project: `../other/bin/cmake` and
+A bin directory decides its own project: `../other/bin/cmake` and
 `../other/bin/envy sync` act on `../other`, not on the directory you are
 standing in, because those scripts inject `--project`. To force a different
 answer, pass `--project <dir>` yourself, or `--subproject` for the nearest
@@ -240,9 +239,9 @@ you can delete it. See
 
 It should not: a local tree with no `@envy sha256sums` borrows an
 already-downloaded envy binary out of the user-wide tree before falling back to
-the network. A sums pin deliberately turns that off, because the fast path never
+the network. A sums pin turns that off, because the fast path never
 re-hashes what it finds and the user-wide tree is written by every other project
-on the machine. That is the tradeoff a pin buys. See
+on the machine. That is the tradeoff a pin makes. See
 [The Cache](/concepts/cache#a-local-tree-reads-the-user-wide-one).
 
 **Network filesystems**

@@ -8,7 +8,7 @@ title: Creating a Bundle
 Distribute a family of specs as one versioned, pinnable unit. Consumers pin one
 commit instead of ten URLs.
 
-## When a bundle is worth it
+## When to use a bundle
 
 - **A shared toolchain.** One organization, many repos, the same twelve tools.
 - **Atomic upgrades.** One `ref` advance moves every spec together, so a
@@ -56,8 +56,8 @@ A spec file's `IDENTITY` has to equal its `SPECS` key. `specs/cmake.lua` must
 declare `IDENTITY = "acme.cmake@r0"`, and a mismatch is an error rather than a
 warning.
 
-That rule is what makes a bundle trustworthy: a bundle cannot promise one
-identity and deliver a spec that claims another.
+That rule means a bundle cannot promise one identity and deliver a spec that
+claims another.
 
 ## Consuming it
 

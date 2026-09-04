@@ -74,8 +74,8 @@ The expected workflow is to check the whole bin directory into the repo:
 | `bin/cmake`, `bin/ctest`, `bin/python3`, ... | `sync` and `deploy`, one per `script` product | yes |
 | `bin/cmake.bat`, ... | same, under `--platform windows` or `all` | yes |
 
-That is the whole point of the design. Someone clones the repo and runs
-`./bin/cmake --version` with nothing installed. The wrapper calls `bin/envy`.
+The result is that someone clones the repo and runs `./bin/cmake --version` with
+nothing installed. The wrapper calls `bin/envy`.
 That downloads the pinned envy, which installs cmake, which runs. There is no
 bootstrap sequence to document and no setup step to forget.
 

@@ -17,7 +17,7 @@ project pinning that `SHA256SUMS` would then be attesting garbage.
 
 The checksum file itself is copied byte for byte rather than regenerated. Any
 reformatting would change the file's own hash and make the pin mirror-specific.
-Copying it verbatim is what makes one `@envy sha256sums` pin work against the
+Copying it verbatim is what lets one `@envy sha256sums` pin work against the
 mirror and against upstream.
 
 ## Usage

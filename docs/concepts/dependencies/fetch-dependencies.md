@@ -100,7 +100,7 @@ FETCH = function(tmp_dir, opts)
 end
 ```
 
-  `needed_by = "fetch"` is what makes the call legal in `FETCH`. The default,
+  `needed_by = "fetch"` is what legalizes the call in `FETCH`. The default,
   `build`, produces `envy.product: product 'jf' needed_by 'build' but accessed
   during 'fetch'`. A fetch dependency needs no `needed_by`, because it is already
   gated on the earliest phase there is.

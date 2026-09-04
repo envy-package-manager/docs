@@ -270,8 +270,8 @@ Moves files from `tmp_dir` into the durable fetch directory, verifying hashes on
 the way. Argument forms: a filename, a `{ filename, sha256 }` table, or an array
 of either.
 
-Anything left in `tmp_dir` is discarded. Committing is what makes a download
-survive to the next phase and to the next run.
+Anything left in `tmp_dir` is discarded. Committing is what carries a download
+into the next phase and the next run.
 
 ### `envy.verify_hash(path, sha256)`
 

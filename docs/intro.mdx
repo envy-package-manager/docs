@@ -154,8 +154,8 @@ is an option in a manifest, changed by editing that manifest. There is no
 **Alongside Nix.** Nix takes on a larger problem than envy does and takes it on
 thoroughly. envy's scope is one project's tools, and it stays small enough to
 commit: a single executable, one bootstrap script, no daemon, no store to
-initialize, nothing that needs root. macOS, Linux, and Windows are all
-first-class, running the same binary against the same manifest. Packages are
+initialize, nothing that needs root. macOS, Linux, and Windows all run the same
+binary against the same manifest. Packages are
 ordinary directories, so anything that takes a path can use them.
 
 **Not Hermit.** envy takes Hermit's best idea, the committed bootstrap script,
@@ -186,7 +186,7 @@ required on the host. Specs reach the same machinery through
 
 ## Supply-chain resilience
 
-No advisory feed, no scanner. The answer is structural: no registry to
+No advisory feed, no scanner. The protection is structural: no registry to
 compromise, nothing resolved by name alone, and every link pinnable by content
 hash and committed to your repo.
 

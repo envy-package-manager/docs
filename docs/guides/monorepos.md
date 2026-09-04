@@ -20,7 +20,7 @@ takes the first root manifest it finds, and stops at a `.git` directory. A
 component checked out on its own still works, because then it is the only
 candidate.
 
-## The shape that works
+## The layout
 
 A shared component carries a real manifest, marked as a component:
 
@@ -130,22 +130,21 @@ $ envy --project ~/src/monorepo/libs/common sync   # syncs the superproject
 
 The walk still climbs to the root from there, so that is the same project
 `--project ~/src/monorepo` names. To target the component itself from outside,
-use `--manifest libs/common/envy.lua`, because `--subproject` deliberately
-ignores `--project`: "nearest to where I stand" is defined against your working
-directory, not an anchor someone passed in.
+use `--manifest libs/common/envy.lua`. `--subproject` ignores `--project` by
+design: "nearest to where I stand" is defined against your working directory,
+not an anchor someone passed in.
 
 This is also why running a component's committed `libs/common/bin/envy` from any
 directory acts on that component's enclosing project. Those scripts inject
 `--project` with their own directory. See
 [Manifest discovery](/concepts/projects#where-the-walk-starts).
 
-## The deliberate hole
+## Leaving a package out on purpose
 
-A useful pattern: the shared component omits a package on purpose, so each
-consumer pins its own.
+The shared component can omit a package so each consumer pins its own.
 
 ```lua title="libs/common/envy.lua"
--- Deliberately no compiler entry. Each superproject pins the version it ships.
+-- No compiler entry, on purpose. Each superproject pins the version it ships.
 PACKAGES = {
   { spec = "envy.cmake@r0", bundle = "envy", options = { version = "4.4.0" } },
 }
@@ -245,7 +244,7 @@ See [Logging & Tracing](../reference/observability.md).
 
 `@envy bin` is per manifest, so the component's wrappers land in
 `libs/common/bin` when you sync it with `--subproject`, and the root's land in
-`bin`. Both are committed. A component's bin directory is what makes it usable
+`bin`. Both are committed. A component needs its own bin directory to be usable
 standalone.
 
 Each bin directory also needs its own Windows flavor. `--platform` applies to the

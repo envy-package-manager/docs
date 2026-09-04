@@ -168,8 +168,8 @@ that accidentally returns a number reports it rather than downloading nothing.
 | Hash given, file present | Re-hash the file. On a match envy reuses it with no network access. On a mismatch envy deletes it and downloads again. |
 | No hash, file present | Delete and download again, every time. |
 
-So `sha256` is not only about integrity. It is what makes a retry cheap. Pin
-hashes on anything you fetch repeatedly.
+So `sha256` is not only about integrity. It also makes a retry cheap. Pin hashes
+on anything you fetch repeatedly.
 
 This applies while an entry is incomplete. A completed package skips `FETCH`
 entirely.

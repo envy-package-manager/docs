@@ -80,7 +80,7 @@ installed. If a dependency's setup pair installs a system library, that has
 happened too.
 
 Phases of the dependent that are not gated run concurrently with the dependency's
-own work. That is the whole point of attaching a phase rather than a boolean.
+own work. That overlap is why the field takes a phase rather than a boolean.
 
 ## Where it can appear
 

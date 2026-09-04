@@ -61,21 +61,19 @@ marked `@envy root "false"`, and stops at the first root manifest.
 
 It also applies the same header grammar: directives are comments before the first
 line of Lua code, and the last occurrence of a key wins. That is not a
-coincidence or a reimplementation-by-eye. The three readers of a manifest header,
-the hook, the bootstrap script, and envy, deliberately share one rule, so a
-directive-shaped comment down inside `PACKAGES` cannot make the hook put one
-project's bin directory on `PATH` while envy resolves another's.
+coincidence or a reimplementation-by-eye. A manifest header has three readers: the hook, the
+bootstrap script, and envy. They share one rule. A directive-shaped comment down
+inside `PACKAGES` therefore cannot make the hook put one project's bin
+directory on `PATH` while envy resolves another's.
 
 ## No performance cost
 
 The hook never runs envy. It is shell script all the way down, and it avoids
-subshells on purpose: the manifest header is parsed with the shell's own regex
-support rather than `head` and `grep`, and results come back through `REPLY`
-rather than through `$(...)`, because a fork costs a millisecond or two and a
-`cd` should not.
+subshells on purpose. The manifest header is parsed with the shell's own regex
+support rather than `head` and `grep`. Results come back through `REPLY` rather
+than through `$(...)`. A fork costs a millisecond or two, and a `cd` should not.
 
-That is why the hook can afford to run on every directory change without anyone
-noticing.
+So the hook can run on every directory change without anyone noticing.
 
 ## The prompt marker
 
@@ -85,7 +83,7 @@ and the enter and leave messages use `--` in place of the em dash.
 If your prompt is managed by a theme that rewrites `PROMPT` on every command, the
 hook re-applies the marker before each prompt and reorders itself to run last.
 Powerlevel10k users get a real segment instead, `prompt_envy`, so the marker can
-be placed deliberately rather than prepended.
+be placed anywhere rather than prepended.
 
 ## Environment variables
 

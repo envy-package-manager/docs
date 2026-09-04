@@ -28,8 +28,7 @@ Rules:
   first line of code ends the header, and a `-- @envy` comment below it is just a
   comment.
 - The last occurrence of a key wins.
-- Unknown keys are ignored, which is what makes a newer manifest readable by an
-  older envy.
+- Unknown keys are ignored, so an older envy can still read a newer manifest.
 - `cache-local` and `state-dir` are relative literals anchored to the manifest's
   directory, never to your working directory. No expansion of any kind: `..`, a
   leading separator, a drive letter, `~`, `$VAR` and `%VAR%` are all rejected. An

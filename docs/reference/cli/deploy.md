@@ -61,7 +61,7 @@ it.
 | The manifest being deployed | Fine, the normal case. |
 | A **different** `envy.lua` | **Error.** Every script written there would hand out another project's tools. |
 | Nothing (a `.git` in between, or no manifest above) | Warning. Those scripts fail loudly at run time, naming the anchor. |
-| A manifest not named `envy.lua`, from `--manifest ci.lua` | Warning. Discovery only ever looks for `envy.lua`, so a variant manifest is invisible to the walk by construction. |
+| A manifest not named `envy.lua`, from `--manifest ci.lua` | Warning. Discovery only ever looks for `envy.lua`, so the walk cannot see a variant manifest. |
 
 The error names the three usual causes: a `.git` between the manifest and the
 bin directory, a `..` in `@envy bin`, or a `--manifest` outside the bin

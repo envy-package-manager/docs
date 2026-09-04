@@ -203,8 +203,8 @@ $ grep -E 'phase_(blocked|unblocked)' t.jsonl
 {"seq":48,...,"event":"phase_unblocked","spec":"local.user@r1","unblocked_at_phase":"build","dependency":"local.tool@r1"}
 ```
 
-Read it as: `local.user@r1` reached `build`, needed `local.tool@r1`, and resumed
-when that package got there. Subtract the timestamps for the stall.
+That line says `local.user@r1` reached `build`, needed `local.tool@r1`, and
+resumed when that package got there. Subtract the timestamps for the stall.
 
 **Where did this file come from?**
 

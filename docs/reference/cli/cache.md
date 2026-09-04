@@ -94,12 +94,12 @@ tree it is abandoning.
 
 The root honors the full chain: `--cache-root` or `ENVY_CACHE_ROOT` (which must
 be absolute), then a marker file, then `@envy cache-mode`, then `@envy
-cache-local` being present at all, then the platform default —
+cache-local` being present at all, then the platform default:
 `~/Library/Caches/envy` on macOS, `$XDG_CACHE_HOME/envy` or `~/.cache/envy` on
 Linux, `%LOCALAPPDATA%\envy` on Windows. Directive paths are relative literals
 anchored to the manifest's directory, never the working directory. envy reads
 them out of the manifest as text, so a broken manifest above your working
-directory cannot stop the report — and under `--cache-root` it does not read a
+directory cannot stop the report. Under `--cache-root` it does not read a
 manifest at all.
 
 Measurement is a parallel walk using native directory enumeration. Sizes are

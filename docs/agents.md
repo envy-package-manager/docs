@@ -130,7 +130,7 @@ and scripts use the explicit path.
 
 ## windows
 
-First-class, not a port. Same manifest, same specs, same cache layout.
+Supported target, not a port. Same manifest, same specs, same cache layout.
 
 - bootstrap `bin\envy.bat` (batch, parses the `@envy` header itself, walks up for
   the root manifest, honors `ENVY_CACHE_ROOT`/`ENVY_MIRROR`). Wrappers are

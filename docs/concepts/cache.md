@@ -8,7 +8,7 @@ title: The Cache
 One content-addressed store, safe under concurrent use and always safe to delete.
 By default it is per-user and serves every project on the machine, so ten projects
 that want the same cmake install it once. A project can instead keep its packages
-inside its own tree, and you can override that choice per project — see
+inside its own tree, and you can override that choice per project. See
 [Where the root lives](#where-the-root-lives).
 
 Nothing outside the cache points into it by absolute path. Projects resolve paths
@@ -87,8 +87,8 @@ Bumping an option does not modify an entry, it names a new one. The old tree sta
 until you delete it, which is why `envy cache` sometimes shows two variants of
 one identity.
 
-Deliberately not in the hash: [setup-pair selections](./specs/setup.md) and depot
-configuration. The same artifact serves a machine that selected `udev_rules` and
+Left out of the hash on purpose: [setup-pair selections](./specs/setup.md) and
+depot configuration. The same artifact serves a machine that selected `udev_rules` and
 one that did not.
 
 ## Where the root lives
@@ -110,7 +110,7 @@ package it downloaded. A manifest asks for it by naming where the tree goes:
 -- @envy cache-local "out/.envy"
 ```
 
-Naming the tree is what turns local mode on — a `cache-local` that needed a
+Naming the tree is what turns local mode on. A `cache-local` that needed a
 second directive to take effect would sit in a manifest doing nothing. Point it
 at whatever directory your build already deletes, and `rm -rf out` becomes a
 complete teardown. If you want local mode but do not care where, omit it and
@@ -125,8 +125,8 @@ $ envy cache --local     # keep this project's packages inside the project
 $ envy cache --shared    # use the user-wide cache instead
 ```
 
-That writes a zero-byte marker file next to the manifest — `.envy-cache-local`
-or `.envy-cache-shared` — and the marker outranks the manifest from then on. The
+That writes a zero-byte marker file next to the manifest, `.envy-cache-local`
+or `.envy-cache-shared`, and the marker outranks the manifest from then on. The
 marker exists only when your choice *differs* from what the project declares, so
 `envy cache --local` on a project that already defaults local just clears it.
 Both markers present at once is an error; envy never writes that state.
@@ -183,12 +183,12 @@ Two more directives exist for projects that need them:
 
 | Directive | Default | What it does |
 | --- | --- | --- |
-| `cache-local "<path>"` | — | Where the local tree goes. Declaring it makes local the project's default. |
+| `cache-local "<path>"` | none | Where the local tree goes. Declaring it makes local the project's default. |
 | `cache-mode "local"` / `"shared"` | implied by `cache-local` | Overrides that implication. Use `"shared"` to declare where `--local` *would* put the tree while still defaulting to the user-wide cache. |
 | `state-dir "<path>"` | the manifest's directory | Where the override markers live. |
 
 Point `state-dir` at your build directory and one `rm -rf` erases the cache and
-your mode choice together — at the cost that `envy cache --shared` no longer
+your mode choice together, at the cost that `envy cache --shared` no longer
 survives a clean. Left alone, the markers sit beside the manifest and a cache
 wipe cannot silently revert you.
 
@@ -196,7 +196,7 @@ wipe cannot silently revert you.
 
 `cache-local` and `state-dir` are **relative literals**: one or more path
 components, no `..`, no leading separator, no drive letter, and no `~`, `$VAR`
-or `%VAR%`. Nothing is expanded, on any platform. That is deliberate — the two
+or `%VAR%`. Nothing is expanded, on any platform. That is on purpose. The two
 bootstrap launchers and the envy binary each have to resolve the cache root
 independently, and a shell-expansion grammar is not something `bash` and
 `cmd.exe` can be made to agree on. One relative literal reads the same

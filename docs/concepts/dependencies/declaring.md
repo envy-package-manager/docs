@@ -64,7 +64,7 @@ DEPENDENCIES = {
 }
 ```
 
-Note the query is deliberately looser than the fallback. `acme.python` matches
+The query is looser than the fallback. `acme.python` matches
 any revision, so a project that already pins `acme.python@r2` satisfies it and
 the fallback is never built.
 
