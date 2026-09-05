@@ -75,6 +75,11 @@ const config: Config = {
           label: 'Docs',
         },
         {
+          href: `https://github.com/${organizationName}/envy/releases/latest`,
+          label: 'Latest Release',
+          position: 'right',
+        },
+        {
           href: `https://github.com/${organizationName}`,
           label: 'GitHub',
           position: 'right',
