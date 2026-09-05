@@ -2,8 +2,6 @@ import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
-// This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
-
 const organizationName = 'envy-package-manager';
 const projectName = 'docs';
 
@@ -12,22 +10,16 @@ const config: Config = {
   tagline: "what's yours... is mine.",
   favicon: 'img/favicon.png',
 
-  // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
-    v4: true, // Improve compatibility with the upcoming Docusaurus v4
+    v4: true,
   },
 
-  // Production URL. GitHub Pages serves this repo at
-  // https://envy-package-manager.github.io/docs/
   url: `https://${organizationName}.github.io`,
   baseUrl: `/${projectName}/`,
 
-  // GitHub Pages deployment config.
   organizationName,
   projectName,
 
-  // Anything that would ship a broken link fails the build, which is what makes
-  // the CI workflow a link checker.
   onBrokenLinks: 'throw',
   onBrokenAnchors: 'throw',
   markdown: {
@@ -65,7 +57,6 @@ const config: Config = {
   ],
 
   themeConfig: {
-    // Placeholder Open Graph card. Replace with a purpose-built 1200x630 image.
     image: 'img/Ruckus.png',
     colorMode: {
       respectPrefersColorScheme: true,
@@ -112,18 +103,11 @@ const config: Config = {
           ],
         },
       ],
-      // envy carries no copyright claim: the source is dual-licensed 0BSD OR
-      // Unlicense (SPDX), so a copyright line in the footer would contradict
-      // the license it links to.
       copyright: `envy is public domain: <a href="https://github.com/${organizationName}/envy/blob/main/LICENSE">0BSD or the Unlicense</a>, your choice. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
-      // Every language any fence in docs/ names. A missing one is not an error:
-      // the block renders monochrome, which reads as a styling bug rather than a
-      // config gap. 'ignore' covers ```gitignore, 'shell-session' covers the
-      // terminal transcripts.
       additionalLanguages: [
         'lua',
         'bash',
