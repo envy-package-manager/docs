@@ -56,7 +56,7 @@
 .hero-splash__mascot {
   /* Caps on a narrow viewport so the mascot never pushes the slogan below the
      fold on a phone. */
-  width: min(280px, 55vw);
+  width: min(224px, 44vw);
   height: auto;
 }
 
@@ -116,6 +116,11 @@
   position: relative;
   overflow: hidden;
   background-color: #282d35;
+  /* The landing page stacks five of these, and at the column's full width they
+     crowded out the prose between them. Only `<Screencast>` is pulled in; the
+     markdown-authored recordings on other pages are one to a page and stay at
+     full width. */
+  width: 80%;
 }
 
 .screencast {
@@ -149,6 +154,16 @@
 @keyframes screencast-spin {
   to {
     transform: rotate(1turn);
+  }
+}
+
+/* The inset above trades width for whitespace, which is a bad trade once the
+   column itself is the constraint: 80% of a phone's width shrinks terminal text
+   that is already at its floor. Below Docusaurus' mobile breakpoint, give it
+   everything. */
+@media (max-width: 996px) {
+  .screencast-frame {
+    width: 100%;
   }
 }
 
