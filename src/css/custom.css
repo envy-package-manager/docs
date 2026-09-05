@@ -1,12 +1,3 @@
-/**
- * Global styles. Docusaurus bundles Infima; override its variables here rather
- * than writing bespoke rules, so the whole site stays on one palette.
- *
- * Palette is derived from the mascot's green, #9f0 (hsl 96 100% 50%). That hue
- * is too light for text on white, so light mode uses a darkened ramp and dark
- * mode uses a brightened one.
- */
-
 :root {
   --ifm-color-primary: #41a300;
   --ifm-color-primary-dark: #3b9400;
@@ -18,7 +9,6 @@
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 
-  /* Amber, off the site palette on purpose, for the pre-1.0 status banner. */
   --envy-status-border: #d97706;
   --envy-status-bg: #fef6e7;
   --envy-status-text: #7c4a03;
@@ -39,12 +29,10 @@
   --envy-status-text: #fcd77a;
 }
 
-/* The mascot is tall and narrow; keep it from dominating the navbar. */
 .navbar__logo {
   height: 1.75rem;
 }
 
-/* Splash block at the top of the home page. */
 .hero-splash {
   display: flex;
   flex-direction: column;
@@ -54,21 +42,15 @@
 }
 
 .hero-splash__mascot {
-  /* Caps on a narrow viewport so the mascot never pushes the slogan below the
-     fold on a phone. */
   width: min(224px, 44vw);
   height: auto;
 }
 
-/* Guard rail, not a fix for a current bug: `align-items: center` sizes flex
-   children to fit-content, which can exceed the container and push the page into
-   horizontal overflow. Keeps long text wrapping instead. */
 .hero-splash__name,
 .hero-splash__tagline {
   max-width: 100%;
   overflow-wrap: break-word;
   text-wrap: balance;
-  /* Both scale with the viewport so each stays on one line where it fits. */
   line-height: 1.15;
 }
 
@@ -84,21 +66,6 @@
   color: var(--ifm-color-emphasis-700);
 }
 
-/* Terminal screencasts. Each is an animated SVG with a baked-in dark terminal
-   palette, so it does not follow the site's color mode; the rounded corners and
-   the shadow are what keep it from looking pasted onto a light page.
-
-   `width: 100%` rather than the SVG's intrinsic size: the recordings are 88 to
-   120 columns wide, and letting each render at its own pixel width would step
-   the column of demos in and out as you switch tabs.
-
-   Two kinds of call site. `<Screencast>` wraps its image in a frame that holds
-   the aspect ratio open while the SVG loads. A markdown image cannot do that
-   and does not need to: Docusaurus rewrites its src through webpack and emits
-   width and height, so the browser reserves the box from the attributes. It
-   also cannot carry a class, and the rewritten src has nothing left to match
-   on, hence "every image in a doc body that is not the mascot or already inside
-   a frame", which is exactly the markdown-authored screencasts. */
 .screencast-frame,
 .markdown img:not(.hero-splash__mascot):not(.screencast) {
   display: block;
@@ -108,18 +75,10 @@
   box-shadow: 0 2px 14px rgb(0 0 0 / 22%);
 }
 
-/* The reserved box, sized by an inline aspect-ratio the component computes from
-   the SVG's own dimensions. Its background is the terminal's own, so what shows
-   before the recording arrives reads as an unlit terminal rather than a hole in
-   the page. */
 .screencast-frame {
   position: relative;
   overflow: hidden;
   background-color: #282d35;
-  /* The landing page stacks five of these, and at the column's full width they
-     crowded out the prose between them. Only `<Screencast>` is pulled in; the
-     markdown-authored recordings on other pages are one to a page and stay at
-     full width. */
   width: 80%;
 }
 
@@ -157,10 +116,6 @@
   }
 }
 
-/* The inset above trades width for whitespace, which is a bad trade once the
-   column itself is the constraint: 80% of a phone's width shrinks terminal text
-   that is already at its floor. Below Docusaurus' mobile breakpoint, give it
-   everything. */
 @media (max-width: 996px) {
   .screencast-frame {
     width: 100%;
@@ -173,12 +128,6 @@
   }
 }
 
-/* Pre-1.0 status banner at the very top of the home page. Loud on purpose: it
-   is the first thing a first-time reader should register, so it sits above the
-   splash and carries its own amber palette rather than the site's green.
-
-   Not an Infima admonition (`:::warning`) because those are sized for a note
-   inside a body of prose. This one has to compete with the mascot. */
 .status-banner {
   margin: 0 0 2.5rem;
   padding: 1.25rem 1.5rem 1.4rem;
@@ -199,8 +148,6 @@
 
 .status-banner__headline {
   margin: 0.15rem 0 0.6rem;
-  /* Scales with the viewport so it stays on one line wherever it fits, the same
-     way the splash headings do. */
   font-size: clamp(1.35rem, 4vw, 2rem);
   font-weight: var(--ifm-font-weight-bold);
   line-height: 1.15;

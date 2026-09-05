@@ -2,11 +2,10 @@
 slug: /
 sidebar_position: 1
 title: Introduction
-# The docs plugin only recognizes a Markdown `#` heading as the page title, so
-# without this it injects "Introduction" as an <h1> above the splash. The
-# slogan in the splash block is this page's <h1>.
+description: >-
+  envy is an unopinionated, hermetic, per-project, serverless package manager.
+  One envy.lua pins your whole toolchain, envy included, by version and checksum.
 hide_title: true
-# The splash heading is the only heading on the page; a one-entry TOC is noise.
 hide_table_of_contents: true
 ---
 
@@ -15,9 +14,6 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Screencast from '@site/src/components/Screencast';
 
-{/* Deliberately above the splash rather than below it: the project's maturity is
-    the first thing a first-time reader needs, and anything under the mascot is
-    below the fold on a phone. */}
 <div className="status-banner" role="note">
   <p className="status-banner__eyebrow">Pre-1.0</p>
   <p className="status-banner__headline">envy is under active development</p>
@@ -35,9 +31,6 @@ release notes before you move off it, and please
   </div>
 </div>
 
-{/* Referenced as a URL rather than imported as a component: this SVG carries an
-    internal <style> block whose class selectors (.b, .c, ...) would leak into the
-    page's global scope if svgr inlined it. */}
 <div className="hero-splash">
   <img
     className="hero-splash__mascot"
@@ -48,11 +41,6 @@ release notes before you move off it, and please
   <p className="hero-splash__tagline">what's yours... is mine.</p>
 </div>
 
-{/* A real session, recorded by screencasts/record.sh and rendered by
-    screencasts/render.sh. <Screencast> references it as a URL rather than
-    importing it, for the same reason the mascot is a URL: the file carries an
-    internal <style> block whose single-letter class selectors would leak into
-    the page if svgr inlined it. */}
 <Screencast
   name="hero"
   alt="A terminal session. cmake is not installed. Entering a project directory
