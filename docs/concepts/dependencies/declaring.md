@@ -97,7 +97,20 @@ Every entry accepts the same shaping fields a manifest entry does:
 | `needed_by` | How early the dependency must be ready. See [Phase Ordering](./ordering.md). Defaults to `build`. |
 | `weak` | The fallback described above. Mutually exclusive with `source`. |
 | `bundle` | Take the spec from a bundle instead of a source. Resolved against the declaring file's own `BUNDLES`. |
-| `platforms` | Where the dependency applies, for example `{ "windows" }`. Excluded platforms skip it silently, which is how one spec depends on a Windows-only helper without breaking elsewhere. |
+
+`platforms` is not one of them. It filters manifest `PACKAGES` entries and
+nothing else, and since envy 0.3.1 a `DEPENDENCIES` entry carrying it is an
+error rather than a field envy drops:
+
+```text
+error: spec 'local.mytool@r1': DEPENDENCIES[2]: Dependency cannot specify
+       'platforms': platform filtering is a manifest PACKAGES field. A
+       dependency exists because something on this platform asked for it.
+```
+
+Every other unknown key is an error too, with the same file-and-index prefix and
+a list of what the entry shape accepts. To make a dependency conditional, put the
+`if envy.PLATFORM == ... then` around the entry.
 
 The `setup` field is how a spec insists on host state it needs. This entry says
 "install Homebrew before you install me", without the project having to know:
@@ -110,13 +123,22 @@ DEPENDENCIES = {
 
 ## Scoping and hygiene
 
-- **Dependencies compose transitively.** Your dependency's dependencies are in
-  the graph too, and you do not declare them.
+- **Dependencies compose transitively, but access does not.** Your dependency's
+  dependencies are in the graph and you do not declare them. Reaching one from
+  Lua is a different question: `envy.product`, `envy.package` and
+  `envy.loadenv_spec` answer from your own entries only. A provider you reach
+  only through someone else's edge is refused by name, because that edge ordered
+  the payload for them and not for you. Declare it yourself and the two entries
+  share one package.
 - **Identical packages are shared.** The same `(identity, options, platform)`
   anywhere in the graph is one package, whether it arrived from a manifest entry
   or from three specs that each wanted it.
 - **`bundle` aliases are file-scoped.** A spec's `DEPENDENCIES` resolves
   `bundle = "acme"` against that spec's own `BUNDLES` table, not the manifest's.
+- **One identity, one set of options, per list.** Edges are keyed by identity, so
+  a list naming `acme.python@r1` twice with different `options` has no
+  representable answer and envy says so. Two entries agreeing on options are
+  fine, and that is how one provider satisfies several product dependencies.
 - **Published specs cannot reach into projects.** A spec outside the `local.*`
   namespace may not depend on a `local.*` spec. envy rejects it with
   `non-local spec '<a>' cannot depend on local spec '<b>'`.

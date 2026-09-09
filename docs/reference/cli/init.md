@@ -27,7 +27,7 @@ envy init <project-dir> <bin-dir> [--envy-version=<x.y.z>] [--mirror=<url>]
 | Argument or flag | Meaning |
 | --- | --- |
 | `project-dir` | Where `envy.lua` and `.luarc.json` go. Created if missing. Required. |
-| `bin-dir` | Where the bootstrap scripts go. Recorded as `@envy bin`, relative to the manifest. Created if missing. Required. |
+| `bin-dir` | Where the bootstrap scripts go. Recorded as `@envy bin`, relative to the manifest. Created if missing. Required. A relative value resolves against `project-dir`, not your working directory, so `envy init proj bin` writes `proj/bin` from anywhere. |
 | `--envy-version <x.y.z>` | Initialize the project at this release instead of the running binary's. See [below](#initializing-at-another-version). |
 | `--mirror <url>` | Stamp `@envy mirror`, an `https://` or `s3://` prefix to download envy releases from instead of GitHub. Validated before anything is written. Also where `--envy-version` downloads from, since the flag's value is the mirror the project is about to get. |
 | `--pin-sums` | Fetch the release's `SHA256SUMS`, hash it, and stamp `@envy sha256sums`, so bootstrap verifies every envy binary it downloads. Runs after the `--envy-version` handoff, so the pin describes the version actually stamped. |
@@ -55,6 +55,18 @@ to add printed for you. The bootstrap scripts are always rewritten, which makes
 re-running `init` a safe way to add a script flavor. `--pin-sums` runs its
 download before anything is created, so a typo or an unpublished version fails
 with an untouched directory.
+
+A bin directory outside the project is a warning rather than a refusal, because
+[`deploy`](./deploy.md#bin-directory-placement) owns that verdict and only
+refuses when the upward walk lands on a *different* `envy.lua`:
+
+```text
+warning: init: bin directory outside-bin is outside the project proj; scripts written there resolve whichever project encloses them, not this one. A nested tree that means to defer to its parent says so with '--root false'.
+```
+
+A bin directory with no relative path to the project at all, two different
+Windows drives, fails before anything is created. There is no `@envy bin` that
+could name it.
 
 `.gitignore` is the one file `init` appends to rather than skipping, and only
 when `project-dir` holds a `.git` directory. Into a plain directory it writes
@@ -141,7 +153,7 @@ POSIX developers clone the same repo.
 ### To add a component manifest inside an existing project
 
 ```bash
-envy init libs/firmware libs/firmware/bin --root=false --deploy=true
+envy init libs/firmware bin --root=false --deploy=true
 ```
 
 `@envy root "false"` marks it as a subproject.

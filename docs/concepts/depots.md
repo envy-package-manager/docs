@@ -129,6 +129,16 @@ is fetched. `FETCH(ctx)` receives `ctx.tmp_dir` and
 table of `{ url, sha256 }` entries. This is the depot-flavored sibling of
 [fetch dependencies](./dependencies/fetch-dependencies.md).
 
+Two rules follow from where that work sits. The `DEPENDS` closure never consults
+the depot itself, since it is what produces the index. And it runs before the
+manifest's [`DEFAULT_SHELL`](./shells.md#bootstrapping-a-custom-shell) can
+exist, so its string verbs and any `envy.run` inside `FETCH` get the platform
+built-in.
+
+`PACKAGE_DEPOTS` is read from the root manifest's globals only. An imported
+manifest that declares one has to have the root adopt it, which
+[`envy.import`](../reference/lua-api.md#envyimportpath) covers.
+
 ## Opting out
 
 `--ignore-depot` on any command, or `ENVY_IGNORE_DEPOT=1` in the environment,

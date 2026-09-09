@@ -167,7 +167,10 @@ version.
 | Event | Fields |
 | --- | --- |
 | `depot_check` | `sha`, `result`, one of `hit`, `miss`, `sha_mismatch` |
-| `product_resolved` | `product`, `provider`, `via`, one of `registry`, `identity`, `fallback` |
+| `depot_wait` | `duration_ms`, `result`, one of `ready`, `bootstrap`, `failed`. One package's block on the merged depot index, closed out. `bootstrap` means the wait ended because the package joined the depot's own `DEPENDS` closure, which exempts it from consulting the index. |
+| `default_shell_resolving` | `depends`. The `#default_shell` task starting, and how many packages it must install before the `SHELL` function can name one. The subject is the synthetic consumer. |
+| `default_shell_resolved` | `shell`, one of `bash`, `sh`, `cmd`, `powershell` for a built-in, or `file`/`inline` for a custom shell naming an interpreter. Emitted once for the run. |
+| `product_resolved` | `product`, `provider`, `via`, one of `registry`, `fallback` |
 | `deploy_script` | `product`, `platform`, `action`, one of `created`, `updated`, `unchanged`, `removed` |
 
 **IO**

@@ -297,10 +297,11 @@ end
 ```
 
 The name resolves either from an explicit `product =` on a dependency entry or,
-failing that, from the project-wide product registry. Either way a dependency
-edge is required, and its `needed_by` must already have been reached. The edge is
-what drove the provider through install, and the registry only answers who
-provides the name. A provider you reach only transitively is refused.
+failing that, from the project-wide product registry. Either way one of *your
+own* dependency entries has to name the provider, and its `needed_by` must
+already have been reached. The edge is what drove the provider through install,
+and the registry only answers who provides the name. A provider you reach only
+through someone else's edge is refused.
 
 Undeclared access is an error naming both sides:
 
@@ -327,13 +328,19 @@ strong-reference rule that comes with it.
 ### `envy.package(identity)`
 
 Returns a declared dependency's installed package directory. Use it when you need
-a directory rather than a product, for example an include path.
+a directory rather than a product, for example an include path. The identity
+matches loosely, so `"helpers"` finds `"acme.helpers@v1"`, and among several
+matching entries the earliest `needed_by` wins.
 
 ### `envy.loadenv_spec(identity, module)`
 
 Loads a Lua module out of a declared dependency and returns its globals. The
-identity matches loosely, so `"helpers"` finds `"acme.helpers@v1"`. Inside a
-bundle, the module path resolves against the bundle root.
+identity matches the same loose way. Inside a bundle, the module path resolves
+against the bundle root.
+
+`module` is Lua dot syntax naming a file inside the dependency, so `"lib.common"`
+loads `lib/common.lua`. Path separators, a leading or trailing `.`, and `..` are
+all rejected, and the resolved path is checked against the load root as well.
 
 ```lua
 DEPENDENCIES = {
@@ -352,6 +359,17 @@ It returns the module's sandbox globals, not its `return` value. See
 All three respect `needed_by`. A dependency declared `needed_by = "build"` is not
 resolvable from `FETCH`, and the error says so rather than handing you a path to
 a half-built package.
+
+All three also answer from your own `DEPENDENCIES` only. If `top` depends on
+`mid` and `mid` depends on `base`, then `top` cannot reach `base`:
+
+```text
+error: envy.package: pkg 'local.top@v1' has no strong dependency on 'local.base@v1'
+```
+
+Declare `base` in `top` as well. The two entries name one package, so nothing is
+built twice. Before envy 0.3.1 the lookup walked the whole graph, and a
+transitive hit could hand back the wrong package's directory.
 
 ## Composition
 
@@ -380,6 +398,19 @@ is `PACKAGES` and `BUNDLES` and anything else it set. Only `PACKAGES` and
 PACKAGE_DEPOTS = common.PACKAGE_DEPOTS
 ```
 
+`PACKAGE_DEPOTS` and `DEFAULT_SHELL` are read from the root manifest's globals
+and nowhere else, so from envy 0.3.1 on, leaving one behind in the sandbox is an
+error rather than a silent drop:
+
+```text
+error: envy.import: /src/libs/common/envy.lua sets PACKAGE_DEPOTS, which is read
+       only from the root manifest; assign it there (e.g. PACKAGE_DEPOTS =
+       envy.import(...).PACKAGE_DEPOTS)
+```
+
+Splicing the value up, as above, satisfies the check. So does the root assigning
+its own.
+
 An imported entry stays tied to the file that wrote it:
 
 - **Relative `source` paths resolve against the imported manifest's directory.**
@@ -389,9 +420,14 @@ An imported entry stays tied to the file that wrote it:
   root's. Re-exporting `BUNDLES` is unnecessary, and two components can use the
   same alias for different bundles.
 
-Everything else names the superproject: the project root, the `SETUP` working
-directory, and custom-fetch cache keys. The imported manifest supplies
-declarations, not a second project.
+- **Provenance is the imported file too.** A conflict between two components
+  names both component manifests, not the root that spliced them together.
+  Custom-fetch cache keys are keyed the same way, so from envy 0.3.1 on a
+  component's `source.fetch` gets one spec entry across every superproject that
+  imports it, instead of one per superproject.
+
+The project root and the `SETUP` working directory still name the superproject.
+The imported manifest supplies declarations, not a second project.
 
 The imported file sees `ENVY_IMPORTER`, the absolute path of the manifest that
 imported it. It is `nil` when the file runs as a manifest on its own, which is

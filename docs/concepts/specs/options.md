@@ -50,7 +50,7 @@ Both install, both coexist, and neither invalidates the other. The canonical key
 being hashed is the identity with its options appended, sorted by name:
 
 ```
-envy.python@r1{provide_python3=true,release="20260623",version="3.13.14"}
+envy.python@r1{["provide_python3"]=true,["release"]="20260623",["version"]="3.13.14"}
 ```
 
 That string is what `envy product` prints in its provider column, and it works
@@ -58,7 +58,18 @@ as a fully specific
 [query](../../reference/cli/index.md#package-queries).
 
 Two consequences. Changing an option never mutates a package, it names a new
-one. And options have to hash, so a function in an options table is rejected.
+one. And options have to hash, so an option envy cannot spell canonically is
+rejected:
+
+- A function anywhere in the table, at any depth.
+- A table, at any depth, that is neither all-string-keyed nor a contiguous
+  `1..n` sequence. A sparse array or a mixed table has no one spelling, and
+  dropping the odd key would collide two option sets on one cache entry.
+
+envy 0.3.1 changed the spelling of the key itself, from `{version="4.4.0"}` to
+`{["version"]="4.4.0"}`, so that a key needing quotes survives the round trip.
+Packages carrying options therefore rebuild once on the upgrade, and a saved
+full-canonical-key query needs the new spelling.
 
 The platform is not an option. It is a separate component of the cache entry
 path, so one option set on macOS and the same option set on Windows are two

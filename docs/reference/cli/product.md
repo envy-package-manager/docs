@@ -86,10 +86,10 @@ compiler flag, and the file itself for a dependency edge.
 
 ```bash
 envy product
-# cmake          bin/cmake          envy.cmake@r0{version="4.2.3"}
-# ctest          bin/ctest          envy.cmake@r0{version="4.2.3"}
+# cmake          bin/cmake          envy.cmake@r0{["version"]="4.2.3"}
+# ctest          bin/ctest          envy.cmake@r0{["version"]="4.2.3"}
 # doctest_cpp_h  doctest.h          envy.doctest-cpp@r0
-# python3        bin/python3        envy.python@r1{version="3.13.14"}
+# python3        bin/python3        envy.python@r1{["version"]="3.13.14"}
 ```
 
 Product name, the spec-relative value, and the canonical key of the providing

@@ -59,20 +59,39 @@ PACKAGES = {
 
   `fetch` writes into `tmp_dir` and calls `envy.commit_fetch`, which verifies any
   hashes and moves the files into the durable fetch directory. A bundle commits
-  its `envy-bundle.lua` and spec files. A single spec commits one file named
-  `spec.lua`.
+  its `envy-bundle.lua` and spec files. A single spec commits `spec.lua`, plus
+  any helper files beside it: everything committed lands in the spec directory,
+  so `envy.loadenv("helper")` from inside the fetched spec finds it.
 
 ## Where it can be declared
 
 A `BUNDLES` declaration, in a manifest or a spec, and a spec `DEPENDENCIES`
-entry. A manifest `PACKAGES` entry cannot carry `source.fetch`: envy fails with
-`Custom fetch function spec has no parent`, because the fetch function is looked
-up in the declaring spec's Lua state and a manifest entry has no declaring spec.
+entry. A manifest `PACKAGES` entry cannot carry `source.fetch`, and since envy
+0.3.1 that is a parse error rather than a failure part way through the run:
 
-A spec-declared `source.fetch` receives `(tmp_dir, opts)`, where `opts` is the
-declaring spec's options rather than the dependency's. One spec can therefore
-route its dependency fetches through whichever server the project configured. A
-bundle's fetch receives `(tmp_dir)` only.
+```text
+error: Package 'source' cannot be a { fetch = ... } table: nothing can ever call
+       that function from here. Declare the spec in another spec's DEPENDENCIES,
+       or the bundle in a BUNDLES table.
+```
+
+A spec-declared `source.fetch` receives `(tmp_dir, options)`. A bundle's fetch
+receives `(tmp_dir)` only.
+
+Everything a spec-declared fetch can see belongs to the dependency it is
+fetching, not to the spec whose file holds the closure:
+
+- `options` are the entry's own. `{ spec = "corp.sdk@r1", options = { region =
+  "eu" }, source = { fetch = ... } }` hands the function `{ region = "eu" }`
+  whatever the declaring spec was built with.
+- `envy.product` and `envy.package` resolve the entry's own
+  `source.dependencies`, so a tool the entry declares is reachable and one the
+  declaring spec declares is not.
+- Each option set gets its own spec cache entry. A closure has no fingerprint to
+  hash, so the options are what keep two variants apart.
+
+Before envy 0.3.1 the function ran in the declaring spec's context, which handed
+it the wrong options table and hid its own declared prerequisites.
 
 ## The ordinary case, for comparison
 
@@ -124,7 +143,12 @@ mechanism changes. Two things about the fetch function do:
   lifecycle, install and setup included, before the dependent's spec is fetched.
   Compare `needed_by = "fetch"`, which gates payload fetching only.
 - **`source.dependencies` requires `source.fetch`.** If nothing custom runs, the
-  tool was not needed.
+  tool was not needed. A `source` table with neither is an error: a URL or a path
+  is written as a plain string, not a table.
+- **No `needed_by` on a `source.dependencies` entry.** A fetch prerequisite
+  always blocks the parent's spec fetch, which is the earliest gate there is.
+  Declare the dependency in the spec's `DEPENDENCIES` to couple it to a later
+  phase instead. Since envy 0.3.1 the key is refused rather than ignored.
 - **Strong references only, through the whole closure.** Every
   `source.dependencies` entry needs its own `spec` and `source`:
 

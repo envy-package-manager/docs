@@ -107,9 +107,9 @@ work.
 
 ```shell-session
 $ envy product                      # every product, and who provides it
-cmake          bin/cmake     envy.cmake@r0{version="4.4.0"}
-ctest          bin/ctest     envy.cmake@r0{version="4.4.0"}
-python3        bin/python3   envy.python@r1{version="3.13.14"}
+cmake          bin/cmake     envy.cmake@r0{["version"]="4.4.0"}
+ctest          bin/ctest     envy.cmake@r0{["version"]="4.4.0"}
+python3        bin/python3   envy.python@r1{["version"]="3.13.14"}
 
 $ envy product cmake                # one product, resolved
 /Users/you/Library/Caches/envy/packages/envy.cmake@r0/darwin-arm64-blake3-49a9b2620de8c380/pkg/bin/cmake

@@ -190,19 +190,40 @@ for src in pathlib.Path("templates").glob("*.in"):
 - **`DEPENDS` names packages the manifest already declares.** Entries are
   [queries](../reference/cli/index.md#package-queries) against `PACKAGES`, the
   same matching the CLI uses. An entry that matches nothing is an error that
-  names it.
+  names it, and so is one matching two different packages. Two `PACKAGES` entries
+  that collapse onto one package, as `envy.import` composition produces, count
+  once.
 - **`DEPENDS` requires `SHELL` to be a function.** A value form is read before
   any package exists, so it could never name one, and envy says
-  `DEFAULT_SHELL DEPENDS requires SHELL to be a function`.
+  `DEFAULT_SHELL DEPENDS requires SHELL to be a function`. A wrapper carrying
+  `DEPENDS` with no `SHELL` at all gets the same error from envy 0.3.1 on.
+  Earlier versions read the wrapper's own keys as a custom shell and dropped
+  `DEPENDS`, so a misspelled `SHELL` silently changed what every verb ran under.
+- **Root manifest only.** `DEFAULT_SHELL` is read from the root manifest's
+  globals, so an imported manifest that declares one and does not have it
+  adopted is an error rather than a value nothing will read:
+
+  ```text
+  error: envy.import: /src/libs/common/envy.lua sets DEFAULT_SHELL, which is
+         read only from the root manifest; assign it there (e.g. DEFAULT_SHELL =
+         envy.import(...).DEFAULT_SHELL)
+  ```
+
+  `PACKAGE_DEPOTS` is root-only for the same reason. See
+  [`envy.import`](../reference/lua-api.md#envyimportpath).
 - **`envy.product` and `envy.package` both work inside `SHELL`.** envy
   synthesizes a consumer for the manifest-wide shell, holding an edge to each
   `DEPENDS` entry. It shows up in traces as `envy.DEFAULT_SHELL@v1`. A bare
   function with no `DEPENDS` has no such edges, so `envy.product` there fails.
-- **The interpreter is installed first.** envy waits for the whole `DEPENDS`
-  closure to complete, then resolves the shell once, and only then can another
-  package's string verb run.
+- **The interpreter is installed first.** The first string verb that needs a
+  shell waits for the whole `DEPENDS` closure to complete, then the shell
+  resolves once, and only then does that verb run.
 - **Resolution happens once, lazily.** The function is called on the first
-  request for a shell, not while the manifest loads.
+  request for a shell, not while the manifest loads. Since envy 0.3.1 the
+  `DEPENDS` closure is installed just as lazily, so a command that runs no
+  string verb never installs the interpreter. `envy deploy` is the usual case:
+  it resolves the graph, validates `DEPENDS`, and writes wrappers without
+  fetching a byte of Python.
 - **Strong references only.** A weak or product reference inside the `DEPENDS`
   closure is refused with `DEFAULT_SHELL dependency closure must use strong
   dependencies`, because that closure can be needed before the resolution pass
@@ -214,8 +235,18 @@ interpreter package and everything it depends on run their own string verbs unde
 the platform built-in, transitively. Without that carve-out, installing Python
 would require Python.
 
-The same applies to `envy.run` called inside the `SHELL` function itself: it runs
-under the built-in, which also keeps the lazy resolution from re-entering itself.
+The same carve-out covers every other package that runs before the manifest
+shell can exist:
+
+- A [`source.dependencies`](./dependencies/fetch-dependencies.md) member and its
+  closure, which run their phase ladders during resolution.
+- A [`PACKAGE_DEPOTS`](./depots.md) `DEPENDS` member and its closure.
+- Lua running in the manifest's own state: a manifest bundle's `source.fetch`, a
+  `PACKAGE_DEPOTS` `FETCH`, and the `SHELL` function itself.
+
+`envy.run` in any of those gets the platform built-in. Before envy 0.3.1 the
+carve-out reached only the `DEPENDS` closure, and the other three could deadlock
+against the shell they were needed to produce.
 :::
 
 ### Overriding one verb instead of the project
