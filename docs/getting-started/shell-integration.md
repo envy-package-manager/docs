@@ -121,9 +121,10 @@ they can position it themselves.
 
 ## Updating
 
-envy rewrites the hook file during self-deploy, so it tracks envy's version
-without you touching your profile. Restart your shell when a new envy version
-ships a new hook.
+envy rewrites the hook file whenever its contents differ from the copy the
+running binary carries, so you never touch your profile again. Restart your
+shell when a command says the hook was updated. See
+[Updating](/concepts/environment/shell-hooks#updating).
 
 The `source` line points into the user-wide cache, so moving or deleting that
 cache breaks it. `envy shell` warns about this when you are on a `--cache-root`

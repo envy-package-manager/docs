@@ -133,9 +133,25 @@ command in a project on the user-wide cache, or set `ENVY_CACHE_ROOT`.
 
 ## Updating
 
-The hook file lives in the user-wide cache, and envy rewrites it during
-self-deploy, so it follows envy's version without you editing your profile. When
-a new envy version ships a new hook, restart your shell to pick it up.
+The hook file lives in the user-wide cache, and envy rewrites it when its
+contents no longer match the copy the running binary carries. Restart your shell
+to pick up a new one. Nothing in your profile changes.
+
+Each hook file carries a stamp naming its writer and a digest of its own text:
+
+```text
+_ENVY_HOOK_STAMP=0.3.2:8d9dde49c42c
+```
+
+Every envy command compares that digest to its own copy. A hook it wrote itself
+is repaired whenever it differs, so a fix to a hook ships with the binary that
+carries it. A byte-identical hook from another version is left labeled as it is,
+and a hook a *newer* envy wrote is never overwritten. That last rule is what
+keeps a version-pinned project and a newer envy from rewriting each other's
+hooks on every command, since all versions share one `shell/` directory.
+
+Before envy 0.3.2 the stamp was a hand-bumped integer, so a hook change that
+shipped without a bump never reached a shell that already had a hook.
 
 Moving or deleting that cache breaks the `source` line, since that is where the
 hook lives. `envy shell` warns about this when you are on a `--cache-root` or

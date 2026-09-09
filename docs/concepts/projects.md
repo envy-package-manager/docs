@@ -63,8 +63,8 @@ Header rules:
 | --- | --- | --- |
 | `PACKAGES` | table | **Required.** The array of [package entries](#package-entries). |
 | `BUNDLES` | table | Alias → [bundle](./dependencies/bundles.md) declaration. Lets many entries share one pin. |
-| `PACKAGE_DEPOTS` | table | Prebuilt-artifact indexes. URI strings, or `{ DEPENDS, FETCH }` tables for depots that need credentials or a tool to reach. See [Depots](./depots.md). |
-| `DEFAULT_SHELL` | constant, table, or function | Which shell runs string verbs project-wide ([Shells & Scripts](./shells.md)). |
+| `PACKAGE_DEPOTS` | table | Prebuilt-artifact indexes. URI strings, or `{ DEPENDS, FETCH }` tables for depots that need credentials or a tool to reach. Read from the root manifest only. See [Depots](./depots.md). |
+| `DEFAULT_SHELL` | constant, table, or function | Which shell runs string verbs project-wide ([Shells & Scripts](./shells.md)). Read from the root manifest only. |
 
 Three helpers are available in manifest code:
 

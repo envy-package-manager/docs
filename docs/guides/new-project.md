@@ -10,7 +10,7 @@ throwaway envy binary, once.
 
 ## Initialize
 
-Download any envy release to a scratch location and run
+Download the latest envy release to a scratch location, extract it, and run
 [`envy init`](../reference/cli/init.md):
 
 ```shell-session

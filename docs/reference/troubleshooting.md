@@ -108,7 +108,14 @@ envy git-resolve https://github.com/acme/specs refs/heads/main
 | `envy.product: pkg 'x' does not declare product dependency on 'y'` | A phase reached for a product it never declared. | Add it to `DEPENDENCIES` with the right `needed_by`. |
 | `Unknown setup pair 'x' selected for y@r1` | A manifest entry selects a `SETUP` pair the spec does not define. | Check the spelling against the spec's `SETUP` table. |
 | `Bundle alias 'x' not found in BUNDLES table for spec '...'` | The alias is missing, or declared in a different manifest. | Declare it in the manifest that owns the entry. |
-| `... cycle detected: a@r1 -> b@r1 -> a@r1` | A dependency loop. Fetch dependencies can form one too. | Break the loop, usually by lowering a `needed_by`. |
+| `... cycle detected: a@r1 -> b@r1 -> a@r1` | A dependency loop, named end to end. Fetch dependencies can form one too. | Break the loop, usually by lowering a `needed_by`. |
+| `envy.package: pkg 'top@v1' has no strong dependency on 'base@v1'` | `base` is in the graph, but only through someone else's edge. | Declare `base` in `top` as well. The two entries name one package. |
+| `spec 'x@r1' depends on 'y@r1' twice with different options` | One dependency list names an identity under two option sets. | Pick one, or give the second a distinct spec revision. |
+| `Dependency cannot specify 'platforms'` | `platforms` filters manifest `PACKAGES` entries only. | Wrap the entry in `if envy.PLATFORM == ... then`. |
+| `Package: unknown key 'x'; allowed keys are ...` | A typo, or a field that belongs on a different entry shape. | The message lists what this shape accepts. |
+| `envy.import: <file> sets DEFAULT_SHELL, which is read only from the root manifest` | An imported manifest declared a root-only global. | Splice it up: `DEFAULT_SHELL = envy.import("sub").DEFAULT_SHELL`. |
+| `spec 'x@r1' is declared with conflicting sources in a and b` | Two declarations of one identity name different payloads. | Correct one. The two files named are the ones that wrote the entries. |
+| `Deadlock: no task is running while N wait(s) are blocked:` | A scheduling bug, not a manifest error. | The report lists every blocked wait and what it waits for. File it with the manifest and that list. |
 
 An ambiguous weak reference means the project provides two candidates, and envy
 refuses to guess which one you meant. See
@@ -130,6 +137,17 @@ User-managed specs define only `SETUP` pairs. The cache holds nothing for them.
 `envy.product` and `envy.package` respect `needed_by`. A dependency declared
 `needed_by = "build"` is not available in `FETCH`, by design, because it has not
 been installed yet. Lower the `needed_by` to the earliest phase that needs it.
+
+They also answer from the spec's own `DEPENDENCIES` and nothing further. A
+package you reach only through a dependency of a dependency is refused by name.
+Declare it yourself, and the two entries still name one package.
+
+**Everything with options rebuilt after upgrading to envy 0.3.1**
+
+Expected, once. The canonical key spells option names `{["version"]="4.4.0"}`
+where it used to write `{version="4.4.0"}`, so every package carrying options
+names a new cache entry. The old entries stay on disk until you delete the
+cache. A saved full-canonical-key query needs the new spelling too.
 
 **My `BUILD` output is missing from the package**
 

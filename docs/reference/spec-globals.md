@@ -114,7 +114,7 @@ A string value is shorthand for `{ value = "...", script = true }`.
 
 | Field | Notes |
 | --- | --- |
-| `spec` | Identity. Required, except for a product-only weak reference. |
+| `spec` | Identity. Required, except for a product-only reference. |
 | `source` | URL, path, git URL, or `{ fetch, dependencies }`. Mutually exclusive with `weak`. |
 | `bundle` | Alias or inline bundle table, when the spec comes from a bundle. |
 | `ref`, `sha256` | Pins for the spec source. |
@@ -122,8 +122,18 @@ A string value is shorthand for `{ value = "...", script = true }`.
 | `needed_by` | `check`, `import`, `fetch`, `stage`, `build`, or `install`. Defaults to `build`. |
 | `product` | Ask for one product rather than the whole package. |
 | `weak` | Fallback entry when the query matches nothing. |
-| `platforms` | Skip the dependency on other platforms. |
 | `setup` | Select `SETUP` pairs by name. |
+
+That is the whole list. Since envy 0.3.1 any other key is an error naming the
+spec and the entry index, and `platforms` gets its own message: platform
+filtering is a manifest `PACKAGES` field, so a conditional dependency is written
+with `if envy.PLATFORM == ... then` around the entry.
+
+A `source.dependencies` entry is narrower still. It takes `spec`, `source`,
+`options`, `product`, `ref` and `sha256`, and refuses `needed_by`, which a fetch
+prerequisite cannot vary. The table under `weak` is a complete strong
+declaration, so it carries its own `source` and refuses `bundle`, `setup`,
+`weak`, and `needed_by`, which it inherits from the entry above it.
 
 ## `SETUP` pair fields
 

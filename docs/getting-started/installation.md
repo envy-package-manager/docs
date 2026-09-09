@@ -48,12 +48,19 @@ what it needs as it goes.
 
 ## Starting a new project
 
-You need one throwaway envy binary, once. Download any release, run
+You need one throwaway envy binary, once. Download the latest release, run
 [`envy init`](/reference/cli/init), commit the result, and delete the binary:
 
 ```bash
+curl -fsSL -O https://github.com/envy-package-manager/envy/releases/latest/download/envy-darwin-arm64.tar.gz
+tar -xzf envy-darwin-arm64.tar.gz -C /tmp
 /tmp/envy init . ./bin --pin-sums --deploy=true
 ```
+
+Releases ship archives rather than bare binaries:
+`envy-{linux,darwin}-{x86_64,arm64}.tar.gz` and
+`envy-windows-{x86_64,arm64}.zip`. The archived binary keeps its executable bit,
+so no `chmod` is needed.
 
 The project is self-bootstrapping from then on. See
 [Starting a Project](/guides/new-project) for the full walkthrough.

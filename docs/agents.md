@@ -14,6 +14,11 @@ everything including envy itself. No install step, no server, no registry, no
 lockfile. Committed bootstrap script `<bin>/envy` (plus `envy.bat`) downloads the
 pinned envy binary on first run.
 
+Releases ship archives, not bare binaries:
+`envy-{linux,darwin}-{x86_64,arm64}.tar.gz` and
+`envy-windows-{x86_64,arm64}.zip`, plus `SHA256SUMS`. The archived binary keeps
+mode 0755 since 0.3.2, so no `chmod` after extracting.
+
 Using an already-set-up project needs NO setup step: run `./bin/<tool>` (a
 committed wrapper) or `./bin/envy run <cmd>`, and the wrapper bootstraps envy and
 installs that tool's subgraph on demand. `./bin/envy sync` is for after a
@@ -37,14 +42,27 @@ and scripts use the explicit path.
   `{ DEPENDS, SHELL }` wrapper:
   `DEFAULT_SHELL = { DEPENDS = { "envy.python@r1" }, SHELL = function() return { file = { envy.product("python3") }, ext = ".py" } end }`.
   DEPENDS entries are queries against PACKAGES; DEPENDS requires SHELL to be a
-  function; envy.product/envy.package authorize against a synthesized
-  `envy.DEFAULT_SHELL@v1` consumer; the closure installs before the shell
-  resolves and before any other string verb; closure members (transitively) run
-  under the platform built-in, which is the bootstrap carve-out. A bare
+  function (a DEPENDS table with NO SHELL errors too, 0.3.1+; earlier it read the
+  wrapper's own keys as a shell and dropped DEPENDS);
+  envy.product/envy.package authorize against a synthesized
+  `envy.DEFAULT_SHELL@v1` consumer. ROOT MANIFEST ONLY: an imported manifest
+  declaring DEFAULT_SHELL (or PACKAGE_DEPOTS) errors unless the root adopts that
+  exact value. Resolution AND the DEPENDS install are lazy, driven by a
+  `#default_shell` task on the first string verb needing a shell, so a run with
+  no string verb (e.g. `deploy`) never installs the interpreter. **Bootstrap
+  carve-out (platform built-in, not the manifest shell)**: any DEPENDS-closure
+  member, any `source.dependencies` closure member, any PACKAGE_DEPOTS DEPENDS
+  closure member, and Lua running in the manifest state (manifest bundle
+  `source.fetch`, PACKAGE_DEPOTS `FETCH`, the SHELL function itself). 0.3.1
+  widened this from DEPENDS-only; the other three used to deadlock. A bare
   `DEFAULT_SHELL = function()` has no edges, so envy.product fails there.
   Per-call override: `envy.run(script, { shell = ... })`.
+  Trace: `default_shell_resolving{depends}`, `default_shell_resolved{shell}`.
 - directives: `version` pins envy. `sha256sums` pins release checksums and
-  requires `version`. `bin` is REQUIRED and names the project bin dir. `mirror`
+  requires `version`. `bin` is REQUIRED and names the project bin dir, relative
+  to the manifest, validated like `cache-local` since 0.3.2 (no drive letter,
+  leading separator, `~`, `$`, `%`) except that `.` and `..` stay legal and
+  `deploy` judges an escape. `mirror`
   sets the release mirror. `deploy "true"` enables product scripts. `root
   "true|false"` marks a superproject boundary, default true.
   `cache-local` puts the cache in a tree inside the project (`cache-mode` and
@@ -53,7 +71,11 @@ and scripts use the explicit path.
 - spec = Lua file describing one package: `IDENTITY = "ns.name@rev"` required,
   where `@rev` versions the spec rather than the payload, and `local.*` means
   project-local. Package = installed instance keyed `(identity, options,
-  platform)`.
+  platform)`. Canonical key `ns.name@rev{["k"]=v,...}`, option names quoted and
+  sorted (0.3.1 changed this from bare `{k=v}`, so everything with options
+  rebuilt once and saved canonical-key queries need respelling). Option tables
+  must be all-string-keyed or a contiguous `1..n` array, and hold no function, at
+  any depth.
 - verbs: `FETCH → STAGE → BUILD → INSTALL`, plus `SETUP` (named CHECK/INSTALL
   pairs). Each verb: string, table, function, or omitted, all with defaults. See
   table below.
@@ -125,7 +147,13 @@ and scripts use the explicit path.
   local-cache project writes **no** hooks at all. `envy shell` says so instead of
   suggesting a command that cannot produce them, and names a stale project-local
   `shell/` an older envy left. Warns about cache relocation only under an
-  override.
+  override. Refresh is by CONTENT since 0.3.2: each hook carries
+  `_ENVY_HOOK_STAMP=<writer version>:<digest of the resource text>`, and every
+  command rewrites a hook whose bytes differ from its own copy, leaves a
+  byte-identical one from another version labeled as-is, and never overwrites a
+  hook a NEWER envy wrote (all versions share one `shell/`). Replaced the
+  hand-bumped `_ENVY_HOOK_VERSION=N`, which stranded two hook fixes that shipped
+  without a bump. One resource edit refreshes only the hooks it touched.
 - reproducibility: no lockfile. Pins live in the manifest: `@envy version` plus
   `sha256sums`, per-source `sha256`, git `ref` as a full sha via
   `envy git-resolve <url> <ref>`. Unhashed fetches re-download every run.
@@ -202,14 +230,47 @@ define SETUP pairs, must not define FETCH/STAGE/BUILD/INSTALL), `EXPORTABLE`
   **product** (`{product="ninja"}`, whoever provides it).
 - ordering: `needed_by` on a dependency names the phase of the *dependent* that
   blocks on it, one of `check|import|fetch|stage|build|install`. Default `build`.
+- **entry shapes are closed sets (0.3.1+)**: an unknown key is an error listing
+  the allowed ones, wrapped with the file and index (`<manifest>: PACKAGES[2]:`,
+  `spec 'x@r1': DEPENDENCIES[2]:`). Manifest PACKAGES takes
+  `spec|source|bundle|sha256|ref|options|platforms|setup|needed_by|product`, is
+  always a TABLE (no bare-string shorthand), refuses `weak`, and refuses
+  `source = { fetch = ... }` (nothing could call it). Spec DEPENDENCIES takes the
+  same minus `platforms` (its own message: platform filtering is a manifest
+  field, gate with `if envy.PLATFORM`) plus `weak`. `source.dependencies` drops
+  `needed_by` too (always spec_fetch). A `weak = {...}` fallback is a complete
+  strong declaration and refuses `bundle|setup|weak|needed_by`.
+- **envy.product / envy.package / envy.loadenv_spec answer from DIRECT edges
+  only (0.3.1+)**. Transitive reachability is refused by name; pre-0.3.1 the DFS
+  could return the wrong package's dir. Fuzzy match still applies
+  (`name`, `ns.name`, `name@rev`, full canonical), earliest `needed_by` wins,
+  ties by identity. A dotted revision now matches (`gcc@13.2.0`), where earlier
+  versions read the dot as a namespace and matched nothing, in CLI queries too.
+  `loadenv_spec` module paths are Lua dot syntax only: no separators, no `..`,
+  no leading or trailing `.`, and the joined path is re-checked against the load
+  root.
+- **one identity, one option set, per dependency list**. Edges are identity-keyed,
+  so two entries naming one identity with different `options` error at parse time
+  in DEPENDENCIES and `source.dependencies`, and at wire time elsewhere. Agreeing
+  options are fine (that is how several product entries share one provider).
+- cycles are caught as each edge is added, by reachability rather than spawn
+  path, and the message names the whole path
+  (`Dependency cycle detected: a -> b -> c -> a`; `Fetch dependency cycle
+  detected: ...`). Mutual roots and diamonds-with-back-edges used to hang.
 - **fetch dependencies**: a package needed before another package's spec or
   payload can be fetched, for example an Artifactory or corporate auth CLI.
   Declared inside the source table:
   `source = { dependencies = {{spec=..., source=...}}, fetch = function(tmp_dir, opts) ... end }`.
   Fetch deps are fully installed before the dependent's spec is loaded. The
-  fetch function commits a file named `spec.lua` via `envy.commit_fetch`.
+  fetch function commits `spec.lua` via `envy.commit_fetch`, plus any helper
+  files beside it, all of which land in the spec dir.
   `envy.product`/`envy.package` work inside a `source.fetch` function: entries
-  are wired with `needed_by = spec_fetch` before it runs. Every
+  are wired with `needed_by = spec_fetch` before it runs. Since 0.3.1 a
+  spec-declared fetch runs as the CHILD: `options` are the entry's own (not the
+  declaring spec's), the reachable deps are the entry's own
+  `source.dependencies`, and each option set gets its own spec cache entry.
+  A `source` table with neither `fetch` nor `dependencies` errors (a URL or path
+  is a plain string). Every
   `source.dependencies` entry must be **strong** (`spec` + `source`), and so must
   everything in its transitive closure. The weak pass runs at a resolution
   barrier after every spec_fetch, including that of the consumer still waiting,
@@ -219,10 +280,27 @@ define SETUP pairs, must not define FETCH/STAGE/BUILD/INSTALL), `EXPORTABLE`
 - bundles: one fetched container of many specs.
   `BUNDLES = { alias = {identity, source, ref} }`, and an entry uses
   `bundle = "alias"` instead of `source`.
+- **redeclaration must agree about the payload (0.3.1+)**: two declarations of one
+  identity naming different sources error
+  (`spec 'x@r1' is declared with conflicting sources in <a> and <b>`), for EVERY
+  source kind, where before only bundles were checked and a second spec source
+  silently lost. The files named are the ones that wrote the entries, so two
+  imported components name themselves, not the root.
 - depot (OPTIONAL): `PACKAGE_DEPOTS = { "s3://bucket/packages.txt" }`, an index
   of prebuilt `.tar.zst` artifacts. A hit skips fetch and build. Bypass with
   `--ignore-depot` or `ENVY_IGNORE_DEPOT=1`. Publish loop: `envy export`, then
-  `envy merge-depot`, then upload.
+  `envy merge-depot`, then upload. Trace `depot_wait{duration_ms,result}`,
+  result `ready|bootstrap|failed`, `bootstrap` meaning the package joined the
+  depot's own DEPENDS closure and is exempt from the index.
+- DEFAULT_SHELL / PACKAGE_DEPOTS `DEPENDS` entries resolve through a stricter
+  matcher than CLI queries: a query matching zero packages errors, and so does
+  one matching two DISTINCT packages (0.3.1+ dedupes on the canonical key first,
+  so two entries collapsing onto one package count once). CLI queries still take
+  the first match in manifest order.
+- a failing run now reports each package's own error, deduplicated and sorted,
+  in place of `install: N package(s) failed`. A hang reports
+  `Deadlock: no task is running while N wait(s) are blocked:` plus every blocked
+  wait and what it waits for.
 
 ## CLI
 
@@ -251,7 +329,12 @@ run export import use cache shell`.
   `--envy-version` re-execs into that release so the pin, the script stamp, and
   the extracted types all come from it; parent-side and stripped from the child's
   argv, so releases predating the flag still work. Downloads it from `--mirror`.
-  A dev build (0.0.0) or `ENVY_NO_REEXEC` warns and stamps itself.
+  A dev build (0.0.0) or `ENVY_NO_REEXEC` warns and stamps itself. Since 0.3.2 a
+  relative `<bin-dir>` resolves against `<project-dir>`, NOT the cwd, so
+  `envy init proj bin` writes `proj/bin` from anywhere (pre-0.3.2 it made a
+  sibling of `proj` and stamped an escaping `@envy bin "../bin"`). An escaping
+  bin dir under a root manifest warns (deploy owns the verdict); no relative path
+  at all, two Windows drives, errors before anything is created.
 - `product [name] [--json]`: resolve a product path. Naming one installs its
   provider; no name lists all; `--json` dumps every product as one object and
   computes paths WITHOUT installing, so `install` first if the files must exist.
@@ -301,7 +384,12 @@ and `bundle = "alias"` resolves against ITS `BUNDLES` first, then the root's (no
 re-export needed; two components may reuse an alias). Declarer stays the
 superproject, so project root, SETUP cwd and custom-fetch cache keys name the
 root. Only `PACKAGES`/`BUNDLES` are tagged; splice other globals by hand
-(`PACKAGE_DEPOTS = sub.PACKAGE_DEPOTS`). Imported file sees `ENVY_IMPORTER` =
+(`PACKAGE_DEPOTS = sub.PACKAGE_DEPOTS`), and for the two ROOT-ONLY globals
+`PACKAGE_DEPOTS`/`DEFAULT_SHELL` that splice is MANDATORY since 0.3.1: an import
+that sets one the root does not end up holding is an error, not a silent drop.
+Provenance is the imported file, so a conflict names both component manifests
+and a custom-fetch cache key is keyed on the component (one spec entry across
+every superproject, where pre-0.3.1 the root keyed it). Imported file sees `ENVY_IMPORTER` =
 importer's absolute path, `nil` standalone: `if not ENVY_IMPORTER then` is the
 standalone-only gate that replaced env-var gates. Nesting fine, cycles error.
 **Imported header is INERT** (`bin`, `deploy`, `cache-*`, `state-dir`, `mirror`,

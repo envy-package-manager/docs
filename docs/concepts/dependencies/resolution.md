@@ -88,22 +88,56 @@ the first rather than replacing it.
 
 ## Cycles
 
-Detected and reported, with the path:
+Detected as each edge is added, and reported with the whole path rather than the
+two ends:
 
-- Strong cycles are caught as the graph grows:
-  `Dependency cycle detected: a -> b`.
+```text
+error: Dependency cycle detected: local.a@v1 -> local.b@v1 -> local.c@v1 -> local.a@v1
+```
+
+- A cycle is caught whenever the new edge's target already reaches the consumer,
+  however it got there. Two manifest roots that depend on each other, and a
+  diamond with a back edge, are both named the same way. Before envy 0.3.1 the
+  check followed the spawn path instead, so those two shapes hung.
 - A weak reference that resolves to something already depending on you is caught
   too: `Weak dependency cycle detected: <a> -> <b> (which already depends on
   <a>)`.
-- Fetch-dependency cycles are checked separately, since they order spec
-  acquisition rather than phases.
+- Fetch dependencies get the same check, prefixed `Fetch dependency cycle
+  detected`.
+
+## One identity, one package, per consumer
+
+A dependency list is keyed by identity, so two entries naming one identity with
+different `options` have no representable answer:
+
+```text
+error: spec 'local.consumer@v1' DEPENDENCIES names 'local.dup@v1' twice with
+       different options: {["v"]="1"} and {["v"]="2"}
+```
+
+Since envy 0.3.1 this is caught while parsing `DEPENDENCIES` and
+`source.dependencies`, and while wiring everywhere else. Two entries agreeing on
+options are fine, and that is how one provider satisfies several product
+dependencies.
 
 ## Validation that happens along the way
 
 - **Setup selections are checked against the spec that defines them.** An unknown
   pair name is an error, not a no-op.
-- **Bundle redeclaration must agree.** Declaring the same bundle identity twice
-  with different sources or refs is an error rather than a silent winner.
+- **Redeclaration must agree about the payload.** Two declarations of one
+  identity have to name the same source. Since envy 0.3.1 this covers every
+  source kind, where before it covered bundles alone and a second spec source
+  silently lost:
+
+  ```text
+  error: spec 'local.tool@v1' is declared with conflicting sources in
+         /src/app/envy.lua and /src/libs/common/envy.lua; a spec identity must
+         name one payload
+  ```
+
+  The files named are the ones that wrote the entries, so a conflict between two
+  imported components names both components rather than the root that composed
+  them.
 - **A spec must declare the identity it was fetched as.** A bundle promising
   `acme.cmake@r0` and a file declaring something else is an error.
 - **Platform filters intersect.** An entry whose manifest `platforms` and spec

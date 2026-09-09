@@ -24,12 +24,12 @@ The table form is for humans:
 
 ```shell-session
 $ ./bin/envy product
-cmake            CMake.app/Contents/bin/cmake  envy.cmake@r0{version="4.4.0"}
-cpack            CMake.app/Contents/bin/cpack  envy.cmake@r0{version="4.4.0"}
-ctest            CMake.app/Contents/bin/ctest  envy.cmake@r0{version="4.4.0"}
-doctest_cpp_dir  .                             envy.doctest-cpp@r0{version="2.5.3"}
-doctest_cpp_h    doctest.h                     envy.doctest-cpp@r0{version="2.5.3"}
-ninja            ninja                         envy.ninja@r0{version="1.13.2"}
+cmake            CMake.app/Contents/bin/cmake  envy.cmake@r0{["version"]="4.4.0"}
+cpack            CMake.app/Contents/bin/cpack  envy.cmake@r0{["version"]="4.4.0"}
+ctest            CMake.app/Contents/bin/ctest  envy.cmake@r0{["version"]="4.4.0"}
+doctest_cpp_dir  .                             envy.doctest-cpp@r0{["version"]="2.5.3"}
+doctest_cpp_h    doctest.h                     envy.doctest-cpp@r0{["version"]="2.5.3"}
+ninja            ninja                         envy.ninja@r0{["version"]="1.13.2"}
 ```
 
 `--json` is for generators. One process gives you every path:

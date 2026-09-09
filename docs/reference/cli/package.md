@@ -36,7 +36,7 @@ disambiguate:
 ```bash
 envy package python                       # error: ambiguous
 envy package envy.python@r1               # error: two option variants
-envy package 'envy.python@r1{version="3.13.14",provide_python3=true}'
+envy package 'envy.python@r1{["provide_python3"]=true,["version"]="3.13.14"}'
 ```
 
 Two other errors: a query naming an entry excluded on this platform, and a query

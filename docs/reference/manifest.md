@@ -34,6 +34,12 @@ Rules:
   leading separator, a drive letter, `~`, `$VAR` and `%VAR%` are all rejected. An
   absolute cache root is `ENVY_CACHE_ROOT`'s job. See
   [The Cache](/concepts/cache#where-the-root-lives).
+- `bin` is anchored the same way, and since envy 0.3.2 it is validated the same
+  way: no drive letter, no leading separator, no `~`, `$` or `%`. `.` and `..`
+  stay legal, because `bin "."` is a supported flat layout and an escaping bin
+  directory is the design under `root "false"`.
+  [`deploy`](./cli/deploy.md#bin-directory-placement) judges whether a given
+  escape is safe.
 - `cache-posix` and `cache-win` were removed in envy 0.2.0 and now raise an error
   naming `cache-local`. Because an older envy ignores keys it does not know, the
   bootstrap launchers refuse to run one older than 0.2.0 against a manifest using
@@ -49,8 +55,8 @@ Rules:
 | --- | --- | --- |
 | `PACKAGES` | array | Package entries. Required. |
 | `BUNDLES` | table | Alias to `{ identity, source, ref, sha256 }`. |
-| `PACKAGE_DEPOTS` | array | Depot index URIs, or `{ DEPENDS, FETCH }` tables. |
-| `DEFAULT_SHELL` | constant, table, or function | Shell for string verbs. See [Shells & Scripts](/concepts/shells). |
+| `PACKAGE_DEPOTS` | array | Depot index URIs, or `{ DEPENDS, FETCH }` tables. Root manifest only. |
+| `DEFAULT_SHELL` | constant, table, or function | Shell for string verbs. See [Shells & Scripts](/concepts/shells). Root manifest only. |
 
 Manifests are Lua, so `envy.import`, `envy.extend`, and `envy.abspath` are all
 available. See [Lua API](./lua-api.md).
@@ -60,7 +66,7 @@ available. See [Lua API](./lua-api.md).
 | Field | Type | Notes |
 | --- | --- | --- |
 | `spec` | string | Required. `namespace.name@revision`. |
-| `source` | string or table | URL, path, git URL, or `{ fetch, dependencies }` for [fetch dependencies](/concepts/dependencies/fetch-dependencies). Mutually exclusive with `bundle`. |
+| `source` | string | URL, path, or git URL. Mutually exclusive with `bundle`. A `{ fetch, dependencies }` table is rejected here, because nothing could call the function. See [Fetch Dependencies](/concepts/dependencies/fetch-dependencies#where-it-can-be-declared). |
 | `bundle` | string or table | A `BUNDLES` alias, or an inline bundle table. Requires `spec`. |
 | `sha256` | string | Pins a downloaded spec file. |
 | `ref` | string | Commit for a git source. |
@@ -69,18 +75,27 @@ available. See [Lua API](./lua-api.md).
 | `setup` | array of strings | Select [`SETUP`](/concepts/specs/setup) pairs by name. |
 | `needed_by` | string | One of `check`, `import`, `fetch`, `stage`, `build`, `install`. Defaults to `build`. |
 | `product` | string | Makes this a [product dependency](/concepts/dependencies/declaring#product). |
-| `weak` | table | Fallback entry for a [weak dependency](/concepts/dependencies/declaring#weak). Mutually exclusive with `source`. |
+| `weak` | table | Not accepted on a manifest entry. Declare weak references in a spec's [`DEPENDENCIES`](/concepts/dependencies/declaring#weak). |
 
-A bare string entry is shorthand for `{ spec = "..." }`, which only works when
-the spec is resolvable without a source, so in practice from a bundle or a weak
-query.
+An entry is always a table. There is no bare-string shorthand, and every entry
+needs a `source` or a `bundle`.
+
+Since envy 0.3.1 an unknown key is an error rather than an inert field, and the
+message lists what the entry shape accepts:
+
+```text
+error: /src/app/envy.lua: PACKAGES[2]: Package: unknown key 'platfroms'; allowed keys are ENVY_BASE, ENVY_BUNDLES, needed_by, options, platforms, product, ref, setup, sha256, source, spec
+```
+
+The wrapper names the file and the index, so a typo in a fifty-entry manifest
+points at one line.
 
 ## Bundle entry fields
 
 | Field | Notes |
 | --- | --- |
 | `identity` | Required. The bundle's `BUNDLE` value, `namespace.name@revision`. |
-| `source` | Required. Git URL, archive URL, or local path. |
+| `source` | Required. Git URL, archive URL, local path, or a `{ fetch, dependencies }` table for a [custom fetch](/concepts/dependencies/fetch-dependencies). |
 | `ref` | Commit for a git source. Required in practice, since a moving ref is not reproducible. |
 | `sha256` | For an archive source. |
 
@@ -151,7 +166,11 @@ PACKAGES = {
 | Message | Cause |
 | --- | --- |
 | `Manifest missing required '@envy bin' directive.` | No `bin` or `bin-dir`. |
+| `'@envy bin' must be relative, with no leading separator: '/opt/bin'` | The bin path has a leading separator, a drive letter, or a `~`, `$` or `%`. |
 | `Package cannot specify both 'source' and 'bundle' fields` | Pick one. |
+| `Package: unknown key 'x'; allowed keys are ...` | A typo, or a field that belongs on a different entry shape. |
+| `Package 'source' cannot be a { fetch = ... } table` | Move the declaration into a spec's `DEPENDENCIES` or a `BUNDLES` table. |
+| `manifest PACKAGES entries cannot be weak` | Weak references belong in a spec's `DEPENDENCIES`. |
 | `Package with 'bundle' field requires 'spec' field` | A bundle entry needs the spec identity. |
 | `Bundle alias 'x' not found in BUNDLES table for spec '...'` | Typo, or the alias is declared in a different manifest. |
 | `'@envy sha256sums' requires '@envy version'` | Add the version, or drop the pin. |

@@ -85,9 +85,9 @@ not by substring:
 | --- | --- |
 | `cmake` | any namespace, any revision, so `envy.cmake@r0` and `local.cmake@r3` |
 | `envy.cmake` | that namespace, any revision |
-| `cmake@r0` | that revision, any namespace |
+| `cmake@r0` | that revision, any namespace. A dotted revision works too: `gcc@13.2.0` matches `arm.gcc@13.2.0` from envy 0.3.1 on, where earlier versions read the dot as a namespace and matched nothing |
 | `envy.cmake@r0` | that identity |
-| `envy.cmake@r0{version="4.2.3"}` | one option variant, the full canonical key |
+| `envy.cmake@r0{["version"]="4.2.3"}` | one option variant, the full canonical key |
 
 Each query resolves to the first matching entry in manifest order, and its
 dependencies come along automatically. A query that matches nothing is an error.
