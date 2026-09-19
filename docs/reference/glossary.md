@@ -33,6 +33,9 @@ title: Glossary
   directories.
 - **User-managed package**: a package whose state lives on the host rather than
   in the cache, such as Homebrew or apt.
+- **Vendoring**: copying a package's installed files out of the cache and into
+  the project tree, for build systems that can only read inputs from inside the
+  project.
 - **Verb**: one of `FETCH`, `STAGE`, `BUILD`, `INSTALL`, `SETUP`. Each is a
   string, a table, a function, or omitted.
 - **Weak reference**: a dependency query with a fallback, used only when the

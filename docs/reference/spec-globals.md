@@ -23,6 +23,7 @@ Terse companion to [Anatomy of a Spec](/concepts/specs).
 | `PLATFORMS` | array of strings, `darwin`, `linux`, `windows`, optionally `-arm64` or `-x86_64` | every platform |
 | `USER_MANAGED` | boolean or function | `false`, meaning cache-managed |
 | `EXPORTABLE` | boolean | `false`, so only fetched bytes are kept for export |
+| `VENDOR` | array of selector strings | the whole install directory is copied when a manifest [vendors](/concepts/vendoring) this package. Requires envy 0.4.0 |
 
 `DEFAULT_SHELL` is a manifest global, not a spec global. A spec picks a shell per
 call with `envy.run(..., { shell = ... })`.
@@ -73,7 +74,25 @@ An array of these tables fetches several files.
 | Field | Meaning |
 | --- | --- |
 | `strip` | Drop this many leading path components. |
-| `only` | Extract just these archive-relative paths or globs, matched after `strip`. |
+| `only` | Extract just these archive-relative paths or globs, matched after `strip`. A leading `!` excludes. |
+
+## `VENDOR` selectors
+
+Which parts of the install directory a manifest copies into the project tree when
+it [vendors](/concepts/vendoring) this package. Absent or empty selects
+everything.
+
+```lua
+VENDOR = { "include/**", "LICENSE", "!include/internal/**" }
+```
+
+Paths are relative to the install directory, and the glob rules are the ones
+`STAGE`'s `only` uses. A leading `!` excludes, and an exclusion beats an
+inclusion. The list is validated when the spec loads, so a malformed pattern
+fails before anything is fetched.
+
+The spec says what is worth copying. Whether a copy happens at all is the
+manifest's `vendor` field.
 
 ## Platform-aware specs
 

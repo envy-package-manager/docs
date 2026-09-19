@@ -19,6 +19,8 @@ A run does the following, in order:
 1. Re-exec into the envy version the manifest pins.
 2. Refresh the `.luarc.json` type paths for that version.
 3. Install every target package concurrently, skipping anything already cached.
+   A package the manifest [vendors](/concepts/vendoring) also gets its copy in
+   the project tree made or checked, as the last step of its own pipeline.
 4. Restamp the bootstrap scripts.
 5. Write, refresh, and prune the product wrappers in the bin directory.
 
@@ -151,5 +153,6 @@ the subcommand.
 ## See also
 
 - [First Steps](/getting-started/first-steps) for the sync, install, and deploy triangle.
+- [`envy vendor`](./vendor.md) for running the vendor step alone, with `--force` or `--dry-run`.
 - [Product Scripts](/concepts/environment/product-scripts) for what gets written to the bin directory.
 - [`envy install`](./install.md) and [`envy deploy`](./deploy.md) for the two halves.

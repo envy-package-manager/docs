@@ -49,8 +49,8 @@ value, so a `--project` you type still wins.
 **Manifest-aware commands re-exec into the pinned envy.** If the manifest's
 `@envy version` names a version other than the running binary, envy downloads
 that version and hands off to it before doing any work. You get the version the
-project pins, not the one you typed. `sync`, `install`, `deploy`, `product`,
-`package`, `run`, `export`, and `import` do this. [`use`](./use.md) and
+project pins, not the one you typed. `sync`, `install`, `deploy`, `vendor`,
+`product`, `package`, `run`, `export`, and `import` do this. [`use`](./use.md) and
 [`cache`](./cache.md) do not. They read the manifest header as text, so they keep
 working when the pinned version cannot run. Set `ENVY_NO_REEXEC` to suppress the
 hand-off while debugging.
@@ -77,8 +77,8 @@ mistaken for a flag.
 
 ## Package queries
 
-`sync`, `install`, `deploy`, `export`, and `package` take queries that select
-manifest entries. A query matches an entry's identity by dropping components,
+`sync`, `install`, `deploy`, `vendor`, `export`, and `package` take queries that
+select manifest entries. A query matches an entry's identity by dropping components,
 not by substring:
 
 | Query form | Matches |
@@ -102,7 +102,7 @@ fails instead of silently doing less.
 | `-q`, `--quiet` | Warnings and errors only. |
 | `--trace[=<sinks>]` | Structured machinery events for the scheduler, cache, locks, and IO. Comma-separated sinks: `stderr` for human-readable text, `file:<path>` for JSONL. Bare `--trace` means `stderr`. Independent of log level. See [Logging & Tracing](../observability.md). |
 | `--cache-root <path>` | Override the cache root. Env: `ENVY_CACHE_ROOT`. |
-| `--project <dir>` | Walk up from `<dir>` instead of the current directory to find the manifest. Honored by every command that loads one: `sync`, `install`, `deploy`, `product`, `package`, `run`, `export`, `import`, `use`, `cache`, and `shell`. Repeatable, last value wins. The directory must exist. |
+| `--project <dir>` | Walk up from `<dir>` instead of the current directory to find the manifest. Honored by every command that loads one: `sync`, `install`, `deploy`, `vendor`, `product`, `package`, `run`, `export`, `import`, `use`, `cache`, and `shell`. Repeatable, last value wins. The directory must exist. |
 | `-v`, `--version` | Print version info. Alias for [`envy version`](./version.md). |
 | `-h`, `--help` | Print help. Works per subcommand: `envy sync --help`. |
 
@@ -115,6 +115,7 @@ fails instead of silently doing less.
 | [`envy sync`](./sync.md) | Install packages and deploy product scripts. Run it after a manifest edit. |
 | [`envy install`](./install.md) | Install packages only. |
 | [`envy deploy`](./deploy.md) | Deploy product scripts only. |
+| [`envy vendor`](./vendor.md) | Restore [vendored](/concepts/vendoring) copies in the project tree. |
 | [`envy product`](./product.md) | Resolve a product to its path or value, or list all. |
 | [`envy package`](./package.md) | Install one package and print its directory. |
 | [`envy run`](./run.md) | Run your own script with `envy` resolvable and the project root known. |
@@ -133,7 +134,7 @@ fails instead of silently doing less.
 | Command | Purpose |
 | --- | --- |
 | [`envy git-resolve`](./git-resolve.md) | Resolve a remote branch or tag to a full commit hash. |
-| [`envy hash`](./hash.md) | Print `sha256` lines for fingerprint tables and depot indexes. |
+| [`envy hash`](./hash.md) | Print `sha256` lines for fingerprint tables and depot indexes, or `--tree` for one BLAKE3 digest per directory. |
 | [`envy fetch`](./fetch.md) | Download one resource the way `FETCH` would. |
 | [`envy extract`](./extract.md) | Extract an archive the way `STAGE` would. |
 | [`envy lua`](./lua.md) | Run a Lua script inside envy's runtime. |

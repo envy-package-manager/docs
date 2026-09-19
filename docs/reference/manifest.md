@@ -57,6 +57,7 @@ Rules:
 | `BUNDLES` | table | Alias to `{ identity, source, ref, sha256 }`. |
 | `PACKAGE_DEPOTS` | array | Depot index URIs, or `{ DEPENDS, FETCH }` tables. Root manifest only. |
 | `DEFAULT_SHELL` | constant, table, or function | Shell for string verbs. See [Shells & Scripts](/concepts/shells). Root manifest only. |
+| `VENDOR_ROOT` | string | Project-relative directory that `vendor = true` entries land under. See [Vendoring](/concepts/vendoring). Root manifest only. Requires envy 0.4.0. |
 
 Manifests are Lua, so `envy.import`, `envy.extend`, and `envy.abspath` are all
 available. See [Lua API](./lua-api.md).
@@ -75,6 +76,7 @@ available. See [Lua API](./lua-api.md).
 | `setup` | array of strings | Select [`SETUP`](/concepts/specs/setup) pairs by name. |
 | `needed_by` | string | One of `check`, `import`, `fetch`, `stage`, `build`, `install`. Defaults to `build`. |
 | `product` | string | Makes this a [product dependency](/concepts/dependencies/declaring#product). |
+| `vendor` | boolean, string, or table | Copy this package into the project tree. See [the forms below](#vendor-forms). Manifest entries only. Requires envy 0.4.0. |
 | `weak` | table | Not accepted on a manifest entry. Declare weak references in a spec's [`DEPENDENCIES`](/concepts/dependencies/declaring#weak). |
 
 An entry is always a table. There is no bare-string shorthand, and every entry
@@ -84,11 +86,52 @@ Since envy 0.3.1 an unknown key is an error rather than an inert field, and the
 message lists what the entry shape accepts:
 
 ```text
-error: /src/app/envy.lua: PACKAGES[2]: Package: unknown key 'platfroms'; allowed keys are ENVY_BASE, ENVY_BUNDLES, needed_by, options, platforms, product, ref, setup, sha256, source, spec
+error: /src/app/envy.lua: PACKAGES[2]: Package: unknown key 'platfroms'; allowed keys are ENVY_BASE, ENVY_BUNDLES, needed_by, options, platforms, product, ref, setup, sha256, source, spec, vendor
 ```
 
 The wrapper names the file and the index, so a typo in a fifty-entry manifest
 points at one line.
+
+## `vendor` forms
+
+Copies the package's installed files into the project tree. See
+[Vendoring](/concepts/vendoring) for the whole feature.
+
+| Form | Meaning |
+| --- | --- |
+| `vendor = true` | Copy to a derived name under `VENDOR_ROOT`. |
+| `vendor = false` | Do not copy. Same as omitting the key, so the setting toggles without being deleted. |
+| `vendor = "deps/cobs"` | Copy to exactly that directory, relative to the root manifest. Needs no `VENDOR_ROOT`. |
+| `vendor = { path = "deps/cobs", auto_sync = false }` | The same two settings written out. Both keys are optional, and any other key is an error. |
+| `vendor = {}` | Same as `vendor = true`. |
+
+`auto_sync` defaults to `true`, which means a destination that no longer matches
+the package is wiped and copied again. `false` reports the mismatch as a warning
+and leaves the directory alone, until
+[`envy vendor --force`](./cli/vendor.md) is run against it.
+
+A derived name is `name`, escalating to `namespace.name`, then
+`namespace.name@revision`, then that plus a hash of the options, and only as far
+as it must to stay unique across the manifest. An explicit path never escalates.
+
+Paths must be relative, with no leading separator, no drive letter, no `.` or
+`..` component, and no `~`, `$` or `%`.
+
+```lua
+VENDOR_ROOT = "third_party"
+
+PACKAGES = {
+  { spec = "local.nanocobs@r3", source = envy.abspath("envy/nanocobs.lua"),
+    vendor = true },                                  -- third_party/nanocobs
+  { spec = "acme.armgcc@r1", source = "https://specs.acme.example/armgcc.lua",
+    sha256 = "e3b0c442...52b855", vendor = "toolchains/armgcc" },   -- exactly there
+  { spec = "local.patched@r1", source = envy.abspath("envy/patched.lua"),
+    vendor = { auto_sync = false } },                 -- report drift, do not repair
+}
+```
+
+`vendor` belongs to the `source` entry shape. An entry that takes its spec from a
+`bundle` cannot carry it, and the unknown-key message names the shape.
 
 ## Bundle entry fields
 
@@ -175,6 +218,12 @@ PACKAGES = {
 | `Bundle alias 'x' not found in BUNDLES table for spec '...'` | Typo, or the alias is declared in a different manifest. |
 | `'@envy sha256sums' requires '@envy version'` | Add the version, or drop the pin. |
 | `warning: deployment is disabled in <manifest>` | `deploy` is absent or false, so no product scripts were written. |
+| `package 'x' asks to be vendored, but the manifest sets no VENDOR_ROOT` | `vendor = true` with no `VENDOR_ROOT`. Add the global, or give the entry a path. |
+| `vendor destination collision: 'a' and 'b' both vendor to <dir>` | Two explicit paths naming one directory. Derived names escalate instead. |
+| `nested vendor destinations: ... one would be erased by the other` | One destination sits inside another, and vendoring wipes before it copies. |
+| `Package 'vendor' must be a boolean, a project-relative path, or a table of { path, auto_sync }` | A number, or some other type. |
+| `Package 'vendor' path cannot be empty; use vendor = true to derive one` | `vendor = ""`. |
+| `package 'x' is declared USER_MANAGED, which has no cached payload to vendor` | A host-mutating package has nothing to copy. |
 
 ## See also
 

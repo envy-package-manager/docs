@@ -172,6 +172,27 @@ PACKAGES = {
 Everything else installs into the cache, so a job leaves nothing behind that the
 next job could depend on by accident.
 
+## Checking committed vendored trees
+
+A repo that commits its [vendored](/concepts/vendoring) directories wants to know
+when one stops matching its package, before a build somewhere else picks up the
+difference:
+
+```yaml
+      - name: Vendored trees are current
+        run: ./bin/envy vendor --all --dry-run
+```
+
+This hashes every vendored destination and reports what a repair would do,
+without writing into any of them. A drifted tree shows up as a
+`would re-vendor` line naming the directory, which is a more useful failure than
+a `git diff` after the fact. Turn it into a failing job by grepping that output,
+or run the real `envy vendor --all` and check `git diff --exit-code` on the
+vendored paths.
+
+A repo that gitignores its vendored trees does not need this. `sync` rebuilds
+them from the cache on every job.
+
 ## Publishing to a depot
 
 A depot export job is the one place where you do **not** want the cache.

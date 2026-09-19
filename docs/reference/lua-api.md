@@ -217,7 +217,7 @@ envy.extract_all(src_dir, dest_dir, opts?)
 | Option | Meaning |
 | --- | --- |
 | `strip` | Drop this many leading path components. |
-| `only` | Extract just these archive-relative paths or globs, matched after `strip`. A directory brings its subtree. |
+| `only` | Extract just these archive-relative paths or globs, matched after `strip`. A directory brings its subtree. A leading `!` excludes. |
 
 `only` globs support `*` and `?` within one component, `**` across components,
 and `[a-z]` or `[!a-z]` classes.
@@ -229,12 +229,27 @@ STAGE = function(fetch_dir, stage_dir, tmp_dir, opts)
 end
 ```
 
-An `only` entry that matches nothing is an error, so a renamed upstream directory
+Since envy 0.4.0 an entry beginning with `!` excludes instead of including, and
+an exclusion beats an inclusion. That makes "everything but" expressible:
+
+```lua
+envy.extract(envy.path.join(fetch_dir, "sdk.tar.gz"), stage_dir,
+             { only = { "**", "!docs/**", "!**/*.pdb" } })
+```
+
+This is envy's one selector language. `only` here, a spec's
+[`VENDOR`](/concepts/vendoring#what-gets-copied) list, and
+[`envy hash --tree --only`](./cli/hash.md#subtree-hashing) are parsed and matched
+by the same code.
+
+An *inclusion* that matches nothing is an error, so a renamed upstream directory
 fails loudly:
 
 ```text
 extract tool.tar.gz: 'only' entries matched no archive contents: "bin/**"
 ```
+
+An exclusion that matches nothing is not an error. A bare `"!"` is.
 
 envy handles `tar` with gzip, bzip2, xz, zstd, or lzma, plus `zip`, `7z`,
 `rar`, `iso`, and bare compressed streams such as a lone `.gz`. You rarely need
@@ -398,9 +413,9 @@ is `PACKAGES` and `BUNDLES` and anything else it set. Only `PACKAGES` and
 PACKAGE_DEPOTS = common.PACKAGE_DEPOTS
 ```
 
-`PACKAGE_DEPOTS` and `DEFAULT_SHELL` are read from the root manifest's globals
-and nowhere else, so from envy 0.3.1 on, leaving one behind in the sandbox is an
-error rather than a silent drop:
+`PACKAGE_DEPOTS`, `DEFAULT_SHELL`, and `VENDOR_ROOT` (from envy 0.4.0) are read
+from the root manifest's globals and nowhere else, so from envy 0.3.1 on, leaving
+one behind in the sandbox is an error rather than a silent drop:
 
 ```text
 error: envy.import: /src/libs/common/envy.lua sets PACKAGE_DEPOTS, which is read
@@ -427,7 +442,9 @@ An imported entry stays tied to the file that wrote it:
   imports it, instead of one per superproject.
 
 The project root and the `SETUP` working directory still name the superproject.
-The imported manifest supplies declarations, not a second project.
+The imported manifest supplies declarations, not a second project. A
+[`vendor`](/concepts/vendoring) path follows the project rather than the file, so
+it resolves against the root manifest's directory wherever it was written.
 
 The imported file sees `ENVY_IMPORTER`, the absolute path of the manifest that
 imported it. It is `nil` when the file runs as a manifest on its own, which is

@@ -259,6 +259,27 @@ envy sync --subproject --platform all                     # from inside libs/com
 Miss one and Windows developers get a working root and a component they cannot
 bootstrap.
 
+## Vendoring is per repo, not per component
+
+[`VENDOR_ROOT`](/concepts/vendoring) is read from the root manifest only, like
+`DEFAULT_SHELL` and `PACKAGE_DEPOTS`, and every destination is anchored on that
+manifest's directory. A component that sets it has to splice the value up, or the
+import is an error:
+
+```lua title="envy.lua"
+VENDOR_ROOT = common.VENDOR_ROOT
+```
+
+Destinations follow the same rule. `vendor = "third_party/nanocobs"` on a
+component's entry is resolved against whichever manifest is the root of the run,
+so it means `libs/common/third_party/nanocobs` when the component is synced
+standalone and `third_party/nanocobs` when the superproject drives it. Unlike
+`source` paths, a `vendor` path does not follow the file that wrote it.
+
+The simple answer is to declare vendoring in the root manifest, where the paths
+mean one thing. A component that has to vendor standalone as well can gate the
+path on `ENVY_IMPORTER`, the same way it gates a standalone-only entry.
+
 ## See also
 
 - [Manifest Discovery](/concepts/projects#manifest-discovery) for the exact walk.

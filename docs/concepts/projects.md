@@ -65,6 +65,7 @@ Header rules:
 | `BUNDLES` | table | Alias → [bundle](./dependencies/bundles.md) declaration. Lets many entries share one pin. |
 | `PACKAGE_DEPOTS` | table | Prebuilt-artifact indexes. URI strings, or `{ DEPENDS, FETCH }` tables for depots that need credentials or a tool to reach. Read from the root manifest only. See [Depots](./depots.md). |
 | `DEFAULT_SHELL` | constant, table, or function | Which shell runs string verbs project-wide ([Shells & Scripts](./shells.md)). Read from the root manifest only. |
+| `VENDOR_ROOT` | string | Project-relative directory that `vendor = true` entries are copied into. See [Vendoring](./vendoring.md). Read from the root manifest only. Needs envy 0.4.0. |
 
 Three helpers are available in manifest code:
 
@@ -93,6 +94,7 @@ from.
 | `setup` | array of string | Which of the spec's [SETUP](./specs/setup.md) pairs to run. Nothing runs unless named here. |
 | `needed_by` | string | How early this package must be ready. One of `check`, `import`, `fetch`, `stage`, `build`, `install`. Defaults to `build`. See [Phase Ordering](./dependencies/ordering.md). |
 | `product` | string | Depend on a product name rather than an identity. See [Declaring Dependencies](./dependencies/declaring.md). |
+| `vendor` | boolean \| string \| table | Copy this package's files into the project tree. `true` derives a directory under `VENDOR_ROOT`, a string names one outright. See [Vendoring](./vendoring.md). Needs envy 0.4.0. |
 | `weak` | table | A fallback entry, used when this one cannot resolve. Mutually exclusive with `source`. |
 
 ### Identity syntax

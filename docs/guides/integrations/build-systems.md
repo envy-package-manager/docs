@@ -182,6 +182,57 @@ Listing `envy.lua` as a prerequisite reconfigures after a version bump. For more
 than a handful of tools, generate an include file from `--json` instead of
 running one process per variable.
 
+## Builds that need files in the tree
+
+Everything above hands the build system an absolute path into the cache. Make and
+CMake take one without complaint, and so does anything else that accepts a path
+as a string.
+
+GN and Bazel do not. Every input is a label relative to the workspace root,
+`//third_party/nanocobs/include`, and there is no way to spell
+`~/Library/Caches/envy/packages/...` in that language. A source file has to be
+inside the project to be a build input at all.
+
+[Vendoring](/concepts/vendoring) is the answer. The manifest asks for a package's
+files to be copied into the project tree, and envy keeps the copy matching the
+package on every `sync`:
+
+```lua title="envy.lua"
+VENDOR_ROOT = "third_party"
+
+PACKAGES = {
+  { spec = "local.nanocobs@r3", source = envy.abspath("envy/nanocobs.lua"),
+    vendor = true },
+}
+```
+
+```python title="third_party/nanocobs/BUILD.gn"
+static_library("nanocobs") {
+  sources = [ "src/cobs.c" ]
+  public = [ "include/nanocobs/cobs.h" ]
+  include_dirs = [ "include" ]
+}
+```
+
+Two things to decide once:
+
+- **Where the build file lives.** Vendoring wipes and recopies a destination
+  whenever it stops matching the package, so a hand-written `BUILD.gn` inside one
+  would be deleted. Put it in a sibling directory, or have the spec install it as
+  part of the package.
+- **Whether to commit the tree.** Commit it when a build has to work without
+  running envy first, which is the usual reason for wanting vendoring at all.
+  Ignore it when everyone runs `envy sync` before building. A committed tree that
+  matches its package is adopted rather than recopied, so it does not churn in
+  diffs.
+
+A spec narrows what gets copied, so a repo takes the headers and not the debug
+symbols:
+
+```lua title="envy/nanocobs.lua"
+VENDOR = { "include/**", "src/**", "LICENSE" }
+```
+
 ## One wrapper instead of two steps
 
 The patterns above assume packages are installed. Rather than asking everyone to
@@ -266,9 +317,13 @@ envy leaves both alone, since neither carries the `envy-managed` marker.
   edit has to invalidate the resolved paths.
 - **Resolve at configure time, not per compile.** One `--json` call beats one
   `envy product` per target.
+- **Reach for vendoring only when a path will not do.** A copy in the tree is
+  more to keep correct than a resolved path. It earns that when the build system
+  cannot name a file outside the project.
 
 ## See also
 
 - [`envy product`](../../reference/cli/product.md) and [`envy package`](../../reference/cli/package.md)
 - [Product Scripts](/concepts/environment/product-scripts) for the `bin/` wrappers
 - [`envy run`](../../reference/cli/run.md) for running a tool with no wrapper deployed
+- [Vendoring](/concepts/vendoring) for builds that need their inputs in the tree

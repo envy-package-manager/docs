@@ -1,5 +1,5 @@
 ---
-sidebar_position: 14
+sidebar_position: 15
 title: envy extract
 ---
 
@@ -26,7 +26,7 @@ envy extract <archive> [<destination>] [--only=<path|glob>]...
 | --- | --- |
 | `archive` | Archive to extract. Required, and it must exist. |
 | `destination` | Output directory. Defaults to the current directory. Created if missing. |
-| `--only <path\|glob>` | Extract just this archive-relative path or glob. Repeatable. Defaults to everything. |
+| `--only <path\|glob>` | Extract just this archive-relative path or glob. A leading `!` excludes instead. Repeatable. Defaults to everything. |
 
 `--only` keeps large archives cheap. Unselected entries are never decompressed to
 disk. Pulling two binaries out of a 10 GB toolchain tarball costs one streaming
@@ -34,8 +34,13 @@ pass instead of 10 GB. A selector naming a directory takes its whole subtree.
 
 Selector rules:
 
-- An `--only` entry that matches nothing is an error, and so is a malformed
-  pattern.
+- A leading `!` excludes rather than includes, and an exclusion beats an
+  inclusion. Since envy 0.4.0. This is envy's one selector language, shared with
+  a spec's [`VENDOR`](/concepts/vendoring#what-gets-copied) list and
+  [`envy hash --tree --only`](./hash.md#subtree-hashing).
+- An *inclusion* that matches nothing is an error, because it is a typo. An
+  exclusion that matches nothing is fine, because it names a thing the archive
+  did not have. A malformed pattern and a bare `!` are both errors.
 - Patterns are archive-relative: no leading `/`, no `..`. envy normalizes `\` to
   `/` and ignores a leading `./` and trailing slashes.
 - `*` and `?` stay within one path component. `**` spans components and must
@@ -77,6 +82,16 @@ envy extract sdk.zip /tmp/try --only 'sdk/bin' --only 'sdk/LICENSE'
 
 `sdk/bin` is a directory, so its whole subtree comes along. If either selector is
 wrong you get an error here, rather than a spec that stages nothing.
+
+### To take everything except one thing
+
+```bash
+envy extract sdk.tar.gz out --only '**' --only '!**/*.pdb'
+```
+
+`**` includes the whole archive and the exclusion drops the symbols. Writing only
+the exclusion works too: with no inclusions at all, everything is selected except
+what `!` removes.
 
 ### To extract into the current directory
 
