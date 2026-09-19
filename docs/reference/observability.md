@@ -186,6 +186,13 @@ version.
 | `extract_start` | `archive`, `destination`, `strip_components` |
 | `extract_complete` | `archive`, `files_extracted`, `duration_ms` |
 
+**[Vendoring](/concepts/vendoring)**
+
+| Event | Fields |
+| --- | --- |
+| `vendor_resolved` | `path`, `origin`, either `derived` or `override`. One per destination, emitted before any package runs, because the whole plan is resolved and checked up front. |
+| `vendor_result` | `path`, `action`, `reason`, `dry_run`, `files`, `bytes`, `hash_ms`, `wipe_ms`, `copy_ms`, `duration_ms`. `action` is `copied`, `redeployed`, `kept`, or `up_to_date`. `reason` is `absent` (nothing was there), `mismatch` (the destination is not what the package holds), or `current`. `kept` is a mismatch under `auto_sync = false`, where envy reports and leaves it. `files` and `bytes` count what was written, so anything but a copy reports zeroes. `dry_run` marks [`envy vendor --dry-run`](./cli/vendor.md), where the decision is the real one and `files`/`bytes` are what a copy *would* have written. The three stage timings split `duration_ms` into hashing, deleting, and copying. |
+
 ## Recipes
 
 **Why did this rebuild?**
@@ -236,6 +243,19 @@ Stack traceback:
 Spec file: /tmp/project/user.lua:11
 Declared in: /tmp/project/envy.lua
 ```
+
+**Why did a vendored directory get rewritten?**
+
+```shell-session
+$ grep vendor_result t.jsonl
+{...,"event":"vendor_result","spec":"local.nanocobs@r3","path":"third_party/nanocobs","action":"redeployed","reason":"mismatch","dry_run":false,"files":41,"bytes":8192,"hash_ms":7,"wipe_ms":2,"copy_ms":3,"duration_ms":12}
+```
+
+`mismatch` says the directory's contents are not what the package holds, which
+covers an edit, a stray file, and a package that moved on. Reproduce the
+comparison with [`envy hash --tree`](./cli/hash.md#subtree-hashing) on that path,
+or ask for the same report without a repair with
+[`envy vendor --all --dry-run`](./cli/vendor.md).
 
 **What did deploy actually change?**
 

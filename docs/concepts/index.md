@@ -39,6 +39,9 @@ read them in order, this page is also a reasonable tour of the model.
 - **[Cache](/concepts/cache)**: the content-addressed store packages install
   into. One per user by default, shared by every project on the machine, or a
   tree inside a single project. Always safe to delete.
+- **[Vendoring](/concepts/vendoring)**: copying a package's files out of the
+  cache and into the project tree, for build systems that can only read inputs
+  from inside the project.
 - **[Depot](/concepts/depots)**: the optional prebuilt-artifact layer.
 - **[Superproject and subproject](/concepts/projects#manifest-discovery)**:
   nested manifests composing into one project.

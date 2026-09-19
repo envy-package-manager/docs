@@ -49,11 +49,16 @@ instead of 10 GB of disk.
 | Field | Meaning |
 | --- | --- |
 | `strip` | Leading path components to remove. Must be 0 or greater. |
-| `only` | Archive-relative paths or globs. Must list at least one entry if present. |
+| `only` | Archive-relative paths or globs. Must list at least one entry if present. A leading `!` excludes. |
 
 Glob rules:
 
-- A selector that matches nothing is an error, and so is a malformed pattern.
+- An inclusion that matches nothing is an error, and so is a malformed pattern.
+  An exclusion that matches nothing is not, because it names something the
+  archive did not ship.
+- A leading `!` excludes rather than includes, and an exclusion beats an
+  inclusion, so `{ "**", "!**/*.pdb" }` means everything but the symbols. Since
+  envy 0.4.0.
 - A selector naming a directory takes its whole subtree.
 - `*` and `?` stay inside one path component. `**` spans components and must
   occupy a component by itself, so `lib/**/include` is valid and `lib/**x` is
@@ -62,6 +67,9 @@ Glob rules:
   literals.
 - Matching is case-sensitive on every platform, including Windows.
 - Paths are archive-relative. No leading `/`, no `..`.
+
+These are the same rules a spec's [`VENDOR`](../vendoring.md#what-gets-copied)
+list follows, because both go through the same matcher.
 
 To test a selector list outside a spec, use
 [`envy extract --only`](../../reference/cli/extract.md), which runs the same

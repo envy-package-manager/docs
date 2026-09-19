@@ -32,6 +32,7 @@ misses are downloads rather than builds.
 | **INSTALL** | [Produce the final package directory.](./install.md) |
 | **SETUP** | [Adjust the host machine](./setup.md), for the pairs a manifest entry selected, and only when their `CHECK` reports the host is not already correct. |
 | **export** | Only during [`envy export`](../../reference/cli/export.md): archive the finished package and print its index line. |
+| **vendor** | Only when the manifest asked: [copy the package](../vendoring.md) into the project tree, or confirm the copy already there still matches. [`envy vendor`](../../reference/cli/vendor.md) runs the ladder for the sake of this step. Requires envy 0.4.0. |
 
 ## The directories a spec sees
 

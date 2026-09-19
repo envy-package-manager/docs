@@ -343,6 +343,77 @@ PowerShell's `>` writes UTF-16. Use
 `| Out-File -Encoding ascii` for depot indexes and `-Encoding utf8` for JSON. See
 [the stdout contract](./observability.md#stdout-is-a-contract).
 
+## Vendoring
+
+**A vendored directory is rewritten on every run**
+
+Something in it does not match the package, and envy repairs the whole directory
+rather than reconciling it. Find out what by hashing it:
+
+```bash
+envy hash --tree third_party/nanocobs     # before a sync
+envy sync
+envy hash --tree third_party/nanocobs     # after
+```
+
+`envy vendor --all --dry-run` answers the same question in one step, and names
+every destination that would be repaired.
+
+Common causes are an editor writing a `.DS_Store` or a `.vscode` directory
+inside it, a build system generating output there, and a `.gitattributes` rule
+rewriting line endings on checkout. A stray file counts as drift, because the
+whole destination is hashed. Move the extra files to a sibling directory, or use
+`vendor = { auto_sync = false }` if the edits are deliberate. See
+[Staying in sync](/concepts/vendoring#staying-in-sync).
+
+**`package 'x' asks to be vendored, but the manifest sets no VENDOR_ROOT`**
+
+`vendor = true` derives a directory name and needs somewhere to put it. Add
+`VENDOR_ROOT = "third_party"` to the root manifest, or give the entry an explicit
+path with `vendor = "third_party/x"`, which needs no root.
+
+**`nested vendor destinations` or `vendor destination collision`**
+
+Two packages want the same directory, or one wants a directory inside another's.
+envy refuses before writing anything, because repairing the outer one would erase
+the inner one. Give at least one of them an explicit path.
+
+**A vendored tree reappears after I deleted it**
+
+That is the repair working. envy copies a missing destination back on the next
+`install` or `sync`. To stop vendoring a package, remove its `vendor` key, then
+delete the directory. envy never prunes a destination it no longer writes.
+
+**A vendored tree is missing or wrong, and I do not want to run a whole sync**
+
+```bash
+envy vendor nanocobs
+```
+
+[`envy vendor`](./cli/vendor.md) runs the vendor step for the packages you name.
+Add `--all` for every vendored package, `--dry-run` to see the verdict without
+changing anything, and `--force` to repair a destination that
+`vendor.auto_sync = false` would otherwise leave alone.
+
+**`envy vendor` says a package is not vendored**
+
+The query matched a `PACKAGES` entry with no `vendor` field. Add one, or name a
+different package. `--all` skips non-vendored entries rather than complaining,
+so it is the right form when you want "whatever this manifest vendors".
+
+**A vendored destination that was a symlink is now a real directory**
+
+Expected. envy owns a vendored destination, and the repair deletes it before
+copying. When the destination is a symlink, the link is what gets removed and
+whatever it pointed at is left whole, so nothing outside is lost. Pointing a
+vendor destination at a directory you maintain is not a way to share it.
+
+**`vendor: 'x' resolves to <path>, outside the project`**
+
+A component of the path is a symlink pointing out of the project. Vendoring
+wipes a destination before copying into it, so envy resolves the real path first
+and refuses one that leaves the project.
+
 ## Depots
 
 **Everything builds from source with a depot configured**

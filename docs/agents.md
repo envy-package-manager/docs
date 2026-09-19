@@ -31,8 +31,8 @@ and scripts use the explicit path.
 
 - manifest `envy.lua`: header comment directives `-- @envy key "value"` before
   the first code line, plus globals `PACKAGES` (required), `BUNDLES`,
-  `PACKAGE_DEPOTS`, `DEFAULT_SHELL`. Manifest is real Lua: conditionals,
-  `envy.import()`, `envy.extend()` all legal.
+  `PACKAGE_DEPOTS`, `DEFAULT_SHELL`, `VENDOR_ROOT`. Manifest is real Lua:
+  conditionals, `envy.import()`, `envy.extend()` all legal.
 - shells: string verbs, and strings returned from function verbs, run under
   `DEFAULT_SHELL`. Default bash on POSIX, PowerShell on Windows. Built-ins
   `ENVY_SHELL.BASH|SH|CMD|POWERSHELL`, platform-validated, wrong platform is an
@@ -79,6 +79,11 @@ and scripts use the explicit path.
 - verbs: `FETCH → STAGE → BUILD → INSTALL`, plus `SETUP` (named CHECK/INSTALL
   pairs). Each verb: string, table, function, or omitted, all with defaults. See
   table below.
+- **vendoring (0.4.0+)**: copy a package's `pkg/` into the project tree, for
+  build systems that cannot name a file outside the project (GN, Bazel: every
+  input is a `//`-relative label). Make/CMake take an absolute `envy product`
+  path and need none of this. `install`/`sync` keep the copies current;
+  `envy vendor` runs that step alone. See the vendoring section below.
 - products: spec exports named entry points, `PRODUCTS = { cmake = "bin/cmake" }`.
   Consumers use the product name rather than the identity: CLI
   `envy product cmake`, Lua `envy.product("cmake")`, or deployed wrapper script
@@ -220,7 +225,118 @@ Other spec globals: `OPTIONS` (schema table with
 `{value=..., script=false}` for non-executables), `DEPENDENCIES`, `PLATFORMS`
 (`darwin|linux|windows[-arch]`), `USER_MANAGED` (host-mutating specs: must
 define SETUP pairs, must not define FETCH/STAGE/BUILD/INSTALL), `EXPORTABLE`
-(false means a depot exports fetched bytes rather than install output).
+(false means a depot exports fetched bytes rather than install output), `VENDOR`
+(0.4.0+, selector list naming what of `pkg/` a vendoring manifest copies).
+
+## vendoring
+
+0.4.0+. Copy-in mechanism: a package's cached payload duplicated into the project
+tree, for build systems that require in-source inputs. Not a move, not a link;
+the cache entry stays authoritative.
+
+- **manifest asks, spec narrows.** Root-manifest `VENDOR_ROOT = "<dir>"` +
+  `vendor` on a `PACKAGES` entry. Spec's `VENDOR = { globs }` picks what of the
+  install dir is worth copying (absent/empty = everything), validated at
+  spec_fetch so a bad glob fails before any fetch. A spec never requests
+  vendoring.
+- `vendor` forms: `true` (derive a leaf under VENDOR_ROOT) | `false`/absent (no)
+  | `"exact/dir"` (project-relative, needs NO VENDOR_ROOT) |
+  `{ path = ..., auto_sync = ... }` | `{}` (= true). Manifest PACKAGES ONLY, and
+  only the `source` shape: a DEPENDENCIES, `source.dependencies` or `bundle =`
+  entry carrying it is an unknown-key error.
+- **derived names escalate only as far as they must**, per colliding group and to
+  a fixpoint: `name` → `ns.name` → `ns.name@rev` → `ns.name@rev-<options hash>`.
+  So two option variants of one spec both vendor. An explicit path is a fixed
+  point and never escalates; a derived name that wanted it steps aside.
+- paths validated like `@envy cache-local`: relative, no leading separator, no
+  drive letter, no `.`/`..` component, no `~`/`$`/`%`. **Anchored on the ROOT
+  manifest's directory, NOT on the file that wrote the entry**: the opposite of
+  an entry's `source` under `envy.import`, so one component's `vendor` path means
+  different things standalone and imported. Gate on `ENVY_IMPORTER`, or declare
+  vendoring in the root.
+- **whole plan resolved and checked before any file is written**: duplicate
+  destinations and nested ones (outer's wipe would erase inner) both error naming
+  both packages. Platform-excluded entries are dropped first, so a linux-only and
+  a darwin-only package may name the same dir. At copy time the destination is
+  also resolved through symlinks and refused if it lands outside the project.
+- **runs as a per-package phase (`pkg_vendor`, after export) of `install` and
+  `sync`.** A package nobody vendors pays one no-op step. `install` therefore
+  does write into the work tree when a manifest vendors.
+- **`envy vendor` (0.4.0+) is the same ladder run for the sake of that one
+  step**, and the only way to override `auto_sync` or to ask without doing.
+  `vendor <queries>... | --all [--force] [--dry-run] [--threads N]
+  [--manifest=...]`, plus the global `--project`. Re-execs into the pinned envy
+  like `sync`/`install`. No `--subproject`, no `--ignore-depot`.
+  - **selection is required and exclusive.** Bare `envy vendor` errors, queries +
+    `--all` errors. No "all by default": the repair deletes directories.
+  - **plan is resolved over the WHOLE manifest** (so a collision or nesting
+    anywhere still errors before a byte is written), then filtered to the named
+    targets. A vendored *dependency* of a target is NOT swept along.
+  - runs targets to completion like `install`, so an uncached package is fetched
+    and built first. True under `--dry-run` too.
+  - a named package with no `vendor` field errors (`'x' is not vendored`);
+    `--all` silently skips them. A manifest vendoring nothing errors either way.
+  - `--force` = "read every destination as `auto_sync = true`". It lifts the
+    exemption only; an up-to-date destination is still a no-op.
+  - `--dry-run` = same decision, nothing written **to the destination**. Not "no
+    writes at all" (the ladder still runs, the cache still records the pristine
+    digest). `files`/`bytes` become what a copy would have written.
+  - `--threads 0` = default; negative errors at execute, as `hash --threads`
+    does. Does not change what lands.
+  - report is one `tui::info` line per target on **stderr**, in target order
+    (stdout stays empty): `vendored N files to <dir>` / `re-vendored N files to
+    <dir>: contents were dirty` / `up to date: <dir>` / `kept <dir>: contents
+    differ from the package`, with `would (re-)vendor` under `--dry-run`. The
+    command prints it because the phase's own row is overwritten by the
+    completion row.
+- **drift check keeps NO project-side state.** Each run hashes the destination
+  whole (`tree_hash`, BLAKE3) and compares against the pristine digest in the
+  cache entry (`envy-vendor-<16 hex of the canonical selector list>`, beside
+  `pkg/`, written at install and backfilled on a cache hit or depot import).
+  Keyed on the selector set because a package cache key does not cover its spec's
+  contents. Mismatch of ANY kind (edited file, stray file, deleted file, added or
+  removed empty dir, repointed symlink, exec-bit change, package moved on) wipes
+  and recopies. mtime alone is not drift. Consequence: a vendored tree committed
+  to git is adopted as-is on a machine that never ran envy.
+- `auto_sync = false` exempts one entry: a mismatch is a `tui::warn` (which names
+  `envy vendor --force`) and the directory is left exactly as it is. Absent
+  destination still copied, matching one still quiet. It is a manifest default,
+  not a lock: `--force` overrides it.
+- **a destination that IS a symlink does not survive the repair.** The wipe
+  removes the link and leaves its target whole, and the copy then creates a real
+  directory. (A symlinked path component resolving OUTSIDE the project is still
+  a hard refusal.) So a vendor destination cannot be aliased onto a directory
+  you maintain.
+- **envy never prunes.** Moving a destination copies afresh and leaves the old
+  one. Removing `vendor` leaves the directory.
+- refusals: `USER_MANAGED` (no cached payload, caught at spec_fetch, names the
+  package), a bundle entry (shape has no `vendor` key), `vendor = ""`, a bad
+  `vendor` type, unknown key in the `vendor` table, non-boolean `auto_sync`.
+- **`VENDOR_ROOT` is root-only**, same rule as `DEFAULT_SHELL`/`PACKAGE_DEPOTS`:
+  an `envy.import`ed manifest setting it errors unless the root holds that exact
+  value.
+- TUI: determinate bar on the package row counting files, last frame
+  `vendored N files` / `re-vendored N files: contents were dirty` /
+  `kept: contents differ from the package`. Up-to-date draws nothing.
+- Trace: `vendor_resolved{path, origin=derived|override}` (one per destination,
+  before the run), `vendor_result{path, action=copied|redeployed|kept|up_to_date,
+  reason=absent|mismatch|current, dry_run, files, bytes, hash_ms, wipe_ms,
+  copy_ms, duration_ms}`. files/bytes are 0 for anything but a copy, and under
+  `dry_run` they are what a copy would have written.
+- **one selector language, three users (0.4.0+)**: `envy extract --only` /
+  `envy.extract`'s `only` / `STAGE.only`, a spec's `VENDOR`, and
+  `envy hash --tree --only`. Same parser, same matcher. Leading `!` excludes and
+  beats an inclusion; empty include list means everything. An INCLUSION matching
+  nothing is an error (typo), an exclusion matching nothing is not; a bare `"!"`
+  and a malformed pattern are errors. Glob: `*`/`?` within a component, `**`
+  spanning and alone in its component, `[a-z]`/`[!a-z]` classes, `[*]`/`[?]`/`[[]`
+  literals, case-sensitive everywhere, `/`-separated.
+- `envy hash --tree <dir>...` prints the same digest, so a drift report is
+  reproducible by hand. Digest folds sorted `(relpath, kind f|d|l, exec bit,
+  payload)`; exec bit is always 0 on Windows, symlinks hash their STORED target
+  and are never followed, empty dirs count, mtimes do not. A selection always
+  carries the ancestor directories of its entries, which is what makes the digest
+  of a selection equal the digest of a copy of it.
 
 ## dependencies
 
@@ -233,9 +349,12 @@ define SETUP pairs, must not define FETCH/STAGE/BUILD/INSTALL), `EXPORTABLE`
 - **entry shapes are closed sets (0.3.1+)**: an unknown key is an error listing
   the allowed ones, wrapped with the file and index (`<manifest>: PACKAGES[2]:`,
   `spec 'x@r1': DEPENDENCIES[2]:`). Manifest PACKAGES takes
-  `spec|source|bundle|sha256|ref|options|platforms|setup|needed_by|product`, is
+  `spec|source|bundle|sha256|ref|options|platforms|setup|needed_by|product|vendor`
+  (`vendor` 0.4.0+, manifest-only), is
   always a TABLE (no bare-string shorthand), refuses `weak`, and refuses
-  `source = { fetch = ... }` (nothing could call it). Spec DEPENDENCIES takes the
+  `source = { fetch = ... }` (nothing could call it). A `bundle` entry is its own
+  narrower shape: `spec|bundle|options|platforms|setup|needed_by|product` only,
+  so `sha256|ref|vendor` there are unknown-key errors. Spec DEPENDENCIES takes the
   same minus `platforms` (its own message: platform filtering is a manifest
   field, gate with `if envy.PLATFORM`) plus `weak`. `source.dependencies` drops
   `needed_by` too (always spec_fetch). A `weak = {...}` fallback is a complete
@@ -307,20 +426,26 @@ define SETUP pairs, must not define FETCH/STAGE/BUILD/INSTALL), `EXPORTABLE`
 `envy <cmd>`. Global flags `--verbose -q --trace[=sinks] --cache-root --project`
 go before the subcommand (`envy sync --verbose` is a parse error). stdout is
 machine-readable only, and human output goes to stderr. `--project <dir>` is
-honored by every manifest-loading command: `sync install deploy product package
-run export import use cache shell`.
+honored by every manifest-loading command: `sync install deploy vendor product
+package run export import use cache shell`.
 
 - `sync [queries]`: install plus deploy product scripts. Needed only when the
   bin dir must change: a manifest edit that added/removed/renamed a **product**,
   after `use` (restamps bootstrap + `.luarc.json`), `--platform all`, or
   restoring a cleaned bin dir.
-- `install [queries]`: install only, no work-tree writes. **The right command
+- `install [queries]`: install only, no bin-dir writes. **The right command
   for anything that just wants bytes**: warming a CI/Docker cache, prefetching,
   benchmarking a cold cache, proving a spec still builds, bumping a version
   option, repopulating after a cache wipe or an `envy cache --local/--shared`.
   Wrappers resolve their package at call time, so none of those need a deploy.
+  NOT "no work-tree writes" since 0.4.0: a manifest that vendors gets its
+  vendored trees written here.
 - `deploy [queries] [--strict] [--platform ...]`: deploy product scripts only,
   no installs. Prunes marked wrappers outside the resolved graph.
+- `vendor <queries>... | --all [--force] [--dry-run] [--threads N]
+  [--manifest=...]` (0.4.0+): run the vendor step alone. See the vendoring
+  section. Selection is REQUIRED and exclusive: bare `envy vendor` errors, and so
+  does queries + `--all`.
 - `init <project-dir> <bin-dir> [--envy-version X.Y.Z] [--mirror URL]
   [--pin-sums] [--deploy=bool] [--root=bool] [--platform ...]`: new project,
   manifest plus bootstrap scripts plus `.luarc.json`, and appends `.envy/` +
@@ -343,9 +468,16 @@ run export import use cache shell`.
 - `shell <bash|zsh|fish|powershell>`: print the shell-hook source line.
 - `use <version>`: retarget the pinned envy version in the manifest.
 - `git-resolve <url> <ref>`: remote ref to full sha, for pinning.
-- `hash <paths>`: sha256 lines for depot indexes.
+- `hash <paths>`: sha256 lines for depot indexes. `hash --tree <dirs>` instead
+  prints one BLAKE3 subtree digest per directory, the one vendoring compares,
+  with `--only` (selector language, `!` included), `--threads` (0 = performance
+  cores), `--json` (array of objects, `duration_ms` times the hash not the
+  process), `--stats` (stage + per-worker balance, on stderr so stdout stays the
+  digest, inside the object under `--json`, suppressed by `-q`). `--tree`
+  excludes `--prefix`; the four `--tree` flags without it are an error, not
+  ignored; every `--tree` argument must be a directory.
 - `export`, `import`, `merge-depot`: depot artifact publish and consume.
-- `fetch <src> <dst>`, `extract <archive> [dst] [--only PATH|GLOB]...`,
+- `fetch <src> <dst>`, `extract <archive> [dst] [--only PATH|GLOB|!GLOB]...`,
   `hash <paths>`, `git-resolve`, `lua <script>`: standalone utilities, no
   manifest or project required. Transports and formats are compiled in: AWS SDK
   (so `s3://` works with ambient credentials and no AWS CLI), libgit2 (no `git`
@@ -384,9 +516,10 @@ and `bundle = "alias"` resolves against ITS `BUNDLES` first, then the root's (no
 re-export needed; two components may reuse an alias). Declarer stays the
 superproject, so project root, SETUP cwd and custom-fetch cache keys name the
 root. Only `PACKAGES`/`BUNDLES` are tagged; splice other globals by hand
-(`PACKAGE_DEPOTS = sub.PACKAGE_DEPOTS`), and for the two ROOT-ONLY globals
-`PACKAGE_DEPOTS`/`DEFAULT_SHELL` that splice is MANDATORY since 0.3.1: an import
-that sets one the root does not end up holding is an error, not a silent drop.
+(`PACKAGE_DEPOTS = sub.PACKAGE_DEPOTS`), and for the ROOT-ONLY globals
+`PACKAGE_DEPOTS`/`DEFAULT_SHELL` (and `VENDOR_ROOT`, 0.4.0+) that splice is
+MANDATORY since 0.3.1: an import that sets one the root does not end up holding
+is an error, not a silent drop.
 Provenance is the imported file, so a conflict names both component manifests
 and a custom-fetch cache key is keyed on the component (one spec entry across
 every superproject, where pre-0.3.1 the root keyed it). Imported file sees `ENVY_IMPORTER` =

@@ -5,13 +5,20 @@ title: envy install
 
 # `envy install`
 
-Install manifest packages into the cache and stop. Nothing in the project
-directory changes: no wrappers are written and no bin directory is created.
-That is [`deploy`](./deploy.md)'s job, and [`sync`](./sync.md) does both.
+Install manifest packages into the cache and stop. No wrappers are written and no
+bin directory is created. That is [`deploy`](./deploy.md)'s job, and
+[`sync`](./sync.md) does both.
 
 Use it when you want the bytes but not the integration. Warming a CI or Docker
 cache, prefetching before going offline, or checking that a spec builds without
 disturbing a bin directory you are debugging.
+
+One thing does reach the project directory: a manifest that asks for
+[vendoring](/concepts/vendoring) gets its vendored trees copied or checked here,
+because they are part of installing rather than part of deploying. A manifest
+with no `vendor` entries leaves the tree byte-identical. To run that step on its
+own, for one package or with an exemption overridden, use
+[`envy vendor`](./vendor.md).
 
 ## Usage
 
@@ -41,7 +48,10 @@ envy install
 ```
 
 The tree is byte-identical afterward, so a later `git status` in the job still
-means something. Pair it with a cache action keyed on the manifest's hash.
+means something. Pair it with a cache action keyed on the manifest's hash. A
+manifest that vendors is the exception: those directories are written here, by
+design, and a project that commits them wants `git status` to stay clean, which
+it does when the copies already match.
 
 ### To build one package's Docker layer
 
@@ -93,3 +103,4 @@ manifest path but has no working directory inside the project.
 - [`envy sync`](./sync.md) for install plus deploy, the everyday command.
 - [`envy deploy`](./deploy.md) for the other half.
 - [The Cache](/concepts/cache) for where installed packages live and why deleting the cache is safe.
+- [Vendoring](/concepts/vendoring) for the one thing `install` writes into the project, and [`envy vendor`](./vendor.md) for running that step alone.

@@ -31,6 +31,7 @@ deleted, moved, or rebuilt without touching a single project.
 │   └── envy.cmake@r0/
 │       └── darwin-arm64-blake3-49a9b2620de8c380/
 │           ├── envy-complete
+│           ├── envy-vendor-1f04c8e1a9b23d7c   # only for a vendored package
 │           └── pkg/      # the installed package
 ├── shell/                    # user-wide tree only, never a project-local one
 │   ├── hook.bash
@@ -71,6 +72,21 @@ Two of those are worth a note:
   anything. `shell/` exists only in the user-wide tree. A project on its own
   cache tree writes no hooks at all, for the reasons in
   [Shell Hooks](./environment/shell-hooks.md#hooks-are-a-user-wide-feature).
+
+### Vendor digests
+
+A [vendored](./vendoring.md) package carries one more file beside its payload,
+`envy-vendor-<selectors>`, holding the subtree digest of exactly what the spec's
+`VENDOR` list takes out of `pkg/`. The name ends in a hash of the selector list
+rather than of the package, because a package's cache key covers its identity and
+options but not its spec's contents. Editing a `VENDOR` list in place would
+otherwise be served the old digest forever.
+
+This is the only record vendoring keeps anywhere. Nothing is written on the
+project side, which is why a vendored tree committed to git is adopted rather
+than recopied on a machine that has never run envy. It is also the one file envy
+adds to a completed entry after the fact, which is safe because it is written
+temp-and-rename and its content is a pure function of bytes that never change.
 
 ## Content addressing
 
