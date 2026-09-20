@@ -54,19 +54,31 @@ $ envy install
 One line per package. Reach for it before going offline, and in CI when you want
 the job to fail at install rather than mid-compile.
 
-`sync` is the same thing plus the bin directory, so it adds a summary line:
+`sync` is the same thing plus the bin directory, so it adds a summary line when
+the bin directory changed:
 
 ```shell-session
 $ envy sync
-[envy.cmake@r0] cache hit
-[envy.ninja@r0] cache hit
-[envy.python@r1] cache hit
-deploy: 12 product script(s) (0 created, 0 updated, 12 unchanged, 0 removed)
+deploy: 12 product script(s) (1 created, 0 updated, 11 unchanged, 0 removed)
 ```
 
 Run that one after editing the manifest, which is when a wrapper has to be
 written or pruned. Both are idempotent and incremental, and running either again
 installs nothing.
+
+Run it a second time and it prints nothing whatsoever:
+
+```shell-session
+$ envy sync
+$
+```
+
+That is success, not a failure to start. A package earns a line by doing
+something, and the deploy summary appears only when a wrapper was written or
+pruned, so a project that is already correct has nothing to report. Redirect the
+output to a file and every package reports its outcome again, which is what
+keeps CI logs complete. See [a run with no work is
+silent](../reference/observability.md#a-run-with-no-work-is-silent).
 
 ## The three verbs
 

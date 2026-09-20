@@ -8,7 +8,8 @@ title: envy sync
 Install every package the manifest requests, then deploy product wrapper scripts
 into the project's bin directory. `sync` is [`install`](./install.md) plus
 [`deploy`](./deploy.md). Run it after editing the manifest, and whenever you are
-unsure. It is idempotent and incremental.
+unsure. It is idempotent and incremental, and on a terminal a run with nothing
+to do [says nothing](../observability.md#a-run-with-no-work-is-silent).
 
 A fresh clone does not need it. The committed wrappers bootstrap envy and install
 what they need on first call, so `sync` is for maintaining the bin directory and

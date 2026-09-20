@@ -35,6 +35,7 @@ PRODUCTS = { rg = "rg" }
 | [`PRODUCTS`](./products.md) | table \| function | Name what the package offers consumers. |
 | [`DEPENDENCIES`](../dependencies/declaring.md) | array | Other packages this one needs, and how early. |
 | [`PLATFORMS`](./platforms.md) | array of string | Where this package exists at all. |
+| [`DISPLAY`](../../reference/spec-globals.md#display) | string \| function | What this package's progress rows say they are working on, which is how several instances of one spec tell themselves apart. Requires envy 0.4.2. |
 | [`USER_MANAGED`](./user-managed.md) | boolean \| function | Orchestrate host state instead of owning files. |
 | `EXPORTABLE` | boolean | Whether the installed tree may be published to a [depot](../depots.md). See [INSTALL](./install.md#exportable). |
 | `BUNDLES` | table | Alias to bundle declaration, for specs whose dependencies live in a bundle. |

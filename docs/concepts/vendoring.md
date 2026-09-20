@@ -147,9 +147,18 @@ a machine that has never run envy, provided its contents match the package. A
 fresh clone is quiet rather than recopying everything.
 
 A run that copies draws a progress bar on the package's row, counting files, and
-its last line names what happened: `vendored 41 files` for a first copy, or
-`re-vendored 41 files: contents were dirty` for a repair. A package whose copy
-already matched draws nothing, because nothing was copied.
+its last line names what happened: `vendored 41 files to third_party/nanocobs`
+for a first copy, or `re-vendored 41 files to ...: contents were dirty` for a
+repair. Destinations are named relative to the project root. A package whose
+copy already matched draws nothing, because nothing was copied.
+
+That outcome replaces `cache hit` on the row rather than joining it. `cache hit`
+is a verdict on the payload, and says nothing about the four hundred files the
+vendor step may have just written into the repo; the row reports the copy
+instead. The [`pkg_outcome` trace event](../reference/observability.md) still
+records `cache_hit`, because that is what machine readers want to know about the
+payload. Under [`envy vendor`](../reference/cli/vendor.md) the command prints
+its own report, so the destination is not named twice.
 
 ## Keeping your own edits
 
@@ -165,7 +174,7 @@ With `auto_sync = false`, a destination that no longer matches the package is
 reported as a warning and left exactly as it is:
 
 ```text
-warning: vendored copy at /src/app/third_party/patched no longer matches the package; left as it is (vendor.auto_sync = false; 'envy vendor --force' restores it)
+warning: vendored copy at third_party/patched no longer matches the package; left as it is (vendor.auto_sync = false; 'envy vendor --force' restores it)
 ```
 
 A missing destination is still copied, because there is nothing to preserve, and

@@ -69,6 +69,9 @@ print(...)        -- routed to the log at info level
 All of it goes to stderr except `envy.stdout`. Do not write progress chatter to
 stdout, because [callers parse it](./observability.md#stdout-is-a-contract).
 
+To label the package's own progress rows rather than log a line, set
+[`DISPLAY`](./spec-globals.md#display) instead.
+
 ## Strings and tables
 
 ### `envy.template(str, values)`

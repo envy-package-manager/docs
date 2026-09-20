@@ -188,6 +188,26 @@ SETUP.<pair>.CHECK = function(pkg_dir, opts)
 One file, one set of verbs, and every project's variation expressed as data in
 the manifest.
 
+## Telling the instances apart
+
+One spec instantiated several times produces several rows carrying the same
+`[identity]`, differing only in options nobody can see. Since envy 0.4.2 a spec
+can name each one with [`DISPLAY`](../../reference/spec-globals.md#display), a
+string or a function of the validated options:
+
+```lua
+DISPLAY = function(options) return options.repo end
+```
+
+```text
+[acme.github@r0] libusb/hidapi      42% [========>           ] 4.10MB/9.77MB
+[acme.github@r0] cesanta/mongoose   17% [===>                ] 1.55MB/9.12MB
+```
+
+It is read once, right after `OPTIONS` validates, and it appears on the outcome
+line as well as the live row — including in a redirected log, where four
+identical identities are otherwise four identical lines.
+
 ## See also
 
 - [Anatomy of a Spec](./index.md) for where `OPTIONS` sits among the globals.

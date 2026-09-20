@@ -21,6 +21,7 @@ Terse companion to [Anatomy of a Spec](/concepts/specs).
 | `PRODUCTS` | table or function | the package exports nothing |
 | `DEPENDENCIES` | array of entry tables | none |
 | `PLATFORMS` | array of strings, `darwin`, `linux`, `windows`, optionally `-arm64` or `-x86_64` | every platform |
+| `DISPLAY` | string or function of the options | the package's rows say nothing beyond their identity. Requires envy 0.4.2 |
 | `USER_MANAGED` | boolean or function | `false`, meaning cache-managed |
 | `EXPORTABLE` | boolean | `false`, so only fetched bytes are kept for export |
 | `VENDOR` | array of selector strings | the whole install directory is copied when a manifest [vendors](/concepts/vendoring) this package. Requires envy 0.4.0 |
@@ -39,6 +40,7 @@ SETUP.<name>.CHECK(pkg_dir, options)     -- pkg_dir is nil for user-managed
 SETUP.<name>.INSTALL(pkg_dir, options)
 PRODUCTS(options)
 OPTIONS(options)
+DISPLAY(options)
 USER_MANAGED()
 ```
 
@@ -55,6 +57,7 @@ Return values:
 | `SETUP.<name>.INSTALL` | nothing, or a script string to run |
 | `PRODUCTS` | the products table |
 | `OPTIONS` | nothing, `true`, `false`, or an error message string |
+| `DISPLAY` | one line of printable text, or `nil` for none |
 | `USER_MANAGED` | boolean |
 
 ## `FETCH` table fields
@@ -179,6 +182,45 @@ package key. See [The SETUP Verb](/concepts/specs/setup).
 The table form validates declaratively. The function form receives the options
 and may call `envy.options(schema)` to apply the same checks. Both reject options
 the schema does not declare.
+
+## `DISPLAY`
+
+What this package's rows say they are working on. Requires envy 0.4.2.
+
+A package's progress row is columns: the `[identity]`, then `DISPLAY`, then
+whatever the row is reporting. The identity is always there, so `DISPLAY` adds
+to it rather than replacing it. The case it exists for is one spec instantiated
+several times, where the identity is the same on every row and cannot tell them
+apart:
+
+```lua
+IDENTITY = "acme.github@r0"
+OPTIONS = { repo = { type = "string", required = true },
+            version = { type = "string", required = true } }
+
+DISPLAY = function(options) return options.repo end
+```
+
+```text
+[acme.github@r0] libusb/hidapi      42% [========>           ] 4.10MB/9.77MB
+[acme.github@r0] cesanta/mongoose   17% [===>                ] 1.55MB/9.12MB
+[acme.nanoprintf@r1]                 3% [>                   ] 0.20MB/6.40MB
+```
+
+| Rule | |
+| --- | --- |
+| Forms | A string, or a function of the validated options. |
+| Resolved | Once, after `OPTIONS` validates, before any fetch. |
+| `nil` | Returning it is the same as omitting `DISPLAY` entirely. |
+| Content | One line of printable text. Any control character — newline, tab, NUL, ESC — is an error, because a row is one line whose width the live region has to count. |
+| Width | Padded into a column of its own, so the bars and outcomes below it stay aligned. Keep it short; a long one pushes every row's status to the right. |
+
+It reaches the outcome line too, including when envy is not writing to a
+terminal, which is the case that matters in CI: without it, four instances of
+one spec are four indistinguishable `[acme.github@r0]` lines in the log.
+
+A run where no spec sets a `DISPLAY` renders exactly as it did before — the
+column is not there at all.
 
 ## Identity syntax
 

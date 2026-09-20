@@ -87,6 +87,55 @@ that names one release is meaningless when the version is resolved dynamically.
 And if the pin is set but the machine has no `sha256sum`, `shasum`, or `openssl`,
 bootstrap fails rather than skipping verification.
 
+### Whichever envy you run becomes the pinned envy
+
+The bootstrap script covers the machine with no envy. **Re-exec** covers the
+more common case: a machine that has one, but not the one this project pins.
+
+Every manifest-aware command reads `@envy version` before it does any work. If
+that is not the version now running, envy obtains that release and replaces
+itself with it, and the original process does nothing else. So the version that
+installs your packages is the version the manifest names, never the one that
+happened to be on your `PATH` — the same guarantee the bootstrap script gives a
+fresh clone, extended to everyone else.
+
+Getting the release is the cheapest route that works: a copy already in the
+project's own cache tree, else one in the user-wide tree, else a download from
+the [mirror](#mirrors) into a temporary directory. When the manifest pins
+`@envy sha256sums`, a downloaded archive is attested against it before it is
+unpacked, on exactly the terms [above](#envy-verifies-itself) — a hostile mirror
+never gets to write a path of its choosing. The new binary installs itself into
+the cache on the way past, so the next run finds it rather than downloading it.
+
+The hand-off happens once. The child is told it is the result of a re-exec and
+proceeds without re-examining the pin, so a wrong version cannot become a loop.
+It is also handed your arguments minus anything that chose *which* envy to run
+— `envy init --envy-version 0.4.2`, for instance, drops that flag, because it
+means nothing to the binary it selected and a release predating the flag would
+reject it outright.
+
+envy does not hand off when there is nothing to gain or no way to judge: no
+`@envy version` in the manifest, a version that already matches, a development
+build (`0.0.0`, built from a working tree, whose feature set a version number
+cannot describe), or `ENVY_NO_REEXEC` set. That variable is for debugging. It
+makes the binary you typed do the work, which is the one situation where a
+`deploy` can stamp scripts from a version the manifest does not pin — and envy
+warns when it does.
+
+One hand-off is refused rather than performed. A manifest that resolves a
+[project-local cache](./cache.md) — through `@envy cache-local`, `cache-mode`,
+`state-dir`, or a marker left by `envy cache --local` — pinned to an envy older
+than 0.2.0 is an error, not a downgrade. That envy does not understand those
+directives, would silently use the shared cache, and would exit 0 having broken
+the one promise a local cache makes.
+
+A few commands deliberately opt out, and all of them read the manifest header as
+text rather than running it: [`use`](../reference/cli/use.md) retargets the pin,
+[`cache`](../reference/cli/cache.md) reports where things live, and
+[`version`](../reference/cli/version.md) reports the running binary rather than
+the pinned one. Each has to keep working when the pinned envy is exactly what
+cannot run, which is the situation you are usually in when you reach for them.
+
 ### What happens without a version pin
 
 An unpinned project resolves a version at run time, in this order: a `latest`

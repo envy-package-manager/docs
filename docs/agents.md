@@ -68,6 +68,24 @@ and scripts use the explicit path.
   `cache-local` puts the cache in a tree inside the project (`cache-mode` and
   `state-dir` tune that; all three need envy 0.2.0, and `cache-posix`/`cache-win`
   now error). `schema` sets the schema version.
+- **re-exec**: every manifest-aware command compares its own version to `@envy
+  version` BEFORE doing any work and, on a mismatch, replaces itself with that
+  release. So the binary you invoked is almost never the one that acts, and
+  `envy --version` is not the project's version — read the header, or ask a
+  command that does not re-exec. Which release: project cache tree, then
+  user-wide tree (borrow rules below), then a download to a temp dir from the
+  mirror, attested against `@envy sha256sums` before unpacking when one is
+  pinned; the child installs itself into the cache. Exactly ONE hop — the child is handed
+  `ENVY_REEXEC=1` and proceeds — and it gets your argv minus any option that
+  chose which envy runs (`init --envy-version`), which an older release would
+  reject. Skipped when: no `@envy version`, it already matches, self is `0.0.0`
+  (dev build), or `ENVY_NO_REEXEC`. REFUSED (hard error, not a downgrade) when
+  the manifest resolves a cache mode (`cache-local`/`cache-mode`/`state-dir`, or
+  an `envy cache --local` marker) and pins an envy `< 0.2.0`, which would
+  silently use the shared cache and exit 0. Opted out by `use`, `cache`,
+  `version`: they read the header as text so they still work when the pinned
+  envy is what cannot run. `ENVY_NO_REEXEC` and a dev build are also the only
+  ways a `deploy` stamps scripts from an unpinned version (it warns).
 - spec = Lua file describing one package: `IDENTITY = "ns.name@rev"` required,
   where `@rev` versions the spec rather than the payload, and `local.*` means
   project-local. Package = installed instance keyed `(identity, options,
@@ -226,7 +244,46 @@ Other spec globals: `OPTIONS` (schema table with
 (`darwin|linux|windows[-arch]`), `USER_MANAGED` (host-mutating specs: must
 define SETUP pairs, must not define FETCH/STAGE/BUILD/INSTALL), `EXPORTABLE`
 (false means a depot exports fetched bytes rather than install output), `VENDOR`
-(0.4.0+, selector list naming what of `pkg/` a vendoring manifest copies).
+(selector list naming what of `pkg/` a vendoring manifest copies), `DISPLAY`
+(0.4.2+, see output below).
+
+## output
+
+Human output is stderr; stdout is machine-readable only, and empty for every
+command that has no answer to print.
+
+- a package's row is columns: `[identity]`, then the spec's `DISPLAY`, then what
+  the row is saying. Rows are padded to the widest of each, so bars line up.
+- **`DISPLAY` (spec global, 0.4.2+)**: string, or `function(options)` returning a
+  string or nil, resolved once after OPTIONS validates. Adds to the identity, never
+  replaces it. The case it is for is ONE spec instantiated many times, whose rows
+  are otherwise indistinguishable — in a CI log as much as on screen, since it
+  reaches the outcome line too. Must be one line of printable text: any byte
+  `< 0x20` or `0x7f` (newline, tab, NUL, ESC) is an error, because the live region
+  counts a row's width to erase it. No spec setting one = no column, no dead space.
+- **a package that did no work draws no row (0.4.2+)**. A row is earned by a
+  timed outcome (`installed`, `fetched`, `imported from depot` — the three that
+  print a wall clock), a SETUP pair that ran, or a vendor copy that wrote.
+  The untimed outcomes earn nothing on their own: `cache hit`, `setup complete`
+  (user-managed, every CHECK already satisfied), `local bundle`. So a second
+  `envy install` over a warm cache paints an empty screen. The `deploy:` summary
+  is gated the same way (and has been for longer): it prints only when a wrapper
+  was created, updated or removed, so a correct project's `envy sync` prints
+  NOTHING. Do NOT read silence as failure; check the exit code.
+- **off a TTY every package still reports**, cache hits included: a log that omits
+  the no-ops is not a record of the run. So a piped run and a terminal run legitimately
+  list different packages. `--verbose` narrates every package either way.
+- a row whose only work was the vendor copy reports the copy
+  (`vendored N files to <dir>`), not `cache hit` — but the `pkg_outcome` trace still
+  says `cache_hit`, which is the payload's verdict and what machine readers want.
+  Under `envy vendor` the command prints the report instead, so nothing doubles.
+- every displayed vendor destination (outcome, `auto_sync` warning, collision and
+  nesting errors) is project-root-relative with forward slashes. The two errors
+  naming a filesystem failure, and "resolves outside the project", keep the
+  absolute path.
+- a shell-hook refresh announces itself once, naming the shells
+  (`Shell hooks updated (bash, zsh, fish) — restart your shell`). First write is
+  not an update and says nothing.
 
 ## vendoring
 
@@ -286,9 +343,9 @@ the cache entry stays authoritative.
   - report is one `tui::info` line per target on **stderr**, in target order
     (stdout stays empty): `vendored N files to <dir>` / `re-vendored N files to
     <dir>: contents were dirty` / `up to date: <dir>` / `kept <dir>: contents
-    differ from the package`, with `would (re-)vendor` under `--dry-run`. The
-    command prints it because the phase's own row is overwritten by the
-    completion row.
+    differ from the package`, with `would (re-)vendor` under `--dry-run`, `<dir>`
+    project-relative. The command owns the report here, so the package row
+    stays out of it (and these are the verdicts a row is silent about anyway).
 - **drift check keeps NO project-side state.** Each run hashes the destination
   whole (`tree_hash`, BLAKE3) and compares against the pristine digest in the
   cache entry (`envy-vendor-<16 hex of the canonical selector list>`, beside
@@ -315,9 +372,8 @@ the cache entry stays authoritative.
 - **`VENDOR_ROOT` is root-only**, same rule as `DEFAULT_SHELL`/`PACKAGE_DEPOTS`:
   an `envy.import`ed manifest setting it errors unless the root holds that exact
   value.
-- TUI: determinate bar on the package row counting files, last frame
-  `vendored N files` / `re-vendored N files: contents were dirty` /
-  `kept: contents differ from the package`. Up-to-date draws nothing.
+- TUI: determinate bar on the package row counting files, and the copy is what
+  the row's outcome then reports (see [output](#output)). Up-to-date draws nothing.
 - Trace: `vendor_resolved{path, origin=derived|override}` (one per destination,
   before the run), `vendor_result{path, action=copied|redeployed|kept|up_to_date,
   reason=absent|mismatch|current, dry_run, files, bytes, hash_ms, wipe_ms,
@@ -424,10 +480,9 @@ the cache entry stays authoritative.
 ## CLI
 
 `envy <cmd>`. Global flags `--verbose -q --trace[=sinks] --cache-root --project`
-go before the subcommand (`envy sync --verbose` is a parse error). stdout is
-machine-readable only, and human output goes to stderr. `--project <dir>` is
-honored by every manifest-loading command: `sync install deploy vendor product
-package run export import use cache shell`.
+go before the subcommand (`envy sync --verbose` is a parse error). `--project <dir>`
+is honored by every manifest-loading command: `sync install deploy vendor product
+package run export import use cache shell`. Streams: see [output](#output).
 
 - `sync [queries]`: install plus deploy product scripts. Needed only when the
   bin dir must change: a manifest edit that added/removed/renamed a **product**,

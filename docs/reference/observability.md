@@ -27,15 +27,50 @@ tools. Neither one touches stdout.
 `-q` and `--verbose` are mutually exclusive. Both are global flags, so they go
 before the subcommand.
 
-Default output is one line per package:
+Default output is one line per package that did something:
 
 ```shell-session
 $ envy sync
+[envy.ninja@r0] imported from depot (0.4s)
+[local.mytool@r1] installed (3.2s)
+deploy: 4 product script(s) (4 created, 0 updated, 0 unchanged, 0 removed)
+```
+
+## A run with no work is silent
+
+On a terminal, a package that did nothing leaves no line behind. Since envy
+0.4.2 the row is earned: something has to have been fetched, built, installed,
+imported, vendored, or run as a [`SETUP`](/concepts/specs/setup) pair. A cache
+hit that copied no files and ran no pair is not work, so it prints nothing, and
+a second `envy sync` over a warm cache paints an empty screen.
+
+The `deploy:` summary is the same bargain, and older: it prints only when a
+wrapper was created, updated, or removed. So `envy sync` on a project that is
+already correct prints nothing at all.
+
+That is the intended result rather than a failure. Nothing to do looks like
+nothing happening. To see the decision behind each package anyway, use
+`--verbose`, which narrates every one.
+
+**Redirect the output and every package reports again.** Off a terminal the
+`cache hit` lines come back, because a log that omits the no-ops is not a record
+of the run:
+
+```shell-session
+$ envy sync 2> sync.log ; cat sync.log
 [envy.cmake@r0] cache hit
 [envy.ninja@r0] imported from depot (0.4s)
 [local.mytool@r1] installed (3.2s)
 deploy: 4 product script(s) (4 created, 0 updated, 0 unchanged, 0 removed)
 ```
+
+So a CI log is complete whether or not the cache was warm, and a laptop is
+quiet. If a pipeline and a terminal seem to disagree about which packages ran,
+this is why.
+
+A spec's [`DISPLAY`](./spec-globals.md#display) sits between the identity and
+the outcome on both, which is what tells several instances of one spec apart in
+a log.
 
 `--verbose` adds the reasoning behind each of those lines:
 

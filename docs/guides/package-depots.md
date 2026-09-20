@@ -59,7 +59,7 @@ $ mkdir -p /tmp/depot
 $ envy export -o /tmp/depot > /tmp/depot/packages.txt
 [envy.doctest-cpp@r0] cache hit
 [envy.ninja@r0] cache hit
-[[envy.cmake@r0]] 2/8845 files 1.48MB/309.73MB: 0.5%
+[envy.cmake@r0] 2/8845 files 1.48MB/309.73MB: 0.5%
 [envy.cmake@r0] cache hit
 ```
 

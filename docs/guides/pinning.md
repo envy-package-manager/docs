@@ -107,6 +107,11 @@ The `sync` is not optional bookkeeping. The bootstrap scripts and `.luarc.json`
 are stamped from the running binary, so only the newly pinned envy can restamp
 them. Commit the manifest and the scripts together.
 
+That `sync` is also where the new version first runs: it reads the pin you just
+wrote, downloads 0.2.1 if the machine does not already have it, and
+[hands off to it](/concepts/reproducibility#whichever-envy-you-run-becomes-the-pinned-envy)
+before doing anything. Nobody on the team has to install envy to move to it.
+
 One `@envy sha256sums` value covers every platform, because it pins the release's
 `SHA256SUMS` file and that file lists the macOS, Linux, and Windows archives. So
 `envy use` on a Mac produces a pin that verifies the Windows binary too.

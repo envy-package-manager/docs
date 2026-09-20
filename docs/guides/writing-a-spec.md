@@ -140,6 +140,15 @@ end
 
 Returning a string is the good error. It becomes the message the user sees.
 
+Once a manifest instantiates your spec more than once, every one of those
+packages draws a progress row under the same identity. Add a
+[`DISPLAY`](../reference/spec-globals.md#display) so each row says which is
+which:
+
+```lua
+DISPLAY = function(opts) return opts.version end
+```
+
 ## 5. Advertise products
 
 Everything a consumer should reach goes in `PRODUCTS`:
