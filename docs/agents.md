@@ -93,8 +93,9 @@ end
 
 STAGE = { strip = 1 }
 
--- Runs BEFORE OPTIONS validates, on the entry's raw options: guard every read.
--- See the ordering trap below. A constant table needs no function at all.
+-- A constant table needs no function. Use function(opts) only when a product
+-- path depends on an option -- and then guard every read: PRODUCTS runs BEFORE
+-- OPTIONS validates. See the ordering trap below.
 PRODUCTS = { mytool = "bin/mytool" .. envy.EXE_EXT }
 ```
 
@@ -111,8 +112,9 @@ tar -xzf envy-darwin-arm64.tar.gz -C /tmp
 /tmp/envy init . ./bin --pin-sums --deploy=true    # writes envy.lua + bin/, then delete /tmp/envy
 ```
 
-Commit: `envy.lua`, the whole bin dir, and `.luarc.json` (it holds all three
-platforms' cache paths, so it is not machine-specific). `init` adds `.envy/` and
+Commit: `envy.lua`, the whole bin dir, and `.luarc.json` (it lists every
+platform's cache path with `~`/`${env:...}` placeholders, never an absolute one,
+so it is machine-independent by design). `init` adds `.envy/` and
 `.envy-cache-*` to `.gitignore` — those are project-local cache/state trees.
 
 Using an already-set-up project needs NO setup step: run `./bin/<tool>` (a
