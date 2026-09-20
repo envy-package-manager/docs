@@ -47,6 +47,11 @@ USER_MANAGED()
 Every directory argument arrives with a trailing path separator. The one
 exception is the `tmp_dir` handed to a `source.fetch` function, which does not.
 
+`options` is the validated table everywhere except `PRODUCTS`, which is resolved
+before `OPTIONS` runs and receives the manifest entry's options as written. Guard
+every read in a `PRODUCTS` function —
+[details](/concepts/specs/options#options-in-verbs).
+
 Return values:
 
 | Verb | Returns |
@@ -218,6 +223,12 @@ DISPLAY = function(options) return options.repo end
 It reaches the outcome line too, including when envy is not writing to a
 terminal, which is the case that matters in CI: without it, four instances of
 one spec are four indistinguishable `[acme.github@r0]` lines in the log.
+
+`DISPLAY` labels the rows; it does not make the packages distinct in any other
+way. A spec instantiated several times still has to give each instance its own
+[product names](/concepts/dependencies/resolution#products) — a hardcoded
+`PRODUCTS = { mytool = ... }` makes the second instance a hard error, so compute
+the names from the same options `DISPLAY` reads.
 
 A run where no spec sets a `DISPLAY` renders exactly as it did before — the
 column is not there at all.

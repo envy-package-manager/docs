@@ -50,7 +50,10 @@ purpose:
 - **At most one provider per name.** Two specs providing `cmake` is an error
   naming both: `Product 'cmake' provided by multiple specs: acme.cmake@r0,
   envy.cmake@r0`. There are no priority rules, because a silent winner would be
-  worse than a failure.
+  worse than a failure. The registry is keyed on the **package**, not the spec,
+  so two instances of ONE spec collide the same way — and then the message names
+  that identity twice. A spec a manifest instantiates several times therefore has
+  to compute its product names from its options rather than hardcode them.
 - **A constrained product must come from its named provider.** An entry that
   carries both `product` and `spec` pins the provider, and a mismatch is an error:
   `Product 'jf' in spec '<x>' must come from 'tools.jfrog-cli@r1', but provider

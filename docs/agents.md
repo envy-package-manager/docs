@@ -57,6 +57,11 @@ PACKAGES = {
 }
 ```
 
+A bundle's spec names, revisions and option names are NOT discoverable from
+envy — there is no `envy bundle list`. Read the bundle repo (for the first-party
+one, `specs/` plus the README table in `package-specs`), and pin `ref` to a full
+sha. A wrong `@rev` is a hard error, not a fallback.
+
 Header directives come before the first code line, one per line, exactly
 `-- @envy <key> "<value>"`. `bin` is required. The `sha256` on a `PACKAGES` entry
 pins the SPEC source, not anything the spec then fetches. A bundle entry takes no
@@ -69,9 +74,13 @@ IDENTITY = "acme.mytool@r0"
 PLATFORMS = { "darwin", "linux", "windows" }
 EXPORTABLE = true
 
--- Plain Lua at file scope: a spec is a script, not a declaration.
+-- Plain Lua at file scope: a spec is a script, not a declaration. Key the table
+-- by EVERY option the payload varies with -- here repo as well as version, or
+-- three of the four instances below would verify against the wrong bytes.
 local hashes = {
-  ["1.4.0"] = { ["darwin-arm64"] = "24ad...37be", ["linux-x86_64"] = "8c91...02af" },
+  ["libusb/hidapi"] = {
+    ["1.4.0"] = { ["darwin-arm64"] = "24ad...37be", ["linux-x86_64"] = "8c91...02af" },
+  },
 }
 
 OPTIONS = {
@@ -87,21 +96,27 @@ FETCH = function(tmp_dir, opts)
   return {
     source = "https://github.com/" .. opts.repo .. "/releases/download/v"
              .. opts.version .. "/mytool-" .. envy.PLATFORM_ARCH .. ext,
-    sha256 = hashes[opts.version][envy.PLATFORM_ARCH],
+    sha256 = hashes[opts.repo][opts.version][envy.PLATFORM_ARCH],
   }
 end
 
 STAGE = { strip = 1 }
 
--- A constant table needs no function. Use function(opts) only when a product
--- path depends on an option -- and then guard every read: PRODUCTS runs BEFORE
--- OPTIONS validates. See the ordering trap below.
-PRODUCTS = { mytool = "bin/mytool" .. envy.EXE_EXT }
+-- Product NAMES are global across the manifest: two packages exporting the same
+-- name is a hard error. A spec instantiated several times must therefore derive
+-- its names from an option, not hardcode them. PRODUCTS runs BEFORE OPTIONS
+-- validates, so guard every read. See both traps below.
+PRODUCTS = function(opts)
+  local repo = opts.repo or ""
+  return { [repo:match("[^/]+$") or "mytool"] = "bin/mytool" .. envy.EXE_EXT }
+end
 ```
 
-Constraint keys are exactly `required`, `type`, `range`, `choices`, `validate`.
-**There is no `default`** — an option the manifest omits is `nil` in every verb,
-so branch on it or make it `required`. `envy.ARCH` is `arm64|x86_64`,
+Constraint keys are exactly `required`, `type` (`string|int|float|boolean|table|list|semver`),
+`range` (a comparison chain, `">=1 <=64"`), `choices` (an array), and `validate`
+— a function returning `nil` or `true` for valid, or `false`, or an error-message
+string, which becomes the message the user sees. **There is no `default`**: an
+option the manifest omits is `nil` in every verb, so branch on it or require it. `envy.ARCH` is `arm64|x86_64`,
 `envy.PLATFORM` is `darwin|linux|windows`, `envy.PLATFORM_ARCH` joins them.
 
 Getting the FIRST binary (the only step `envy init` cannot bootstrap):
@@ -296,7 +311,11 @@ Supported target, not a port. Same manifest, same specs, same cache layout.
   `check=false` it injects nothing, so a Windows script keeps going where the
   POSIX one stops — the one place the two platforms genuinely differ.
 - paths are native: `envy.path.join`/`envy.abspath`/`envy product` all yield
-  backslashes. Never hardcode `/`. `envy.EXE_EXT` is `".exe"`.
+  backslashes. Never hardcode a separator in a path you BUILD and hand to the
+  filesystem — use `envy.path.join`. Declarative package-relative strings are the
+  exception and are written with `/`: a `PRODUCTS` value, `STAGE.only`, `VENDOR`
+  selectors and `vendor` paths are all `/`-separated on every platform, and envy
+  joins them natively. `envy.EXE_EXT` is `".exe"`.
 - cache `%LOCALAPPDATA%\envy`. Long paths and antivirus file locks are handled
   internally.
 - `envy run <name>` finds `bin\<name>.bat` (no `execvp`, so it spawns, waits, and
@@ -375,7 +394,13 @@ stdout: `product` (a path, or `--json`), `package` (a dir), `hash`
   NOTHING. Do NOT read silence as failure; check the exit code.
 - **off a TTY every package still reports**, cache hits included: a log that omits
   the no-ops is not a record of the run. So a piped run and a terminal run legitimately
-  list different packages. `--verbose` narrates every package either way.
+  list different packages — the PIPED one lists MORE. `--verbose` narrates every
+  package either way.
+- **"my CI log is short/empty" is almost never the silence rule**, which only ever
+  adds rows to a redirected stream. Check, in order: the log captured stdout and
+  not stderr (`2>&1` — all human output is stderr); a global `-q`; on Windows,
+  PowerShell `>` writing UTF-16; a `platforms` filter excluding the packages on
+  the runner.
 - a row whose only work was the vendor copy reports the copy
   (`vendored N files to <dir>`), not `cache hit` — but the `pkg_outcome` trace still
   says `cache_hit`, which is the payload's verdict and what machine readers want.
@@ -518,10 +543,14 @@ the cache entry stays authoritative.
   `loadenv_spec` module paths are Lua dot syntax only: no separators, no `..`,
   no leading or trailing `.`, and the joined path is re-checked against the load
   root.
-- **one identity, one option set, per dependency list**. Edges are identity-keyed,
-  so two entries naming one identity with different `options` error at parse time
-  in DEPENDENCIES and `source.dependencies`, and at wire time elsewhere. Agreeing
-  options are fine (that is how several product entries share one provider).
+- **one identity, one option set, per DEPENDENCY LIST**. Dependency edges are
+  identity-keyed, so two entries naming one identity with different `options`
+  error: at parse time in a spec's DEPENDENCIES and in `source.dependencies`, and
+  at wire time for any other edge. Agreeing options are fine (that is how several
+  product entries share one provider). **This does NOT apply to top-level
+  `PACKAGES`**, which is not a dependency list: N entries naming one identity with
+  N different option sets are N packages, which is the whole point of options
+  being part of the key — and the case `DISPLAY` exists to label.
 - cycles are caught as each edge is added, by reachability rather than spawn
   path, and the message names the whole path
   (`Dependency cycle detected: a -> b -> c -> a`; `Fetch dependency cycle

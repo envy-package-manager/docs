@@ -181,12 +181,33 @@ FETCH    = function(tmp_dir, opts)
 STAGE    = function(fetch_dir, stage_dir, tmp_dir, opts)
 BUILD    = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
 INSTALL  = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
-PRODUCTS = function(opts)
 SETUP.<pair>.CHECK = function(pkg_dir, opts)
 ```
 
 One file, one set of verbs, and every project's variation expressed as data in
 the manifest.
+
+`PRODUCTS = function(opts)` is the exception, and it is worth knowing about.
+It is resolved *before* `OPTIONS` runs, so it receives the manifest entry's
+options exactly as written: never validated, never checked against the schema.
+The table itself is always there — an empty one when the entry declared no
+`options` — but any individual key may be `nil`:
+
+```lua
+-- Wrong: paths[nil] is nil, and indexing that throws "attempt to index a nil
+-- value" with no traceback. Marking `target` required does not help, because
+-- OPTIONS has not run yet.
+PRODUCTS = function(opts) return { tool = paths[opts.target] .. "/tool" } end
+
+-- Right: guard the read.
+PRODUCTS = function(opts)
+  local dir = opts.target and paths[opts.target]
+  return dir and { tool = dir .. "/tool" } or {}
+end
+```
+
+The clean "unrecorded target" message `OPTIONS` would have produced still
+arrives — but only once `PRODUCTS` has survived long enough to let it.
 
 ## Telling the instances apart
 
@@ -207,6 +228,12 @@ DISPLAY = function(options) return options.repo end
 It is read once, right after `OPTIONS` validates, and it appears on the outcome
 line as well as the live row — including in a redirected log, where four
 identical identities are otherwise four identical lines.
+
+One thing to get right before instantiating a spec several times: product names
+are a project-wide registry, so every instance needs its own. A `PRODUCTS` table
+with a fixed name makes the second instance
+[an error](../dependencies/resolution.md#products). Derive the names from the
+options, the way `DISPLAY` derives its text.
 
 ## See also
 
