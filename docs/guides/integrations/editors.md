@@ -125,7 +125,7 @@ the same result.
 | `envy` | everywhere, the API table |
 | `IDENTITY`, `DEPENDENCIES`, `PRODUCTS`, `PLATFORMS` | specs |
 | `FETCH`, `STAGE`, `BUILD`, `INSTALL`, `SETUP` | specs, the [phase verbs](/concepts/specs/lifecycle) |
-| `OPTIONS`, `USER_MANAGED`, `EXPORTABLE`, `VENDOR` | specs |
+| `OPTIONS`, `USER_MANAGED`, `EXPORTABLE`, `VENDOR`, `DISPLAY` | specs |
 | `PACKAGES`, `DEFAULT_SHELL`, `PACKAGE_DEPOTS`, `VENDOR_ROOT` | manifests |
 | `ENVY_IMPORTER` | an imported manifest, set by [`envy.import`](/reference/lua-api#envyimportpath) |
 | `ENVY_SHELL` | both, the shell constants |

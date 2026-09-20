@@ -93,10 +93,9 @@ end
 
 STAGE = { strip = 1 }
 
-PRODUCTS = function(opts)
-  if not opts then return {} end   -- see the PRODUCTS/OPTIONS ordering trap below
-  return { mytool = "bin/mytool" .. envy.EXE_EXT }
-end
+-- Runs BEFORE OPTIONS validates, on the entry's raw options: guard every read.
+-- See the ordering trap below. A constant table needs no function at all.
+PRODUCTS = { mytool = "bin/mytool" .. envy.EXE_EXT }
 ```
 
 Constraint keys are exactly `required`, `type`, `range`, `choices`, `validate`.
@@ -330,13 +329,15 @@ define SETUP pairs, must not define FETCH/STAGE/BUILD/INSTALL), `EXPORTABLE`
 (0.4.2+, see output below).
 
 **Spec-global evaluation order, which is a trap.** `PRODUCTS` is resolved
-BEFORE `OPTIONS` runs, and it is handed the manifest entry's options verbatim —
-unvalidated, and `nil` outright when the entry declared none. So
-`PRODUCTS = function(opts) return { t = opts.version } end` dies with a bare
-"attempt to index a nil value" on any entry without options, and no `required`
-in `OPTIONS` prevents it, because `OPTIONS` has not run yet. Guard it:
-`if not opts then return {} end`. `DISPLAY` is the opposite — resolved right
-AFTER `OPTIONS` validates, so its `options` argument is always the checked table.
+BEFORE `OPTIONS` runs, and is handed the manifest entry's options verbatim:
+never validated, never defaulted, and an EMPTY TABLE (not nil) when the entry
+declared none. So every key may be nil, and
+`PRODUCTS = function(opts) return { t = paths[opts.target] } end` dies with a
+bare "attempt to index a nil value" — `paths[nil]` is nil, and indexing that
+throws. Marking `target` `required` in `OPTIONS` does NOT prevent it: `OPTIONS`
+has not run yet, so the clean error it would have produced never happens. Guard
+every option read in a `PRODUCTS` function. `DISPLAY` is the opposite — resolved
+right AFTER `OPTIONS` validates, so its argument is always the checked table.
 
 ## output
 
