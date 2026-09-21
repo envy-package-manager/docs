@@ -53,8 +53,8 @@ project pins, not the one you typed. `sync`, `install`, `deploy`, `vendor`,
 `product`, `package`, `run`, `export`, and `import` do this. [`use`](./use.md) and
 [`cache`](./cache.md) do not. They read the manifest header as text, so they keep
 working when the pinned version cannot run. Set `ENVY_NO_REEXEC` to suppress the
-hand-off while debugging. See [whichever envy you run becomes the pinned
-envy](/concepts/reproducibility#whichever-envy-you-run-becomes-the-pinned-envy)
+hand-off while debugging. See
+[Re-exec](/concepts/reproducibility#re-exec-running-the-version-the-manifest-pins)
 for where the release comes from and when the hand-off is refused.
 
 **Exit status is 0 on success and non-zero on failure.** The exception is

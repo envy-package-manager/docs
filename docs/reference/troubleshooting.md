@@ -235,9 +235,9 @@ no work is silent](./observability.md#a-run-with-no-work-is-silent).
 
 **A CI log and my terminal disagree about which packages ran**
 
-They are both right. A terminal drops the rows for packages that did no work; a
-redirected stream keeps every one, so a log stays a complete record. Nothing
-about the run differs.
+Both are correct. A terminal omits the rows for packages that did no work; a
+redirected stream keeps all of them, so the log lists every package. The run
+itself is the same.
 
 **Several rows in my log are the same `[identity]` and I cannot tell them apart**
 
@@ -247,10 +247,10 @@ row will name the instance it is working on.
 
 **`DISPLAY must be a single line of printable text`**
 
-A `DISPLAY` string carried a control character: a newline, a tab, a NUL, or an
-escape. A row is one line whose width the live region has to count, so any byte
-below `0x20`, and `0x7f`, is refused. Pad with spaces if you were aligning
-something — but the column is padded for you, so you probably do not need to.
+A `DISPLAY` string contained a control character: a newline, a tab, a NUL, or
+an escape. envy measures each row's width in order to erase it later, so any
+byte below `0x20`, and `0x7f`, is rejected. If you were aligning text, note that
+envy already pads the column for you.
 
 ## Cache
 

@@ -187,10 +187,9 @@ SETUP.<pair>.CHECK = function(pkg_dir, opts)
 One file, one set of verbs, and every project's variation expressed as data in
 the manifest.
 
-`PRODUCTS = function(opts)` is the exception, and it is worth knowing about.
-It is resolved *before* `OPTIONS` runs, so it receives the manifest entry's
-options exactly as written: never validated, never checked against the schema.
-The table itself is always there — an empty one when the entry declared no
+`PRODUCTS = function(opts)` is the exception. It runs *before* `OPTIONS`, so it
+receives the manifest entry's options exactly as written, with no validation
+against the schema. The table is always present — empty if the entry declared no
 `options` — but any individual key may be `nil`:
 
 ```lua
@@ -206,15 +205,16 @@ PRODUCTS = function(opts)
 end
 ```
 
-The clean "unrecorded target" message `OPTIONS` would have produced still
-arrives — but only once `PRODUCTS` has survived long enough to let it.
+`OPTIONS` still produces its own error for a bad `target`, but only if
+`PRODUCTS` returns first.
 
 ## Telling the instances apart
 
-One spec instantiated several times produces several rows carrying the same
-`[identity]`, differing only in options nobody can see. Since envy 0.4.2 a spec
-can name each one with [`DISPLAY`](../../reference/spec-globals.md#display), a
-string or a function of the validated options:
+One spec instantiated several times produces several rows with the same
+`[identity]`, differing only in their options, which are not shown. Since envy
+0.4.2 a spec can label each one with
+[`DISPLAY`](../../reference/spec-globals.md#display), a string or a function of
+the validated options:
 
 ```lua
 DISPLAY = function(options) return options.repo end
@@ -225,15 +225,15 @@ DISPLAY = function(options) return options.repo end
 [acme.github@r0] cesanta/mongoose   17% [===>                ] 1.55MB/9.12MB
 ```
 
-It is read once, right after `OPTIONS` validates, and it appears on the outcome
-line as well as the live row — including in a redirected log, where four
-identical identities are otherwise four identical lines.
+It is read once, right after `OPTIONS` validates, and appears on the outcome
+line as well as the live row, including in a redirected log where four identical
+identities would otherwise be four identical lines.
 
-One thing to get right before instantiating a spec several times: product names
-are a project-wide registry, so every instance needs its own. A `PRODUCTS` table
-with a fixed name makes the second instance
-[an error](../dependencies/resolution.md#products). Derive the names from the
-options, the way `DISPLAY` derives its text.
+One other thing to get right before instantiating a spec several times: product
+names are a project-wide registry, so every instance needs its own. A `PRODUCTS`
+table with a fixed name makes the second instance
+[an error](../dependencies/resolution.md#products). Compute the names from the
+options instead.
 
 ## See also
 

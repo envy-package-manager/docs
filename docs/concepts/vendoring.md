@@ -152,13 +152,12 @@ for a first copy, or `re-vendored 41 files to ...: contents were dirty` for a
 repair. Destinations are named relative to the project root. A package whose
 copy already matched draws nothing, because nothing was copied.
 
-That outcome is the whole row. It replaces whatever the payload did —
-`cache hit`, or `installed (2.5s)` — rather than joining it, because vendoring
-is the last phase to write and the copy is the most recent true thing about the
-package. A payload verdict says nothing about the four hundred files the vendor
-step may have just put in the repo. The
+That outcome is the whole row. It replaces what the payload did — `cache hit`,
+or `installed (2.5s)` — rather than appearing alongside it, because vendoring is
+the last phase to run and the payload verdict says nothing about what was
+written into the project. The
 [`pkg_outcome` trace event](../reference/observability.md) is unaffected and
-still records `cache_hit` or `installed`, because a machine reader wants the
+still records `cache_hit` or `installed`, since a machine reader wants the
 payload's verdict. Under [`envy vendor`](../reference/cli/vendor.md) the command
 prints its own report, so the destination is not named twice.
 

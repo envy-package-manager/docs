@@ -25,9 +25,9 @@ Releases ship archives, not bare binaries:
 `https://github.com/envy-package-manager/envy/releases/download/v<version>/`.
 The archived binary keeps mode 0755, so no `chmod` after extracting.
 
-## the two files, whole
+## a complete manifest and a complete spec
 
-Everything below is detail on these. A manifest:
+Everything below is detail on these two files. A manifest:
 
 ```lua
 -- @envy version "0.4.5"
@@ -75,7 +75,7 @@ IDENTITY = "acme.mytool@r0"
 PLATFORMS = { "darwin", "linux", "windows" }
 EXPORTABLE = true
 
--- Plain Lua at file scope: a spec is a script, not a declaration. Key the table
+-- A spec is an ordinary Lua script, so file-scope locals work. Key the table
 -- by EVERY option the payload varies with -- here repo as well as version, or
 -- three of the four instances below would verify against the wrong bytes.
 local hashes = {
@@ -164,7 +164,7 @@ and scripts use the explicit path.
   are lazy, so a run with no string verb (e.g. `deploy`) never installs the
   interpreter. Anything in a bootstrap closure (DEPENDS, `source.dependencies`,
   PACKAGE_DEPOTS DEPENDS, Lua in the manifest state) uses the platform built-in
-  instead, so the shell cannot depend on itself. Per-call override:
+  instead, so resolving the shell cannot require the shell. Per-call override:
   `envy.run(script, { shell = ... })`.
 - directives: `version` pins envy. `sha256sums` pins release checksums and
   requires `version`. `bin` is REQUIRED and names the project bin dir, relative
@@ -262,7 +262,7 @@ and scripts use the explicit path.
   Layout `envy/<ver>/{envy,envy.lua}` + `envy/latest`, `packages/`, `specs/`,
   `shell/`, `locks/`; entry key `identity/<platform>-<arch>-blake3-<hash>`. A
   first-run notice on stderr announces a LOCAL tree only; the shared default is
-  silent. Never a prompt.
+  silent. Neither one prompts.
 - **a local tree reads the user-wide one, never writes to it**. Launchers and
   reexec try `<project cache>/envy/<ver>/envy`, then `<user-wide>/envy/<ver>/envy`.
   The second is tried only for a LOCAL tree with **no** `@envy sha256sums` (the fast
@@ -314,7 +314,7 @@ Supported target, not a port. Same manifest, same specs, same cache layout.
   policy bypassed), run from a temp script. POSIX gets `bash -e`, so fail-fast is
   free; on Windows envy INJECTS fail-fast when `check=true` (the default). With
   `check=false` it injects nothing, so a Windows script keeps going where the
-  POSIX one stops — the one place the two platforms genuinely differ.
+  POSIX one stops.
 - paths are native: `envy.path.join`/`envy.abspath`/`envy product` all yield
   backslashes. Never hardcode a separator in a path you BUILD and hand to the
   filesystem — use `envy.path.join`. Declarative package-relative strings are the
@@ -354,7 +354,7 @@ define SETUP pairs, must not define FETCH/STAGE/BUILD/INSTALL), `EXPORTABLE`
 (selector list naming what of `pkg/` a vendoring manifest copies), `DISPLAY`
 (0.4.2+, see output below).
 
-**Spec-global evaluation order, which is a trap.** `PRODUCTS` is resolved
+**Spec-global evaluation order.** `PRODUCTS` is resolved
 BEFORE `OPTIONS` runs, and is handed the manifest entry's options verbatim:
 never validated, never defaulted, and an EMPTY TABLE (not nil) when the entry
 declared none. So every key may be nil, and
@@ -388,17 +388,17 @@ stdout: `product` (a path, or `--json`), `package` (a dir), `hash`
   reaches the outcome line too. Must be one line of printable text: any byte
   `< 0x20` or `0x7f` (newline, tab, NUL, ESC) is an error, because the live region
   counts a row's width to erase it. No spec setting one = no column, no dead space.
-- **a package that did no work draws no row (0.4.2+)**. A row is earned by a
-  timed outcome (`installed`, `fetched`, `imported from depot` — the three that
-  print a wall clock), a SETUP pair that ran, or a vendor copy that wrote.
-  The untimed outcomes earn nothing on their own: `cache hit`, `setup complete`
-  (user-managed, every CHECK already satisfied), `local bundle`. So a second
-  `envy install` over a warm cache writes NOTHING to the terminal — not one byte,
-  cursor and auto-wrap control included (0.4.3+; through 0.4.2 a no-work run still
-  emitted the live region's escape sequences and blinked the cursor). The `deploy:`
-  summary is gated the same way and has been for longer: it prints only when a
-  wrapper was created, updated or removed. Do NOT read silence as failure; check
-  the exit code.
+- **a package that did no work draws no row (0.4.2+)**. A package prints a row
+  only for a timed outcome (`installed`, `fetched`, `imported from depot` — the
+  three that print a wall clock), a SETUP pair that ran, or a vendor copy that
+  wrote. The untimed outcomes do not qualify on their own: `cache hit`,
+  `setup complete` (user-managed, every CHECK already satisfied), `local bundle`.
+  So a second `envy install` over a warm cache writes NOTHING to the terminal,
+  not even cursor and auto-wrap control bytes (0.4.3+; through 0.4.2 a no-work
+  run still emitted the live region's escape sequences). The `deploy:` summary
+  works the same way and has for longer: it prints only when a wrapper was
+  created, updated or removed. Do NOT read silence as failure; check the exit
+  code.
 - **off a TTY every package still reports**, cache hits included: a log that omits
   the no-ops is not a record of the run. So a piped run and a terminal run legitimately
   list different packages — the PIPED one lists MORE. `--verbose` narrates every
@@ -720,9 +720,9 @@ the root pin errors, older warns.
 `--trace[=sinks]` emits a structured event per decision (manifest resolution,
 dependency waits, depot hits, download retries, every vendor destination and
 result, package outcomes). Schemas are in the Logging & Tracing reference; do
-not hand-transcribe them here. `pkg_outcome` is the one worth knowing: it
-reports the PAYLOAD's verdict (`cache_hit`, `installed`, `imported`, ...)
-regardless of what the row on screen said.
+not hand-transcribe them here. The one to know is `pkg_outcome`: it reports the
+PAYLOAD's verdict (`cache_hit`, `installed`, `imported`, ...) regardless of what
+the row on screen said.
 
 Env vars read: `ENVY_CACHE_ROOT`, `ENVY_MIRROR`, `ENVY_IGNORE_DEPOT`,
 `ENVY_NO_REEXEC`, `ENVY_FETCH_ATTEMPTS`, `ENVY_FETCH_RETRY_BASE_MS`; hook-only

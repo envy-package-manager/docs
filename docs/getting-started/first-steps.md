@@ -66,18 +66,18 @@ Run that one after editing the manifest, which is when a wrapper has to be
 written or pruned. Both are idempotent and incremental, and running either again
 installs nothing.
 
-Run it a second time and it prints nothing whatsoever:
+Run it a second time and it prints nothing:
 
 ```shell-session
 $ envy sync
 $
 ```
 
-That is success, not a failure to start. A package earns a line by doing
-something, and the deploy summary appears only when a wrapper was written or
-pruned, so a project that is already correct has nothing to report. Redirect the
-output to a file and every package reports its outcome again, which is what
-keeps CI logs complete. See [a run with no work is
+That means it succeeded. A package prints a line only if it did something, and
+the deploy summary appears only when a wrapper was written or pruned, so a
+project that is already correct has nothing to report. Redirect the output to a
+file and every package prints its outcome again, which is what keeps CI logs
+complete. See [a run with no work is
 silent](../reference/observability.md#a-run-with-no-work-is-silent).
 
 ## The three verbs

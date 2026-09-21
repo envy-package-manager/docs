@@ -190,13 +190,12 @@ the schema does not declare.
 
 ## `DISPLAY`
 
-What this package's rows say they are working on. Requires envy 0.4.2.
+Text naming what this package is working on. Requires envy 0.4.2.
 
-A package's progress row is columns: the `[identity]`, then `DISPLAY`, then
-whatever the row is reporting. The identity is always there, so `DISPLAY` adds
-to it rather than replacing it. The case it exists for is one spec instantiated
-several times, where the identity is the same on every row and cannot tell them
-apart:
+A package's progress row has three parts: the `[identity]`, then `DISPLAY`, then
+whatever the row is reporting. `DISPLAY` is added to the identity, not
+substituted for it. It exists for the case of one spec instantiated several
+times, where every row shows the same identity:
 
 ```lua
 IDENTITY = "acme.github@r0"
@@ -217,21 +216,21 @@ DISPLAY = function(options) return options.repo end
 | Forms | A string, or a function of the validated options. |
 | Resolved | Once, after `OPTIONS` validates, before any fetch. |
 | `nil` | Returning it is the same as omitting `DISPLAY` entirely. |
-| Content | One line of printable text. Any control character — newline, tab, NUL, ESC — is an error, because a row is one line whose width the live region has to count. |
-| Width | Padded into a column of its own, so the bars and outcomes below it stay aligned. Keep it short; a long one pushes every row's status to the right. |
+| Content | One line of printable text. Any control character — newline, tab, NUL, ESC — is an error, since envy measures the row's width in order to erase it later. |
+| Width | Padded to its own column, so the bars and outcomes below it stay aligned. Keep it short; a long one pushes every row's status to the right. |
 
-It reaches the outcome line too, including when envy is not writing to a
-terminal, which is the case that matters in CI: without it, four instances of
-one spec are four indistinguishable `[acme.github@r0]` lines in the log.
+It appears on the outcome line as well, including when envy is not writing to a
+terminal. That is the case that matters in CI, where without it four instances
+of one spec produce four identical `[acme.github@r0]` lines.
 
-`DISPLAY` labels the rows; it does not make the packages distinct in any other
-way. A spec instantiated several times still has to give each instance its own
-[product names](/concepts/dependencies/resolution#products) — a hardcoded
-`PRODUCTS = { mytool = ... }` makes the second instance a hard error, so compute
-the names from the same options `DISPLAY` reads.
+`DISPLAY` only labels the rows. A spec instantiated several times must still
+give each instance its own
+[product names](/concepts/dependencies/resolution#products): a fixed
+`PRODUCTS = { mytool = ... }` makes the second instance an error. Compute them
+from the same options `DISPLAY` uses.
 
-A run where no spec sets a `DISPLAY` renders exactly as it did before — the
-column is not there at all.
+If no spec sets a `DISPLAY`, output is unchanged from earlier versions and the
+column is absent.
 
 ## Identity syntax
 

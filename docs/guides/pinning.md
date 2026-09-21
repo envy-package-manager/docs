@@ -109,7 +109,7 @@ them. Commit the manifest and the scripts together.
 
 That `sync` is also where the new version first runs: it reads the pin you just
 wrote, downloads 0.2.1 if the machine does not already have it, and
-[hands off to it](/concepts/reproducibility#whichever-envy-you-run-becomes-the-pinned-envy)
+[hands off to it](/concepts/reproducibility#re-exec-running-the-version-the-manifest-pins)
 before doing anything. Nobody on the team has to install envy to move to it.
 
 One `@envy sha256sums` value covers every platform, because it pins the release's
