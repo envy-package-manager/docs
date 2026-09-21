@@ -48,6 +48,11 @@ The `deploy:` summary is the same bargain, and older: it prints only when a
 wrapper was created, updated, or removed. So `envy sync` on a project that is
 already correct prints nothing at all.
 
+Since envy 0.4.3 that is true to the byte. Earlier versions opened the live
+region unconditionally, so a no-work run still wrote the escape sequences that
+hide the cursor and toggle auto-wrap — invisible on a terminal, but not nothing,
+and enough to fail a test asserting on empty output.
+
 That is the intended result rather than a failure. Nothing to do looks like
 nothing happening. To see the decision behind each package anyway, use
 `--verbose`, which narrates every one.
@@ -127,6 +132,12 @@ envy --trace sync                          # human-readable, to stderr
 envy --trace=file:trace.jsonl sync         # JSONL, to a file
 envy --trace=stderr,file:trace.jsonl sync  # both
 ```
+
+A file sink survives a [re-exec](/concepts/reproducibility#whichever-envy-you-run-becomes-the-pinned-envy):
+envy closes the file and hands it to the pinned binary, so one trace covers the
+whole run rather than two versions writing over each other. Requires envy 0.4.4;
+before that the interleaving was visible on Windows, whose hand-off waits for
+the child instead of replacing the process.
 
 Bare `--trace` means `stderr`. Tracing does not change the log level, so pair it
 with `-q` when you want events without the narrative.

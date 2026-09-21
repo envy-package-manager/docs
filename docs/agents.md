@@ -14,9 +14,10 @@ everything including envy itself. No install step, no server, no registry, no
 lockfile. Committed bootstrap script `<bin>/envy` (plus `envy.bat`) downloads the
 pinned envy binary on first run.
 
-**Current release: 0.4.2.** This page describes it. A feature added in 0.4.x is
-marked (`0.4.2+`) because a project may pin something older; anything unmarked
-has been there since 0.3.0 and is not worth checking.
+**Current release: 0.4.5.** This page describes it. Behaviour that changed
+during 0.4.x is marked (`0.4.2+`, `0.4.5+`) because a project may pin something
+older; anything unmarked has been there since 0.3.0 and is not worth checking.
+`DISPLAY` (0.4.2) is the newest feature — 0.4.3 to 0.4.5 are TUI fixes.
 
 Releases ship archives, not bare binaries:
 `envy-{linux,darwin}-{x86_64,arm64}.tar.gz` and
@@ -29,7 +30,7 @@ The archived binary keeps mode 0755, so no `chmod` after extracting.
 Everything below is detail on these. A manifest:
 
 ```lua
--- @envy version "0.4.2"
+-- @envy version "0.4.5"
 -- @envy sha256sums "9f2c...e10b"
 -- @envy bin "bin"
 -- @envy deploy "true"
@@ -193,7 +194,11 @@ and scripts use the explicit path.
   silently use the shared cache and exit 0. Opted out by `use`, `cache`,
   `version`: they read the header as text so they still work when the pinned
   envy is what cannot run. `ENVY_NO_REEXEC` and a dev build are also the only
-  ways a `deploy` stamps scripts from an unpinned version (it warns).
+  ways a `deploy` stamps scripts from an unpinned version (it warns). A
+  `--trace=file:` sink is closed and handed to the child before the exec, so one
+  trace file spans the handoff (0.4.4+; before that, Windows — whose exec waits
+  rather than replacing — kept the parent's handle open and interleaved its
+  records into the child's file).
 - spec = Lua file describing one package: `IDENTITY = "ns.name@rev"` required,
   where `@rev` versions the spec rather than the payload, and `local.*` means
   project-local. Package = installed instance keyed `(identity, options,
@@ -388,10 +393,12 @@ stdout: `product` (a path, or `--json`), `package` (a dir), `hash`
   print a wall clock), a SETUP pair that ran, or a vendor copy that wrote.
   The untimed outcomes earn nothing on their own: `cache hit`, `setup complete`
   (user-managed, every CHECK already satisfied), `local bundle`. So a second
-  `envy install` over a warm cache paints an empty screen. The `deploy:` summary
-  is gated the same way (and has been for longer): it prints only when a wrapper
-  was created, updated or removed, so a correct project's `envy sync` prints
-  NOTHING. Do NOT read silence as failure; check the exit code.
+  `envy install` over a warm cache writes NOTHING to the terminal — not one byte,
+  cursor and auto-wrap control included (0.4.3+; through 0.4.2 a no-work run still
+  emitted the live region's escape sequences and blinked the cursor). The `deploy:`
+  summary is gated the same way and has been for longer: it prints only when a
+  wrapper was created, updated or removed. Do NOT read silence as failure; check
+  the exit code.
 - **off a TTY every package still reports**, cache hits included: a log that omits
   the no-ops is not a record of the run. So a piped run and a terminal run legitimately
   list different packages — the PIPED one lists MORE. `--verbose` narrates every
@@ -401,10 +408,13 @@ stdout: `product` (a path, or `--json`), `package` (a dir), `hash`
   not stderr (`2>&1` — all human output is stderr); a global `-q`; on Windows,
   PowerShell `>` writing UTF-16; a `platforms` filter excluding the packages on
   the runner.
-- a row whose only work was the vendor copy reports the copy
-  (`vendored N files to <dir>`), not `cache hit` — but the `pkg_outcome` trace still
-  says `cache_hit`, which is the payload's verdict and what machine readers want.
-  Under `envy vendor` the command prints the report instead, so nothing doubles.
+- **a package that vendored reports the copy** (`vendored N files to <dir>`) as its
+  whole row, replacing the payload verdict — `cache hit` AND `installed (2.5s)`
+  alike (0.4.5+; 0.4.2-0.4.4 only replaced an untimed one, so a freshly built
+  vendored package said `installed`). Vendoring is the last phase to write. The
+  `pkg_outcome` trace is unaffected and still carries the payload's verdict, which
+  is what machine readers want. Under `envy vendor` the command prints the report
+  instead, so nothing doubles.
 - every displayed vendor destination (outcome, `auto_sync` warning, collision and
   nesting errors) is project-root-relative with forward slashes. The two errors
   naming a filesystem failure, and "resolves outside the project", keep the
