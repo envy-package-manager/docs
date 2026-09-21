@@ -86,6 +86,11 @@ Pass `interactive = true` to `envy.run` when the command needs the terminal, for
 example a `sudo` password prompt or a license agreement. Output streams through
 instead of being captured.
 
+envy gives the child the terminal for as long as it runs, and prints nothing
+else meanwhile. Before envy 0.4.3 queued log lines were still flushed during
+that time, so under `--verbose` another package's debug output could print over
+the prompt the child was waiting on.
+
 ## How a pair executes
 
 1. Platform filter. A `PLATFORMS` mismatch skips the pair.

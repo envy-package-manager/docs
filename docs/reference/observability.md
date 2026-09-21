@@ -27,15 +27,52 @@ tools. Neither one touches stdout.
 `-q` and `--verbose` are mutually exclusive. Both are global flags, so they go
 before the subcommand.
 
-Default output is one line per package:
+Default output is one line per package that did something:
 
 ```shell-session
 $ envy sync
+[envy.ninja@r0] imported from depot (0.4s)
+[local.mytool@r1] installed (3.2s)
+deploy: 4 product script(s) (4 created, 0 updated, 0 unchanged, 0 removed)
+```
+
+## A run with no work is silent
+
+On a terminal, a package that did nothing prints no line. Since envy 0.4.2 a
+package only prints one if it fetched, built, installed, imported, vendored, or
+ran a [`SETUP`](/concepts/specs/setup) pair. A cache hit that copied no files
+and ran no pair did none of those, so a second `envy sync` over a warm cache
+prints nothing.
+
+The `deploy:` summary works the same way, and has for longer: it prints only
+when a wrapper was created, updated, or removed. So `envy sync` on a project
+that is already correct prints nothing at all.
+
+Since envy 0.4.3 it writes no bytes at all. Earlier versions opened the live
+region on every run, so one with no work still wrote the escape sequences that
+hide the cursor and toggle auto-wrap. Those are invisible on a terminal, but a
+test that asserts on empty output would fail.
+
+A silent run is a successful one. To see what envy decided about each package,
+use `--verbose`, which prints a line for every one.
+
+**Redirect the output and every package prints again.** Off a terminal the
+`cache hit` lines come back, so the log lists every package in the run:
+
+```shell-session
+$ envy sync 2> sync.log ; cat sync.log
 [envy.cmake@r0] cache hit
 [envy.ninja@r0] imported from depot (0.4s)
 [local.mytool@r1] installed (3.2s)
 deploy: 4 product script(s) (4 created, 0 updated, 0 unchanged, 0 removed)
 ```
+
+A CI log is therefore complete whether or not the cache was warm. If a pipeline
+and a terminal disagree about which packages ran, this is why.
+
+A spec's [`DISPLAY`](./spec-globals.md#display) sits between the identity and
+the outcome on both, which is how you tell several instances of one spec apart
+in a log.
 
 `--verbose` adds the reasoning behind each of those lines:
 
@@ -92,6 +129,12 @@ envy --trace sync                          # human-readable, to stderr
 envy --trace=file:trace.jsonl sync         # JSONL, to a file
 envy --trace=stderr,file:trace.jsonl sync  # both
 ```
+
+A file sink survives a [re-exec](/concepts/reproducibility#re-exec-running-the-version-the-manifest-pins).
+envy closes the file and hands it to the pinned binary, so one trace covers the
+whole run instead of two versions writing over each other. Requires envy 0.4.4.
+Before that, on Windows, the parent kept the file open across the hand-off and
+its records landed over the child's.
 
 Bare `--trace` means `stderr`. Tracing does not change the log level, so pair it
 with `-q` when you want events without the narrative.

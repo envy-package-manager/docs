@@ -63,9 +63,12 @@ order under `--all`:
 
 ```shell-session
 $ envy vendor --all
-[local.nanocobs@r3] re-vendored 41 files to /src/app/third_party/nanocobs: contents were dirty
-[acme.armgcc@r1] up to date: /src/app/toolchains/armgcc
+[local.nanocobs@r3] re-vendored 41 files to third_party/nanocobs: contents were dirty
+[acme.armgcc@r1] up to date: toolchains/armgcc
 ```
+
+Destinations are named relative to the project root, with forward slashes, so
+the report reads the same on every machine.
 
 | Line | Meaning |
 | --- | --- |

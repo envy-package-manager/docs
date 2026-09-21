@@ -224,6 +224,34 @@ Run `envy deploy`. Scripts are regenerated from the current manifest. A script
 you [took ownership of](/concepts/environment/product-scripts#taking-ownership-of-a-name)
 is never touched, which is exactly the situation where a stale one can persist.
 
+## Output
+
+**`envy sync` printed nothing at all**
+
+It worked. Since envy 0.4.2 a package only gets a line when it did something, so
+a run that found everything cached and copied nothing has nothing to report. Use
+`--verbose` to see the decision behind each package anyway, and see [a run with
+no work is silent](./observability.md#a-run-with-no-work-is-silent).
+
+**A CI log and my terminal disagree about which packages ran**
+
+Both are correct. A terminal omits the rows for packages that did no work; a
+redirected stream keeps all of them, so the log lists every package. The run
+itself is the same.
+
+**Several rows in my log are the same `[identity]` and I cannot tell them apart**
+
+That is one spec instantiated several times. Give the spec a
+[`DISPLAY`](./spec-globals.md#display) — a function of its options — and each
+row will name the instance it is working on.
+
+**`DISPLAY must be a single line of printable text`**
+
+A `DISPLAY` string contained a control character: a newline, a tab, a NUL, or
+an escape. envy measures each row's width in order to erase it later, so any
+byte below `0x20`, and `0x7f`, is rejected. If you were aligning text, note that
+envy already pads the column for you.
+
 ## Cache
 
 **Out of disk**

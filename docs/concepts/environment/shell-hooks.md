@@ -153,6 +153,15 @@ hooks on every command, since all versions share one `shell/` directory.
 Before envy 0.3.2 the stamp was a hand-bumped integer, so a hook change that
 shipped without a bump never reached a shell that already had a hook.
 
+A refresh announces itself once, naming every shell whose hook changed, because
+one restart covers all of them:
+
+```text
+Shell hooks updated (bash, zsh, fish) — restart your shell
+```
+
+A hook written for the first time is not an update and says nothing.
+
 Moving or deleting that cache breaks the `source` line, since that is where the
 hook lives. `envy shell` warns about this when you are on a `--cache-root` or
 `ENVY_CACHE_ROOT` override. To force a refresh, delete `<user-wide

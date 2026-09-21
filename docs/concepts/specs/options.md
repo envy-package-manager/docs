@@ -181,12 +181,59 @@ FETCH    = function(tmp_dir, opts)
 STAGE    = function(fetch_dir, stage_dir, tmp_dir, opts)
 BUILD    = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
 INSTALL  = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
-PRODUCTS = function(opts)
 SETUP.<pair>.CHECK = function(pkg_dir, opts)
 ```
 
 One file, one set of verbs, and every project's variation expressed as data in
 the manifest.
+
+`PRODUCTS = function(opts)` is the exception. It runs *before* `OPTIONS`, so it
+receives the manifest entry's options exactly as written, with no validation
+against the schema. The table is always present — empty if the entry declared no
+`options` — but any individual key may be `nil`:
+
+```lua
+-- Wrong: paths[nil] is nil, and indexing that throws "attempt to index a nil
+-- value" with no traceback. Marking `target` required does not help, because
+-- OPTIONS has not run yet.
+PRODUCTS = function(opts) return { tool = paths[opts.target] .. "/tool" } end
+
+-- Right: guard the read.
+PRODUCTS = function(opts)
+  local dir = opts.target and paths[opts.target]
+  return dir and { tool = dir .. "/tool" } or {}
+end
+```
+
+`OPTIONS` still produces its own error for a bad `target`, but only if
+`PRODUCTS` returns first.
+
+## Telling the instances apart
+
+One spec instantiated several times produces several rows with the same
+`[identity]`, differing only in their options, which are not shown. Since envy
+0.4.2 a spec can label each one with
+[`DISPLAY`](../../reference/spec-globals.md#display), a string or a function of
+the validated options:
+
+```lua
+DISPLAY = function(options) return options.repo end
+```
+
+```text
+[acme.github@r0] libusb/hidapi      42% [========>           ] 4.10MB/9.77MB
+[acme.github@r0] cesanta/mongoose   17% [===>                ] 1.55MB/9.12MB
+```
+
+It is read once, right after `OPTIONS` validates, and appears on the outcome
+line as well as the live row, including in a redirected log where four identical
+identities would otherwise be four identical lines.
+
+One other thing to get right before instantiating a spec several times: product
+names are a project-wide registry, so every instance needs its own. A `PRODUCTS`
+table with a fixed name makes the second instance
+[an error](../dependencies/resolution.md#products). Compute the names from the
+options instead.
 
 ## See also
 

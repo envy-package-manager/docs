@@ -15,7 +15,7 @@ of these.
 | `ENVY_CACHE_ROOT` | Cache root. Same as `--cache-root`, and the highest-priority tier. Read by the binary and by the committed bootstrap scripts. |
 | `ENVY_MIRROR` | Where to download envy releases from. Overrides the `@envy mirror` directive. `https://` and `s3://` both work. |
 | `ENVY_IGNORE_DEPOT` | Set to skip [depot](/concepts/depots) lookups and build from source. Same as `--ignore-depot`, honored by `sync`, `install`, `package`, and `export`. |
-| `ENVY_NO_REEXEC` | Set to stop envy from re-executing into the version the manifest pins. Debugging only. |
+| `ENVY_NO_REEXEC` | Set to stop envy from [re-executing](/concepts/reproducibility#re-exec-running-the-version-the-manifest-pins) into the version the manifest pins. Debugging only. |
 | `ENVY_FETCH_ATTEMPTS` | How many times a transient download failure is retried, counting the first try. Default 3, clamped to 1 through 10. See [retries](#download-retries). |
 | `ENVY_FETCH_RETRY_BASE_MS` | Base backoff between those attempts, in milliseconds. Default 1000, clamped to 0 through 60000. `0` disables the wait. |
 

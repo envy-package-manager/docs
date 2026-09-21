@@ -23,7 +23,7 @@ misses are downloads rather than builds.
 
 | Phase | What it does |
 | --- | --- |
-| **spec fetch** | Acquire the spec from disk, a URL, git, or a [bundle](../dependencies/bundles.md), then execute it and validate its globals. `OPTIONS` runs here, so a bad option fails before anything is downloaded. |
+| **spec fetch** | Acquire the spec from disk, a URL, git, or a [bundle](../dependencies/bundles.md), then execute it and validate its globals. `OPTIONS` runs here, so a bad option fails before anything is downloaded, and [`DISPLAY`](../../reference/spec-globals.md#display) is resolved right after it, so every later row can carry it. |
 | **check** | Hash the package identity: `identity`, serialized `options`, and any resolved [weak](../dependencies/resolution.md) dependency keys, as blake3. The hash names the cache entry. A completed entry ends the run for this package. |
 | **import** | Ask the depot for a prebuilt artifact matching that hash. A hit is downloaded, verified against its sha256, and unpacked. No fetch, no build. |
 | **FETCH** | [Get the bytes.](./fetch.md) |

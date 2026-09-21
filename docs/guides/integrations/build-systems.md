@@ -48,8 +48,10 @@ $ ./bin/envy -q product --json
 
 Two things to know about that output:
 
-- **`-q` matters.** Progress lines like `[envy.cmake@r0] cache hit` go to stderr,
-  so JSON on stdout parses either way. `-q` keeps them out of your build log.
+- **`-q` matters.** Progress lines like `[envy.cmake@r0] installed (8.2s)` go to
+  stderr, so JSON on stdout parses either way. `-q` keeps them out of your build
+  log. Redirecting stderr too brings back the `cache hit` lines a terminal
+  [leaves out](../../reference/observability.md#a-run-with-no-work-is-silent).
 - **`--json` does not install.** It computes where each product will be from the
   resolved graph. Run [`sync`](../../reference/cli/sync.md) before a build that
   needs the files, which the [wrapper-script pattern](#one-wrapper-instead-of-two-steps)

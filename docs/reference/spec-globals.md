@@ -21,6 +21,7 @@ Terse companion to [Anatomy of a Spec](/concepts/specs).
 | `PRODUCTS` | table or function | the package exports nothing |
 | `DEPENDENCIES` | array of entry tables | none |
 | `PLATFORMS` | array of strings, `darwin`, `linux`, `windows`, optionally `-arm64` or `-x86_64` | every platform |
+| `DISPLAY` | string or function of the options | the package's rows say nothing beyond their identity. Requires envy 0.4.2 |
 | `USER_MANAGED` | boolean or function | `false`, meaning cache-managed |
 | `EXPORTABLE` | boolean | `false`, so only fetched bytes are kept for export |
 | `VENDOR` | array of selector strings | the whole install directory is copied when a manifest [vendors](/concepts/vendoring) this package. Requires envy 0.4.0 |
@@ -39,11 +40,17 @@ SETUP.<name>.CHECK(pkg_dir, options)     -- pkg_dir is nil for user-managed
 SETUP.<name>.INSTALL(pkg_dir, options)
 PRODUCTS(options)
 OPTIONS(options)
+DISPLAY(options)
 USER_MANAGED()
 ```
 
 Every directory argument arrives with a trailing path separator. The one
 exception is the `tmp_dir` handed to a `source.fetch` function, which does not.
+
+`options` is the validated table everywhere except `PRODUCTS`, which is resolved
+before `OPTIONS` runs and receives the manifest entry's options as written. Guard
+every read in a `PRODUCTS` function —
+[details](/concepts/specs/options#options-in-verbs).
 
 Return values:
 
@@ -55,6 +62,7 @@ Return values:
 | `SETUP.<name>.INSTALL` | nothing, or a script string to run |
 | `PRODUCTS` | the products table |
 | `OPTIONS` | nothing, `true`, `false`, or an error message string |
+| `DISPLAY` | one line of printable text, or `nil` for none |
 | `USER_MANAGED` | boolean |
 
 ## `FETCH` table fields
@@ -179,6 +187,50 @@ package key. See [The SETUP Verb](/concepts/specs/setup).
 The table form validates declaratively. The function form receives the options
 and may call `envy.options(schema)` to apply the same checks. Both reject options
 the schema does not declare.
+
+## `DISPLAY`
+
+Text naming what this package is working on. Requires envy 0.4.2.
+
+A package's progress row has three parts: the `[identity]`, then `DISPLAY`, then
+whatever the row is reporting. `DISPLAY` is added to the identity, not
+substituted for it. It exists for the case of one spec instantiated several
+times, where every row shows the same identity:
+
+```lua
+IDENTITY = "acme.github@r0"
+OPTIONS = { repo = { type = "string", required = true },
+            version = { type = "string", required = true } }
+
+DISPLAY = function(options) return options.repo end
+```
+
+```text
+[acme.github@r0] libusb/hidapi      42% [========>           ] 4.10MB/9.77MB
+[acme.github@r0] cesanta/mongoose   17% [===>                ] 1.55MB/9.12MB
+[acme.nanoprintf@r1]                 3% [>                   ] 0.20MB/6.40MB
+```
+
+| Rule | |
+| --- | --- |
+| Forms | A string, or a function of the validated options. |
+| Resolved | Once, after `OPTIONS` validates, before any fetch. |
+| `nil` | Returning it is the same as omitting `DISPLAY` entirely. |
+| Content | One line of printable text. Any control character — newline, tab, NUL, ESC — is an error, since envy measures the row's width in order to erase it later. |
+| Width | Padded to its own column, so the bars and outcomes below it stay aligned. Keep it short; a long one pushes every row's status to the right. |
+
+It appears on the outcome line as well, including when envy is not writing to a
+terminal. That is the case that matters in CI, where without it four instances
+of one spec produce four identical `[acme.github@r0]` lines.
+
+`DISPLAY` only labels the rows. A spec instantiated several times must still
+give each instance its own
+[product names](/concepts/dependencies/resolution#products): a fixed
+`PRODUCTS = { mytool = ... }` makes the second instance an error. Compute them
+from the same options `DISPLAY` uses.
+
+If no spec sets a `DISPLAY`, output is unchanged from earlier versions and the
+column is absent.
 
 ## Identity syntax
 
