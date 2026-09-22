@@ -364,7 +364,7 @@ and the vendor path every time:
 local M = {}
 
 ---One source tree from GitHub, vendored into the project for the build to compile.
----@param name string leaf directory name under vendor/
+---@param name string leaf directory name under the consumer's VENDOR_ROOT
 ---@param repo string "owner/name"
 ---@param ref string full commit sha
 ---@return table entry a PACKAGES entry
@@ -372,7 +372,7 @@ function M.repo(name, repo, ref)
   return {
     spec = "acme.github@r0",
     bundle = ENVY_BUNDLE.alias,
-    vendor = "vendor/" .. name,
+    vendor = (VENDOR_ROOT or "vendor") .. "/" .. name,
     options = { repo = repo, ref = ref },
   }
 end
@@ -388,6 +388,8 @@ BUNDLES = {
     ref = "ded36a39bbf13744f5a0e539f2f4741fecb61dd0",
   },
 }
+
+VENDOR_ROOT = "third_party"
 
 local gh = envy.loadenv_bundle("tools", "lib.github")
 
@@ -412,6 +414,19 @@ out of a bundle sees the bundle's `identity`, its materialized `root`, and the
 `alias` the caller reached it by. Under `envy.loadenv_spec` the `alias` is `nil`,
 since that call names the dependency by identity. It is `nil` altogether where no
 bundle is involved.
+
+The builder reads `VENDOR_ROOT` out of the consuming manifest, because
+[a module reads the globals of the file that loaded it](/reference/lua-api#what-a-module-can-read).
+The two entries above land in `third_party/libb64` and `third_party/hidapi`.
+Spelling the leaf out matters here. Every entry the builder writes shares the
+identity `acme.github@r0`, so `vendor = true` would derive names that escalate
+to an options hash.
+
+When the consuming manifest is an [imported component](/guides/monorepos), the
+builder sees the component's globals. That needs envy 0.4.8. Before it, a
+builder loaded by an imported manifest saw the root manifest's globals instead.
+Unless the root had already assigned `VENDOR_ROOT`, the builder read `nil` and
+every entry fell back to `vendor/`.
 
 A bundle with a [custom fetch](./fetch-dependencies.md) is refused here by name.
 Its fetch function needs a phase to run in, and its `source.dependencies` cannot

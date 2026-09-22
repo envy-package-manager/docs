@@ -162,7 +162,7 @@ can also ship the builder that writes its consumers' `PACKAGES` entries:
 local M = {}
 
 ---One source tree from GitHub, vendored where the build system compiles it.
----@param name string leaf directory name under vendor/
+---@param name string leaf directory name under the consumer's VENDOR_ROOT
 ---@param repo string "owner/name"
 ---@param ref string full commit sha
 ---@return table entry a PACKAGES entry
@@ -170,7 +170,7 @@ function M.repo(name, repo, ref)
   return {
     spec = "acme.github@r0",
     bundle = ENVY_BUNDLE.alias,
-    vendor = "vendor/" .. name,
+    vendor = (VENDOR_ROOT or "vendor") .. "/" .. name,
     options = { repo = repo, ref = ref },
   }
 end
@@ -185,9 +185,16 @@ works in a project that spells the alias differently. The `spec` identity stays
 written out, because that is your bundle's promise rather than the consumer's
 naming.
 
+`VENDOR_ROOT` is the consumer's too. A module reads the globals of the file that
+loaded it. The builder puts each tree under whatever root the consumer chose, or
+under `vendor/` when there is none. From envy 0.4.8 this also holds when the
+loading file is an imported component manifest.
+
 A consumer is then one line per dependency:
 
 ```lua title="envy.lua"
+VENDOR_ROOT = "third_party"
+
 local gh = envy.loadenv_bundle("tools", "lib.github")
 
 PACKAGES = {
@@ -195,8 +202,8 @@ PACKAGES = {
 }
 ```
 
-Treat a builder's arguments as consumer-visible API, the same as a spec's option
-names. Changing them is a bundle identity bump.
+Treat a builder's arguments, and any global it reads, as consumer-visible API,
+the same as a spec's option names. Changing them is a bundle identity bump.
 
 ## Testing a bundle before publishing
 

@@ -419,6 +419,37 @@ Nothing failed at the load. The call site got an empty table and reported
 `require` and `loadenv_spec` had to assign a global *and* return a table.
 Returning the table is now enough.
 
+### What a module can read
+
+A module reads the globals of the file that loaded it. What the module assigns
+stays in its own sandbox, so loading it never changes the caller's globals. A
+helper can therefore follow its caller's settings without taking them as
+arguments:
+
+```lua title="lib/paths.lua"
+local M = {}
+
+function M.vendor_dir(name)
+  return (VENDOR_ROOT or "vendor") .. "/" .. name
+end
+
+return M
+```
+
+The loading file can be a manifest, an [imported](#envyimportpath) manifest, a
+spec, or another module. Each one's own globals show through, so a helper that a
+component manifest loads sees the component's `VENDOR_ROOT` rather than the root
+manifest's.
+
+This needs envy 0.4.8. Before it, a module read the root manifest's globals (in
+a spec, the spec's) no matter which file loaded it. A helper loaded by an
+imported manifest or by another module saw the root's values instead of its
+caller's, and nothing failed at the load.
+
+[`ENVY_BUNDLE`](#envy_bundle) does not show through. It always names the bundle
+that the current load resolved, so a file that a bundled module loads with
+`envy.loadenv` sees `nil` rather than the outer module's bundle.
+
 ## Composition
 
 ### `envy.import(path)`
@@ -544,8 +575,9 @@ manifest's `BUNDLES`.
 
 `module` is Lua dot syntax, with the same rules as
 [`envy.loadenv_spec`](#envyloadenv_specidentity-module). What comes back follows
-[the module rule](#what-a-module-hands-back), and the module sees
-[`ENVY_BUNDLE`](#envy_bundle).
+[the module rule](#what-a-module-hands-back). The module sees
+[`ENVY_BUNDLE`](#envy_bundle) and
+[the calling file's globals](#what-a-module-can-read).
 
 An entry the helper returns is parsed exactly like one written out in the
 manifest, so its `bundle` names an alias of the *consuming* manifest, including
@@ -590,8 +622,9 @@ do for `envy.loadenv_spec`.
 A module that `envy.loadenv_bundle` or `envy.loadenv_spec` loaded out of a bundle
 sees `ENVY_BUNDLE`, naming the bundle it came from. Requires **envy 0.4.7 or
 newer**. It is `nil` everywhere else: in a manifest, in a spec, in anything
-`envy.loadenv` reached, and in a module a bundle's own spec reached with
-`require`, which is plain Lua module loading.
+`envy.loadenv` reached (including a file a bundled module loads from beside
+itself), and in a module a bundle's own spec reached with `require`, which is
+plain Lua module loading.
 
 | Field | Value |
 | --- | --- |
@@ -623,7 +656,8 @@ that returns nothing does not hand it back to its caller.
 
 Loads a Lua file next to the calling file. Dots are path separators, so
 `"libs.common.helpers"` means `libs/common/helpers.lua`. What comes back follows
-[the module rule](#what-a-module-hands-back). Use it for shared helper files:
+[the module rule](#what-a-module-hands-back), and the file reads
+[the caller's globals](#what-a-module-can-read). Use it for shared helper files:
 
 ```lua title="envy.lua"
 local versions = envy.loadenv("envy.versions")
