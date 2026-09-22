@@ -40,14 +40,15 @@ Everything a spec can call that does not need a package behind it:
 
 ## What is not
 
-There is no package and no phase, so the four calls that need one fail rather
-than guessing:
+There is no package, no phase, and no manifest, so the calls that need one fail
+rather than guessing:
 
 | Call | What you get |
 | --- | --- |
 | `envy.product`, `envy.package` | `not in phase context (missing pkg)`. Both authorize against a dependency edge, and a bare script has none. |
 | `envy.commit_fetch` | `can only be called from FETCH phase with cache lock active`. |
 | `envy.loadenv_spec` | `can only be called within phase functions, not at global scope`. |
+| `envy.loadenv_bundle` | `manifest scope only; a spec reaches a bundle it declared with envy.loadenv_spec(identity, module)`. It resolves a `BUNDLES` alias, and a script has no `BUNDLES`. |
 
 `envy.fetch` needs no phase, but it does need `{ dest = <dir> }`, since there is
 no `tmp_dir` to default to.

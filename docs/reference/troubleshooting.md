@@ -74,19 +74,27 @@ cache is the file you asked for, so it fetches again. Add the hash.
 **A flaky network fails the run**
 
 envy already retries a download that dies on the transport: connect, TLS, and
-DNS failures, a connection dropped mid-body, a stall, and HTTP 5xx or 429. Three
-attempts by default, with exponential jittered backoff. A 404 or a 403 is not
-retried, because a replay will not change the answer.
+DNS failures, a connection dropped mid-body, a stall, and HTTP 5xx or 429. From
+envy 0.4.6 it keeps at it for 90 seconds from the first failure, with
+exponential jittered backoff, honoring a `Retry-After` the server sends. A 404
+or a 403 is not retried, because a replay will not change the answer.
 
-If the failure survives that, raise the attempt count rather than re-running the
-whole build:
+The waiting package counts its backoff down on its own row, so a run that looks
+stalled is usually one of these:
 
-```bash
-ENVY_FETCH_ATTEMPTS=6 envy install
+```text
+[acme.tool@r1] retry 2 in 6s (http_status) tool.tar.gz
 ```
 
-`--verbose` shows each retry as `fetch: attempt N of M failed`, and `--trace`
-emits a `download_retry` event carrying the classification. See
+If the failure survives the budget, raise it rather than re-running the whole
+build:
+
+```bash
+ENVY_FETCH_BUDGET_MS=300000 envy install
+```
+
+`--verbose` names each retry and why, and `--trace` emits a `download_retry`
+event carrying the same classification. See
 [Download retries](./environment-variables.md#download-retries).
 
 **A git source will not resolve**

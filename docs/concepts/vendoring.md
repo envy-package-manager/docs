@@ -230,10 +230,14 @@ the package is pinned by the manifest.
 - **Vendor a `USER_MANAGED` package.** Its state lives on the host, not in a
   cache entry, so there is no payload to copy. Asking is an error naming the
   package.
-- **Vendor a bundled spec.** `vendor` belongs to the `source` entry shape. An
-  entry that takes its spec from a `bundle` cannot carry the key, and says so.
 - **Accept `vendor` in a spec.** It is a manifest `PACKAGES` key only. A
   `DEPENDENCIES` entry that carries it is an error.
+
+Until envy 0.4.6, `vendor` also belonged to the `source` entry shape alone, so
+an entry taking its spec from a `bundle` was refused the key. That was backwards
+for the spec most worth sharing, one whose whole job is to put a source tree
+where the build system compiles it, and moving such a spec into a bundle took
+vendoring away from every consumer. A bundled entry vendors now.
 
 ## Checking a copy by hand
 

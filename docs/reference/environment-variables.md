@@ -16,11 +16,12 @@ of these.
 | `ENVY_MIRROR` | Where to download envy releases from. Overrides the `@envy mirror` directive. `https://` and `s3://` both work. |
 | `ENVY_IGNORE_DEPOT` | Set to skip [depot](/concepts/depots) lookups and build from source. Same as `--ignore-depot`, honored by `sync`, `install`, `package`, and `export`. |
 | `ENVY_NO_REEXEC` | Set to stop envy from [re-executing](/concepts/reproducibility#re-exec-running-the-version-the-manifest-pins) into the version the manifest pins. Debugging only. |
-| `ENVY_FETCH_ATTEMPTS` | How many times a transient download failure is retried, counting the first try. Default 3, clamped to 1 through 10. See [retries](#download-retries). |
+| `ENVY_FETCH_BUDGET_MS` | How long envy keeps retrying one transient download, measured from its first failure. Default 90000, clamped to 0 through 3600000. Requires envy 0.4.6. See [retries](#download-retries). |
+| `ENVY_FETCH_ATTEMPTS` | Ceiling on attempts for one download, counting the first try. Default 10 from envy 0.4.6, 3 before that. Clamped to 1 through 100. The budget is normally what stops a retry loop. |
 | `ENVY_FETCH_RETRY_BASE_MS` | Base backoff between those attempts, in milliseconds. Default 1000, clamped to 0 through 60000. `0` disables the wait. |
 
-Both fetch knobs are read once per process. They exist for CI and for tests that
-cannot afford real backoff.
+All three fetch knobs are read once per process. They exist for CI and for tests
+that cannot afford real backoff.
 
 ## Written by envy
 
@@ -102,14 +103,52 @@ Retrying is safe because everything envy fetches is an idempotent GET and every
 payload is verified against its `sha256` after transport, so a replay cannot
 launder bad bytes.
 
-Backoff is exponential and jittered: 1x, 4x, then 16x `ENVY_FETCH_RETRY_BASE_MS`,
-capped at 60 seconds, each spread over plus or minus 50%. envy runs a thread per
-request, so without the jitter a batch that all failed against one bad mirror
-would march back onto it in lockstep. `s3://` sources are not retried here,
-because the AWS SDK already retries internally.
+From envy 0.4.6, what ends the retrying is a wall-clock budget rather than a bare
+attempt count. `ENVY_FETCH_BUDGET_MS` is 90 seconds by default, measured from the
+first failure, so an attempt that burns its own connect timeout spends the budget
+as surely as a wait does. `ENVY_FETCH_ATTEMPTS` survives as a ceiling. A
+connection that never completes a handshake is capped at 5 seconds instead: a
+host that will not answer is down rather than busy, and throttling is what
+recovers inside a minute.
+
+Backoff is exponential and jittered: 1x, 2x, then 4x `ENVY_FETCH_RETRY_BASE_MS`,
+capped at 30 seconds per wait, each spread over plus or minus 50%. Doubling
+rather than quadrupling keeps several attempts inside the first few seconds,
+where transient faults live. envy runs a thread per request, so without the
+jitter a batch that all failed against one bad mirror would march back onto it in
+lockstep.
+
+A server that sends `Retry-After` with its 429 or 503 sets a floor on the next
+wait, jittered upward but never back below what it asked for. A cooldown longer
+than the budget has left ends the fetch rather than coming back early to earn the
+same refusal. `s3://` sources are not retried here, because the AWS SDK already
+retries internally.
+
+Since a minute and a half of silence would read as a hang, a package waiting out
+a backoff says so on its own row, counting down:
+
+```text
+[acme.tool@r1] retry 2 in 6s (http_status) tool.tar.gz
+```
 
 Each retry is a `download_retry` [trace event](./observability.md), and shows up
-under `--verbose` as `fetch: attempt N of M failed`.
+under `--verbose` as:
+
+```text
+[DBG] [acme.tool@r1] fetch: attempt 2 failed (http_status), retrying in 2754ms: HTTP error 503 from https://example.com/tool.tar.gz
+```
+
+A transport failure that is not an HTTP status now carries the status and
+`Content-Type` that did arrive, which is what separates a real network fault from
+a server answering `200 text/html` and closing the connection before the body:
+
+```text
+Failure when receiving data from the peer after 0 of 54881 bytes (HTTP 200, text/html)
+```
+
+envy also sends a real `User-Agent`, `envy/<version>` plus its repository URL,
+because the placeholder it used before is the kind of thing abuse heuristics
+flag.
 
 ## Variables envy respects indirectly
 

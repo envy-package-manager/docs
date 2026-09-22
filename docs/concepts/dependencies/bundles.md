@@ -247,8 +247,8 @@ envy.run(envy.product("jf") .. " rt download --flat --fail-no-op '" ..
 ```
 
 Put it in the bundle once. `envy.loadenv_spec` executes the module in a sandbox
-and returns that sandbox, not the module's return value, so a module meant for
-this path assigns a global. Do both, and one module serves both callers:
+and hands back what it returned, the same rule `require` follows, so one module
+serves both callers unchanged:
 
 ```lua title="lib/jfrog.lua"
 local M = {}
@@ -278,9 +278,14 @@ function M.download(opts)
   envy.commit_fetch({ filename = opts.dest, sha256 = opts.sha256 })
 end
 
-jfrog = M   -- global, for envy.loadenv_spec callers
-return M    -- return value, for require callers
+return M
 ```
+
+Before envy 0.4.6, `envy.loadenv_spec` returned the sandbox globals whatever the
+module returned, so a module on this path had to assign `jfrog = M` as well and
+callers reached it as `envy.loadenv_spec(...).jfrog`. That assignment is now
+dead weight. Both forms still work, because a module that returns nothing still
+hands back its globals, but there is no reason to write both.
 
 A project-local spec then reads as one call:
 
@@ -305,7 +310,7 @@ DEPENDENCIES = {
 }
 
 FETCH = function(tmp_dir, opts)
-  local jfrog = envy.loadenv_spec("acme.cmake@r0", "lib.jfrog").jfrog
+  local jfrog = envy.loadenv_spec("acme.cmake@r0", "lib.jfrog")
 
   return jfrog.artifact {
     base = "https://acme.jfrog.io",
@@ -341,6 +346,76 @@ Four rules govern `envy.loadenv_spec`:
   manifest's. A spec that pulls from a bundle declares that bundle itself. The
   same rule covers imported manifests, where an entry resolves against the
   `BUNDLES` of the manifest that declared it.
+
+### Reaching a bundle's API from a manifest
+
+`envy.loadenv_spec` needs a phase to run in, so a manifest cannot use it. From
+envy 0.4.6,
+[`envy.loadenv_bundle(alias, module)`](/reference/lua-api#envyloadenv_bundlealias-module)
+is the manifest-scope version. It names a `BUNDLES` alias, fetches that bundle
+on the spot, and returns the module.
+
+That is what lets a bundle ship the helper that writes its own consumers'
+entries. One generic spec plus a builder that knows how to call it, and a
+consumer writes a line per dependency instead of restating the spec, the alias,
+and the vendor path every time:
+
+```lua title="lib/github.lua, in the bundle"
+local M = {}
+
+---One source tree from GitHub, vendored into the project for the build to compile.
+---@param name string leaf directory name under vendor/
+---@param repo string "owner/name"
+---@param ref string full commit sha
+---@return table entry a PACKAGES entry
+function M.repo(name, repo, ref)
+  return {
+    spec = "acme.github@r0",
+    bundle = ENVY_BUNDLE.alias,
+    vendor = "vendor/" .. name,
+    options = { repo = repo, ref = ref },
+  }
+end
+
+return M
+```
+
+```lua title="envy.lua, in the consuming project"
+BUNDLES = {
+  tools = {
+    identity = "acme.specs@r1",
+    source = "https://github.com/acme/envy-specs.git",
+    ref = "ded36a39bbf13744f5a0e539f2f4741fecb61dd0",
+  },
+}
+
+local gh = envy.loadenv_bundle("tools", "lib.github")
+
+PACKAGES = {
+  gh.repo("libb64", "libb64/libb64", "ce864b1d3f4b9e0e2b0a4e5f0c9d8a7b6c5d4e3f"),
+  gh.repo("hidapi", "libusb/hidapi", "4ebce6b0dcdd9eb9b8d8d0a0d0b9f8e7d6c5b4a3"),
+}
+```
+
+`BUNDLES` has to be assigned above the call, because a manifest is read top to
+bottom.
+
+An entry the builder returns is parsed exactly like one written out in the
+manifest. Its `bundle` resolves against the *consuming* manifest's `BUNDLES`, so
+a helper may name any alias its consumer declared, including one pointing at a
+different bundle. It may also carry [`vendor`](/concepts/vendoring), which
+before envy 0.4.6 was rejected on any entry that named a bundle.
+
+[`ENVY_BUNDLE`](/reference/lua-api#envy_bundle), from envy 0.4.7, is what spares
+the builder from being handed a name its caller already typed. A module loaded
+out of a bundle sees the bundle's `identity`, its materialized `root`, and the
+`alias` the caller reached it by. Under `envy.loadenv_spec` the `alias` is `nil`,
+since that call names the dependency by identity. It is `nil` altogether where no
+bundle is involved.
+
+A bundle with a [custom fetch](./fetch-dependencies.md) is refused here by name.
+Its fetch function needs a phase to run in, and its `source.dependencies` cannot
+be ordered this early.
 
 ## See also
 

@@ -130,8 +130,10 @@ PACKAGES = {
 }
 ```
 
-`vendor` belongs to the `source` entry shape. An entry that takes its spec from a
-`bundle` cannot carry it, and the unknown-key message names the shape.
+An entry that takes its spec from a `bundle` is its own narrower shape, without
+`source`, `sha256`, or `ref`, since the bundle declaration carries those. It can
+carry `vendor` from envy 0.4.6 on. Before that the key was rejected there as
+unknown, which took vendoring away from any spec that moved into a bundle.
 
 ## Bundle entry fields
 
