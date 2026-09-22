@@ -16,6 +16,10 @@ commit instead of ten URLs.
 - **Shared helpers.** Specs in a bundle can `require()` Lua modules that ship
   beside them, which is how a bundle becomes a library rather than a folder. See
   [Shipping an API with your specs](/concepts/dependencies/bundles#shipping-an-api-with-your-specs).
+- **Helpers your consumers call.** From envy 0.4.6 a consuming manifest reaches
+  those same modules with
+  [`envy.loadenv_bundle`](/reference/lua-api#envyloadenv_bundlealias-module), so
+  a bundle can ship the code that writes its own consumers' entries.
 
 For one or two specs, a URL with a `sha256` is simpler. Reach for a bundle when
 the specs start sharing code or need to move together.
@@ -148,6 +152,52 @@ The pattern worth aiming for is a helper that returns whole verb sets, so a spec
 becomes a name, a repo, and a hash table. That is covered in
 [Shipping an API with your specs](/concepts/dependencies/bundles#shipping-an-api-with-your-specs).
 
+## Helpers your consumers call
+
+A module under `lib/` is not only for the bundle's own specs. From envy 0.4.6 a
+consuming manifest loads one with `envy.loadenv_bundle`, which means the bundle
+can also ship the builder that writes its consumers' `PACKAGES` entries:
+
+```lua title="lib/github.lua"
+local M = {}
+
+---One source tree from GitHub, vendored where the build system compiles it.
+---@param name string leaf directory name under vendor/
+---@param repo string "owner/name"
+---@param ref string full commit sha
+---@return table entry a PACKAGES entry
+function M.repo(name, repo, ref)
+  return {
+    spec = "acme.github@r0",
+    bundle = ENVY_BUNDLE.alias,
+    vendor = "vendor/" .. name,
+    options = { repo = repo, ref = ref },
+  }
+end
+
+return M
+```
+
+`ENVY_BUNDLE.alias`, from envy 0.4.7, is whatever the consuming manifest happened
+to call your bundle in its `BUNDLES` table. Reading it there means the builder
+does not have to take an alias its caller already typed, and the same helper
+works in a project that spells the alias differently. The `spec` identity stays
+written out, because that is your bundle's promise rather than the consumer's
+naming.
+
+A consumer is then one line per dependency:
+
+```lua title="envy.lua"
+local gh = envy.loadenv_bundle("tools", "lib.github")
+
+PACKAGES = {
+  gh.repo("libb64", "libb64/libb64", "ce864b1d3f4b9e0e2b0a4e5f0c9d8a7b6c5d4e3f"),
+}
+```
+
+Treat a builder's arguments as consumer-visible API, the same as a spec's option
+names. Changing them is a bundle identity bump.
+
 ## Testing a bundle before publishing
 
 Point a scratch manifest at your working copy. A local path needs no ref:
@@ -183,7 +233,7 @@ Two identities move independently, and the distinction matters:
 | Change | Bump |
 | --- | --- |
 | A spec gains an option, renames a product, or changes its install layout | that spec's revision, `acme.cmake@r0` to `@r1` |
-| The bundle adds, removes, or renames specs, or reorganizes `lib/` in a way consumers can see | the bundle identity, `acme.specs@r1` to `@r2` |
+| The bundle adds, removes, or renames specs, reorganizes `lib/` in a way consumers can see, or changes a helper a consuming manifest calls | the bundle identity, `acme.specs@r1` to `@r2` |
 | A spec gains a new version in its hash table | neither. That is a normal commit consumers pick up by advancing the ref. |
 
 Bumping the bundle identity is a consumer-visible break, because `BUNDLES` pins

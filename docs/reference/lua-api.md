@@ -17,6 +17,7 @@ Your editor has all of this as hover documentation. See
 | constants, `path.*`, `template`, `extend`, logging | yes | yes | pure |
 | `abspath`, `loadenv` | yes | yes | resolves against the calling file |
 | `import` | manifest top level only | no | not installed in specs or `envy lua` |
+| `loadenv_bundle` | manifest top level only | no | materializes the bundle first. Requires envy 0.4.6. |
 | `copy`, `move`, `remove`, `exists`, `is_file`, `is_dir` | yes | yes | relative paths anchor to `stage_dir` in phases |
 | `run`, `extract`, `extract_all` | yes | yes | |
 | `fetch` | no | `FETCH` only | |
@@ -31,6 +32,7 @@ Calling a phase-only function too early is an error, not undefined behavior:
 envy.product: not in phase context (missing pkg)
 envy.commit_fetch: can only be called from FETCH phase with cache lock active
 envy.loadenv_spec: can only be called within phase functions, not at global scope
+envy.loadenv_bundle: manifest scope only; a spec reaches a bundle it declared with envy.loadenv_spec(identity, module)
 ```
 
 ## Constants
@@ -352,9 +354,8 @@ matching entries the earliest `needed_by` wins.
 
 ### `envy.loadenv_spec(identity, module)`
 
-Loads a Lua module out of a declared dependency and returns its globals. The
-identity matches the same loose way. Inside a bundle, the module path resolves
-against the bundle root.
+Loads a Lua module out of a declared dependency. The identity matches the same
+loose way. Inside a bundle, the module path resolves against the bundle root.
 
 `module` is Lua dot syntax naming a file inside the dependency, so `"lib.common"`
 loads `lib/common.lua`. Path separators, a leading or trailing `.`, and `..` are
@@ -371,7 +372,10 @@ FETCH = function(tmp_dir, opts)
 end
 ```
 
-It returns the module's sandbox globals, not its `return` value. See
+What comes back follows
+[the module rule](#what-a-module-hands-back). A module loaded out of a bundle
+also sees [`ENVY_BUNDLE`](#envy_bundle), whose `alias` is `nil` here, since
+`loadenv_spec` names the dependency by identity. See
 [Shipping an API with your specs](/concepts/dependencies/bundles#shipping-an-api-with-your-specs).
 
 All three respect `needed_by`. A dependency declared `needed_by = "build"` is not
@@ -388,6 +392,32 @@ error: envy.package: pkg 'local.top@v1' has no strong dependency on 'local.base@
 Declare `base` in `top` as well. The two entries name one package, so nothing is
 built twice. Before envy 0.3.1 the lookup walked the whole graph, and a
 transitive hit could hand back the wrong package's directory.
+
+### What a module hands back
+
+`loadenv_spec`, [`loadenv_bundle`](#envyloadenv_bundlealias-module), and
+[`loadenv`](#envyloadenvmodule) share one rule, the one `require` already
+teaches. A module that returns a table hands back that table. A module that
+returns nothing hands back the globals it assigned. Anything else is an error
+naming the module:
+
+```text
+envy.loadenv_spec: module 'lib.common' returned a number; a module returns a table or nothing
+```
+
+Before envy 0.4.6 all three handed back the sandbox globals whatever the module
+returned, so the shape every Lua author writes came back empty:
+
+```lua
+local M = {}
+function M.release_url(repo, tag, file) ... end
+return M                                  -- before 0.4.6, the caller got {}
+```
+
+Nothing failed at the load. The call site got an empty table and reported
+`attempt to call a nil value` somewhere later. A module that served both
+`require` and `loadenv_spec` had to assign a global *and* return a table.
+Returning the table is now enough.
 
 ## Composition
 
@@ -479,11 +509,115 @@ warning: envy.import: /src/sub/envy.lua pins envy 0.2.5; the root manifest pins 
 
 See [The bootstrap boundary](/guides/monorepos#the-bootstrap-boundary).
 
+### `envy.loadenv_bundle(alias, module)`
+
+Loads a Lua module out of a bundle from the manifest's own top level, fetching
+the bundle first. Requires **envy 0.4.6 or newer**. This is how a bundle ships a
+helper its consumers call while they are still building `PACKAGES`:
+
+```lua title="envy.lua"
+BUNDLES = {
+  tools = {
+    identity = "acme.specs@r1",
+    source = "https://github.com/acme/envy-specs.git",
+    ref = "ded36a39bbf13744f5a0e539f2f4741fecb61dd0",
+  },
+}
+
+local gh = envy.loadenv_bundle("tools", "lib.github")
+
+PACKAGES = {
+  gh.repo("libb64", "libb64/libb64", "ce864b1d3f4b9e0e2b0a4e5f0c9d8a7b6c5d4e3f"),
+  gh.repo("hidapi", "libusb/hidapi", "4ebce6b0dcdd9eb9b8d8d0a0d0b9f8e7d6c5b4a3"),
+}
+```
+
+The builder is the bundle's code. See
+[Reaching a bundle's API from a manifest](/concepts/dependencies/bundles#reaching-a-bundles-api-from-a-manifest)
+for what `lib/github.lua` holds.
+
+`alias` is a key of the calling file's `BUNDLES`. Assign that table above the
+call, because a manifest is read top to bottom. An
+[imported](#envyimportpath) fragment resolves its own aliases against its own
+file, the same way one of its literal entries would, and falls back to the root
+manifest's `BUNDLES`.
+
+`module` is Lua dot syntax, with the same rules as
+[`envy.loadenv_spec`](#envyloadenv_specidentity-module). What comes back follows
+[the module rule](#what-a-module-hands-back), and the module sees
+[`ENVY_BUNDLE`](#envy_bundle).
+
+An entry the helper returns is parsed exactly like one written out in the
+manifest, so its `bundle` names an alias of the *consuming* manifest, including
+one pointing at a different bundle, and it can carry
+[`vendor`](/concepts/vendoring).
+
+The bundle is materialized during the manifest's own global scope, which is
+earlier than envy fetches bundles for anything else. A bundle whose identity
+starts with `local.` and whose source is a directory is read where it stands, so
+edits to it land without a copy. Every other shape goes into the cache, where the
+bundle's own package finds it complete a moment later, so nothing is fetched
+twice. A fetch this early has no package row to report on, so it says so in one
+line:
+
+```text
+bundle acme.specs@r1: fetching, the manifest reads it
+```
+
+A cache hit stays quiet.
+
+Calling it anywhere but a manifest's top level, or naming an alias the calling
+file does not have, is an error that says which:
+
+```text
+envy.loadenv_bundle: manifest scope only; a spec reaches a bundle it declared with envy.loadenv_spec(identity, module)
+envy.loadenv_bundle: no bundle alias 'tolos' in the BUNDLES table of /src/app/envy.lua; declare it above the call, since a manifest is read top to bottom
+```
+
+A bundle with a [custom fetch](/concepts/dependencies/fetch-dependencies) is
+refused by name, because its fetch function needs a phase to run in and its
+`source.dependencies` cannot be ordered this early. A bad module path, a missing
+file, and a parse or execution error report as they do for `envy.loadenv_spec`.
+
+### `ENVY_BUNDLE`
+
+A module that `envy.loadenv_bundle` or `envy.loadenv_spec` loaded out of a bundle
+sees `ENVY_BUNDLE`, naming the bundle it came from. Requires **envy 0.4.7 or
+newer**. It is `nil` everywhere else: in a manifest, in a spec, in anything
+`envy.loadenv` reached, and in a module a bundle's own spec reached with
+`require`, which is plain Lua module loading.
+
+| Field | Value |
+| --- | --- |
+| `identity` | The bundle's identity. |
+| `alias` | What the calling file called it. `nil` under `envy.loadenv_spec`, which resolves by identity. |
+| `root` | Absolute path of the bundle's materialized root. |
+
+It saves a helper from being handed a name its caller already typed:
+
+```lua title="lib/github.lua, inside bundle acme.specs@r1"
+local M = {}
+
+function M.repo(name, repo, ref)
+  return {
+    spec = "acme.github@r0",
+    bundle = ENVY_BUNDLE.alias,      -- whatever the consuming manifest called us
+    vendor = "vendor/" .. name,
+    options = { repo = repo, ref = ref },
+  }
+end
+
+return M
+```
+
+`ENVY_BUNDLE` is readable but is not one of the module's own globals, so a module
+that returns nothing does not hand it back to its caller.
+
 ### `envy.loadenv(module)`
 
-Loads a Lua file next to the calling file and returns its globals. Dots are path
-separators, so `"libs.common.helpers"` means `libs/common/helpers.lua`. Use it
-for shared helper files:
+Loads a Lua file next to the calling file. Dots are path separators, so
+`"libs.common.helpers"` means `libs/common/helpers.lua`. What comes back follows
+[the module rule](#what-a-module-hands-back). Use it for shared helper files:
 
 ```lua title="envy.lua"
 local versions = envy.loadenv("envy.versions")
@@ -493,11 +627,23 @@ PACKAGES = {
 }
 ```
 
+The resolved path has to stay inside the calling file's directory. Since envy
+0.4.6 one that does not is an error rather than a load from wherever it landed:
+
+```text
+envy.loadenv: module '/tmp/outside/helper' resolves outside the calling file's directory: /tmp/outside/helper.lua
+```
+
 **To compose one manifest from another, use
 [`envy.import`](#envyimportpath) instead.** `loadenv` hands back a plain table,
 so an imported entry's relative `source` paths would resolve against the wrong
 directory and its bundle aliases would not resolve at all. Both are silent, and
 both are what `envy.import` exists to fix.
+
+**To reach a helper inside a bundle, use
+[`envy.loadenv_bundle`](#envyloadenv_bundlealias-module) instead.** `loadenv`
+only ever sees files beside the caller, and a manifest's neighbors are the
+project's own files.
 
 ## Options
 

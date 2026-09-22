@@ -67,13 +67,14 @@ Header rules:
 | `DEFAULT_SHELL` | constant, table, or function | Which shell runs string verbs project-wide ([Shells & Scripts](./shells.md)). Read from the root manifest only. |
 | `VENDOR_ROOT` | string | Project-relative directory that `vendor = true` entries are copied into. See [Vendoring](./vendoring.md). Read from the root manifest only. Needs envy 0.4.0. |
 
-Three helpers are available in manifest code:
+Four helpers are available in manifest code:
 
 | Helper | What it does |
 | --- | --- |
 | `envy.abspath("p")` | Resolves `p` against the directory of the file that calls it, not the current directory. A subproject manifest uses it to name its own spec files, so the paths still work when a superproject includes the file. |
 | `envy.import("libs/common")` | Runs another manifest in a sandbox and returns its globals. Its entries keep resolving paths and bundle aliases against it. Needs envy 0.3.0. |
-| `envy.loadenv("a.b")` | Loads `<caller's dir>/a/b.lua` in a sandbox and returns its globals as a table. For shared helper files. |
+| `envy.loadenv("a.b")` | Loads `<caller's dir>/a/b.lua` in a sandbox and hands back what it returned. For shared helper files. |
+| `envy.loadenv_bundle("alias", "a.b")` | The same, for a file inside a [bundle](./dependencies/bundles.md) the manifest declares. Fetches the bundle on the spot. Needs envy 0.4.6. |
 | `envy.extend(t, ...)` | Appends the array items of each argument onto `t`. Use it to add entries to an inherited `PACKAGES` list. |
 
 ## Package entries

@@ -14,10 +14,13 @@ everything including envy itself. No install step, no server, no registry, no
 lockfile. Committed bootstrap script `<bin>/envy` (plus `envy.bat`) downloads the
 pinned envy binary on first run.
 
-**Current release: 0.4.5.** This page describes it. Behaviour that changed
-during 0.4.x is marked (`0.4.2+`, `0.4.5+`) because a project may pin something
+**Current release: 0.4.7.** This page describes it. Behaviour that changed
+during 0.4.x is marked (`0.4.2+`, `0.4.6+`) because a project may pin something
 older; anything unmarked has been there since 0.3.0 and is not worth checking.
-`DISPLAY` (0.4.2) is the newest feature — 0.4.3 to 0.4.5 are TUI fixes.
+The newest features are `ENVY_BUNDLE` (0.4.7) and, in 0.4.6,
+`envy.loadenv_bundle`, a loaded module's return value being the result, `vendor`
+on a bundle entry, and a wall-clock fetch-retry budget. 0.4.3 to 0.4.5 are TUI
+fixes.
 
 Releases ship archives, not bare binaries:
 `envy-{linux,darwin}-{x86_64,arm64}.tar.gz` and
@@ -30,7 +33,7 @@ The archived binary keeps mode 0755, so no `chmod` after extracting.
 Everything below is detail on these two files. A manifest:
 
 ```lua
--- @envy version "0.4.5"
+-- @envy version "0.4.7"
 -- @envy sha256sums "9f2c...e10b"
 -- @envy bin "bin"
 -- @envy deploy "true"
@@ -66,7 +69,8 @@ sha. A wrong `@rev` is a hard error, not a fallback.
 Header directives come before the first code line, one per line, exactly
 `-- @envy <key> "<value>"`. `bin` is required. The `sha256` on a `PACKAGES` entry
 pins the SPEC source, not anything the spec then fetches. A bundle entry takes no
-`sha256`/`ref`/`vendor` — the `BUNDLES` declaration carries the pin.
+`sha256`/`ref` — the `BUNDLES` declaration carries the pin — but does take
+`vendor` (0.4.6+).
 
 And a spec:
 
@@ -507,8 +511,10 @@ the cache entry stays authoritative.
 - **envy never prunes.** Moving a destination copies afresh and leaves the old
   one. Removing `vendor` leaves the directory.
 - refusals: `USER_MANAGED` (no cached payload, caught at spec_fetch, names the
-  package), a bundle entry (shape has no `vendor` key), `vendor = ""`, a bad
-  `vendor` type, unknown key in the `vendor` table, non-boolean `auto_sync`.
+  package), `vendor = ""`, a bad `vendor` type, unknown key in the `vendor`
+  table, non-boolean `auto_sync`. A BUNDLE entry vendors from **0.4.6**; before
+  that the key was an unknown-key error there, which took vendoring away from
+  any spec that moved into a bundle.
 - **`VENDOR_ROOT` is root-only**, same rule as `DEFAULT_SHELL`/`PACKAGE_DEPOTS`:
   an `envy.import`ed manifest setting it errors unless the root holds that exact
   value.
@@ -540,10 +546,11 @@ the cache entry stays authoritative.
   (`vendor` 0.4.0+, manifest-only), is
   always a TABLE (no bare-string shorthand), refuses `weak`, and refuses
   `source = { fetch = ... }` (nothing could call it). A `bundle` entry is its own
-  narrower shape: `spec|bundle|options|platforms|setup|needed_by|product` only,
-  so `sha256|ref|vendor` there are unknown-key errors. Spec DEPENDENCIES takes the
-  same minus `platforms` (its own message: platform filtering is a manifest
-  field, gate with `if envy.PLATFORM`) plus `weak`. `source.dependencies` drops
+  narrower shape:
+  `spec|bundle|options|platforms|setup|needed_by|product|vendor` only
+  (`vendor` 0.4.6+), so `sha256|ref` there are unknown-key errors.
+  Spec DEPENDENCIES takes the same minus `platforms` (its own message: platform
+  filtering is a manifest field, gate with `if envy.PLATFORM`) plus `weak`. `source.dependencies` drops
   `needed_by` too (always spec_fetch). A `weak = {...}` fallback is a complete
   strong declaration and refuses `bundle|setup|weak|needed_by`.
 - **envy.product / envy.package / envy.loadenv_spec answer from DIRECT edges
@@ -587,7 +594,11 @@ the cache entry stays authoritative.
   Nothing runs unselected, and the selection is not part of the cache key.
 - bundles: one fetched container of many specs.
   `BUNDLES = { alias = {identity, source, ref} }`, and an entry uses
-  `bundle = "alias"` instead of `source`.
+  `bundle = "alias"` instead of `source`. A bundle also carries Lua under
+  `lib/`: its own specs reach it with `require`, an outside spec with
+  `envy.loadenv_spec(identity, module)` from a phase, and a MANIFEST with
+  `envy.loadenv_bundle(alias, module)` (**0.4.6+**) at global scope. See
+  [lua modules](#lua-modules).
 - **redeclaration must agree about the payload**: two declarations of one
   identity naming different sources error
   (`spec 'x@r1' is declared with conflicting sources in <a> and <b>`), for EVERY
@@ -607,6 +618,54 @@ the cache entry stays authoritative.
   reports
   `Deadlock: no task is running while N wait(s) are blocked:` plus every blocked
   wait and what it waits for.
+
+## lua modules
+
+Four loaders, and the scope each is legal in. The three `envy.*` ones run the
+file in a sandbox and ALWAYS re-execute; only `require` caches.
+
+| call | scope | resolves against |
+| --- | --- | --- |
+| `require(mod)` | a spec INSIDE a bundle | the bundle root, on `package.path` |
+| `envy.loadenv(mod)` | anywhere, incl. `envy lua` | the CALLING FILE's directory |
+| `envy.loadenv_spec(id, mod)` | spec PHASE functions only | a declared dependency's root (the bundle root when it came from one) |
+| `envy.loadenv_bundle(alias, mod)` | manifest GLOBAL SCOPE only (**0.4.6+**) | a `BUNDLES` alias of the calling file |
+
+- **what comes back (0.4.6+)**: the module's RETURN VALUE when it returned a
+  table, the globals it assigned when it returned nothing, an error naming the
+  module for anything else — the rule `require` teaches. Before 0.4.6
+  `loadenv`/`loadenv_spec` handed back the globals REGARDLESS, so the ordinary
+  `local M = {} ... return M` came back `{}` and failed later as `attempt to
+  call a nil value`; a module serving both callers had to assign a global AND
+  return a table. That double assignment is now dead weight, not an error.
+- `mod` is Lua dot syntax for `loadenv_spec`/`loadenv_bundle`: no separators, no
+  `..`, no leading or trailing `.`, and the joined path is re-checked against
+  the load root. `loadenv` is looser (a separator works) but from 0.4.6 also
+  cannot escape the calling file's directory.
+- **`envy.loadenv_bundle`** materializes the bundle DURING the manifest's global
+  scope, earlier than any other bundle fetch, so a helper's entries go straight
+  into `PACKAGES`. Declare `BUNDLES` ABOVE the call (a manifest is read top to
+  bottom). An imported fragment resolves its own `BUNDLES` against its own file,
+  then the root's against the root. A `local.` bundle is read in place; every
+  other shape lands in the cache the bundle's own package later finds complete.
+  Refusals: called outside manifest scope (points at `loadenv_spec`), alias
+  absent (names alias + file), CUSTOM-FETCH bundle (its fetch needs a phase).
+  Trace: `lua_ctx_loadenv_bundle`.
+- an entry a helper RETURNS parses exactly like a literal one: its `bundle`
+  names an alias of the CONSUMING manifest (possibly a different bundle), and it
+  may carry `vendor` (0.4.6+).
+- **`ENVY_BUNDLE`** (**0.4.7+**): set in a module `loadenv_bundle` or
+  `loadenv_spec` loaded out of a bundle, `{ identity, alias, root }`. `alias` is
+  what the CALLING file called the bundle, `nil` under `loadenv_spec` (which
+  resolves by identity). The whole global is `nil` where no bundle is involved —
+  a manifest, a spec, anything `envy.loadenv` reached, and anything a bundle's
+  own spec reached with plain `require`. It lets a bundled entry builder write
+  `bundle = ENVY_BUNDLE.alias` instead of taking a name its caller already
+  typed. Readable but NOT one of the module's own globals, so a module that
+  returns nothing does not leak it into the caller's table (or into an entry's
+  `options`, which would put a cache path in the cache key).
+- `ENVY_SHELL`, `ENVY_IMPORTER` and `ENVY_BUNDLE` are the only bare globals envy
+  installs.
 
 ## CLI
 
@@ -685,12 +744,24 @@ where optional = the whole manifest.
   `version`, `mirror-envy`.
 - fetch retries: transport failures retry (`connect`, `transfer`, `timeout`,
   HTTP 5xx, 429); every other 4xx and any malformed-URL or local error is fatal.
-  Tune with `ENVY_FETCH_ATTEMPTS` (default 3) and `ENVY_FETCH_RETRY_BASE_MS`
-  (default 1000); `s3://` is excluded, the AWS SDK retrying itself.
+  From **0.4.6** a WALL-CLOCK budget ends the loop, not the attempt count:
+  `ENVY_FETCH_BUDGET_MS` (default 90000) measured from the FIRST failure, so an
+  attempt burning its own connect timeout spends it too. `ENVY_FETCH_ATTEMPTS`
+  is now a ceiling (default 10, was 3). A `connect` failure is capped at 5s
+  instead (a host that will not handshake is down, not busy). Backoff doubles
+  (1x/2x/4x `ENVY_FETCH_RETRY_BASE_MS`, default 1000) ±50%, max 30s per wait;
+  `Retry-After` is a jittered FLOOR, and one longer than the budget's remainder
+  ends the fetch. `s3://` is excluded, the AWS SDK retrying itself. A waiting
+  package draws a countdown row, `retry 2 in 6s (http_status) tool.tar.gz`, so a
+  90s wait does not read as a hang. A non-status transport error carries the
+  status and Content-Type that did arrive
+  (`... after 0 of 54881 bytes (HTTP 200, text/html)`), which is how a 200 HTML
+  interstitial tells itself apart from a network fault.
 - editor support: `init` writes `.luarc.json` with three platform cache paths and
   envy's LuaCATS type definitions on `workspace.library`; `sync`/`deploy` rewrite
   stale `envy/<semver>` entries and preserve everything else. Delete the file to
-  opt out. `BUNDLES` is not in the default `diagnostics.globals` list.
+  opt out. `BUNDLES` is not in the default `diagnostics.globals` list;
+  `ENVY_BUNDLE` is, from 0.4.7.
 
 Superprojects: nested `envy.lua` manifests compose. A sub-manifest sets `@envy
 root "false"`, and the superproject imports it via
@@ -725,7 +796,8 @@ PAYLOAD's verdict (`cache_hit`, `installed`, `imported`, ...) regardless of what
 the row on screen said.
 
 Env vars read: `ENVY_CACHE_ROOT`, `ENVY_MIRROR`, `ENVY_IGNORE_DEPOT`,
-`ENVY_NO_REEXEC`, `ENVY_FETCH_ATTEMPTS`, `ENVY_FETCH_RETRY_BASE_MS`; hook-only
+`ENVY_NO_REEXEC`, `ENVY_FETCH_BUDGET_MS` (0.4.6+), `ENVY_FETCH_ATTEMPTS`,
+`ENVY_FETCH_RETRY_BASE_MS`; hook-only
 `ENVY_SHELL_HOOK_DISABLE`, `ENVY_SHELL_NO_ENTER_EXIT_ANNOUNCE`,
 `ENVY_SHELL_NO_ICON`. Written: `ENVY_PROJECT_ROOT` and `PATH`, by `envy run`, the
 shell hook, and every deployed product script.
@@ -735,7 +807,7 @@ env, cwd, shell})`, `envy.fetch(src, {dest})`, `envy.commit_fetch`,
 `envy.verify_hash`, `envy.extract`, `envy.extract_all(src, dst, {strip, only})`,
 `envy.copy/move/remove/exists`, `envy.path.*`, `envy.abspath`,
 `envy.template(str, vars)`, `envy.product(name)`, `envy.package(identity)`,
-`envy.options(schema)`, `envy.loadenv` (helper files; NOT manifest composition,
-see `envy.import`), `envy.loadenv_spec(identity, module)`
-(returns a module's globals out of a declared dependency), and constants `envy.PLATFORM`
-(`darwin|linux|windows`), `envy.ARCH`, `envy.PLATFORM_ARCH`, `envy.EXE_EXT`.
+`envy.options(schema)`, the module loaders `envy.loadenv` /
+`envy.loadenv_spec` / `envy.loadenv_bundle` (see [lua modules](#lua-modules)),
+and constants `envy.PLATFORM` (`darwin|linux|windows`), `envy.ARCH`,
+`envy.PLATFORM_ARCH`, `envy.EXE_EXT`.

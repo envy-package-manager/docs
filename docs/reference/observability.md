@@ -204,6 +204,7 @@ version.
 | `lua_ctx_package_access` | `target`, `current_phase`, `needed_by`, `allowed`, `reason` |
 | `lua_ctx_product_access` | `target`, `provider`, `current_phase`, `needed_by`, `allowed`, `reason` |
 | `lua_ctx_loadenv_spec_access` | `target`, `subpath`, `current_phase`, `needed_by`, `allowed`, `reason` |
+| `lua_ctx_loadenv_bundle` | `alias`, `target`, `subpath`, `root`. A manifest reaching into a bundle before its own global scope has finished, via [`envy.loadenv_bundle`](./lua-api.md#envyloadenv_bundlealias-module). `alias` is the `BUNDLES` key it named, `root` where the payload landed. Requires envy 0.4.6. |
 
 **Depot, products, deploy**
 

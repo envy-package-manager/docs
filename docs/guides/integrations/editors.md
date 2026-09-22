@@ -128,6 +128,7 @@ the same result.
 | `OPTIONS`, `USER_MANAGED`, `EXPORTABLE`, `VENDOR`, `DISPLAY` | specs |
 | `PACKAGES`, `DEFAULT_SHELL`, `PACKAGE_DEPOTS`, `VENDOR_ROOT` | manifests |
 | `ENVY_IMPORTER` | an imported manifest, set by [`envy.import`](/reference/lua-api#envyimportpath) |
+| `ENVY_BUNDLE` | a module loaded out of a bundle, from envy 0.4.7. See [`ENVY_BUNDLE`](/reference/lua-api#envy_bundle). |
 | `ENVY_SHELL` | both, the shell constants |
 
 The list `init` writes covers the common ones. Add what your project uses, for
@@ -137,7 +138,8 @@ bundle repo:
 ```json
 "diagnostics.globals": [
   "envy", "IDENTITY", "PACKAGES", "BUNDLES", "DEPENDENCIES", "PRODUCTS",
-  "FETCH", "STAGE", "BUILD", "INSTALL", "SETUP", "ENVY_IMPORTER"
+  "FETCH", "STAGE", "BUILD", "INSTALL", "SETUP", "ENVY_IMPORTER",
+  "ENVY_BUNDLE"
 ]
 ```
 
