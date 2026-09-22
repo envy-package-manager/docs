@@ -79,10 +79,14 @@ An imported entry keeps resolving against the manifest that declared it:
 - `bundle = "envy"` in the component resolves against the component's own
   `BUNDLES`. The root does not re-export it, and it can define its own `envy`
   alias pointing somewhere else.
+- A custom fetch in the component is cached under the component's file, not the
+  root's. Needs envy 0.3.1.
+- A helper module the component loads, with `envy.loadenv` or
+  `envy.loadenv_bundle`, reads the component's globals, `VENDOR_ROOT` included.
+  Needs envy 0.4.8. Before that the helper read the root manifest's globals.
 
-Everything else names the superproject: the project root, the `SETUP` working
-directory, and custom-fetch cache keys. The component supplies declarations, not
-a second project.
+Everything else names the superproject: the project root and the `SETUP` working
+directory. The component supplies declarations, not a second project.
 
 :::note[Upgrading from `envy.loadenv`]
 
