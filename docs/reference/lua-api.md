@@ -576,8 +576,14 @@ envy.loadenv_bundle: no bundle alias 'tolos' in the BUNDLES table of /src/app/en
 
 A bundle with a [custom fetch](/concepts/dependencies/fetch-dependencies) is
 refused by name, because its fetch function needs a phase to run in and its
-`source.dependencies` cannot be ordered this early. A bad module path, a missing
-file, and a parse or execution error report as they do for `envy.loadenv_spec`.
+`source.dependencies` cannot be ordered this early:
+
+```text
+envy.loadenv_bundle: bundle 'acme.cf@r1' uses a custom fetch, which needs a phase to run in; only a spec reaches one of those, with envy.loadenv_spec
+```
+
+A bad module path, a missing file, and a parse or execution error report as they
+do for `envy.loadenv_spec`.
 
 ### `ENVY_BUNDLE`
 
