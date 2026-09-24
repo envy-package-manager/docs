@@ -223,6 +223,7 @@ envy.extract_all(src_dir, dest_dir, opts?)
 | --- | --- |
 | `strip` | Drop this many leading path components. |
 | `only` | Extract just these archive-relative paths or globs, matched after `strip`. A directory brings its subtree. A leading `!` excludes. |
+| `archives` | `envy.extract_all` only. Filenames or globs in `src_dir` to unpack whatever their extension, such as `"*.whl"`. A leading `!` keeps a file whole. Since envy 0.4.9. |
 
 `only` globs support `*` and `?` within one component, `**` across components,
 and `[a-z]` or `[!a-z]` classes.
