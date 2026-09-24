@@ -13,10 +13,9 @@ envy = per-project package manager. Lua manifest `envy.lua` at project root pins
 everything incl. envy itself. No install step, server, registry, lockfile.
 Committed bootstrap `<bin>/envy` + `envy.bat` downloads pinned envy on first run.
 
-**Current release 0.4.8.** `(0.4.N+)` = minimum version, check the project's
-`@envy version`. Unmarked = 0.3.0+. Newest: module reads the loading file's
-globals (0.4.8), `ENVY_BUNDLE` (0.4.7), `envy.loadenv_bundle` / module return value /
-`vendor` on bundle entries / fetch-retry budget (0.4.6).
+**Current release 0.4.9.** `(0.4.N+)` = minimum version, check the project's
+`@envy version`. Unmarked = 0.3.0+. Newest: `STAGE`/`extract_all` `archives`
+(0.4.9), module reads the loading file's globals (0.4.8), `ENVY_BUNDLE` (0.4.7).
 
 Release assets under
 `https://github.com/envy-package-manager/envy/releases/download/v<ver>/`:
@@ -26,7 +25,7 @@ Release assets under
 ## manifest + spec
 
 ```lua
--- @envy version "0.4.8"
+-- @envy version "0.4.9"
 -- @envy sha256sums "9f2c...e10b"
 -- @envy bin "bin"
 -- @envy deploy "true"
@@ -263,7 +262,7 @@ Same manifest, specs, cache layout. Not a port.
 | Verb | string | table | function | omitted |
 |---|---|---|---|---|
 | `FETCH(tmp_dir, opts)` | one URL, unverified | `{source, sha256?, ref?, dest?, post_data?}` or array | imperative, or return any declarative form | error unless `USER_MANAGED` |
-| `STAGE(fetch_dir, stage_dir, tmp_dir, opts)` | shell | `{strip=N, only={globs}}` | programmatic | extract all fetched archives |
+| `STAGE(fetch_dir, stage_dir, tmp_dir, opts)` | shell | `{strip=N, only={globs}, archives={globs}}` | programmatic | extract all fetched archives |
 | `BUILD(install_dir, stage_dir, fetch_dir, tmp_dir, opts)` | shell, cwd = stage | no | may return string → shell | no-op |
 | `INSTALL(install_dir, stage_dir, fetch_dir, tmp_dir, opts)` | shell | no | may return string → shell | promote stage to install dir |
 | `SETUP.<name>.CHECK(pkg_dir, opts)` | shell, exit 0 = satisfied | no | bool, or string → shell | pair needs CHECK + INSTALL |
@@ -281,6 +280,10 @@ Same manifest, specs, cache layout. Not a port.
   `attempt to index a nil value (field 'target')`, and `required` does NOT save
   you (OPTIONS has not run). Guard every read. `DISPLAY` runs AFTER OPTIONS,
   gets the checked table.
+- fetched file = archive by EXTENSION (`.tar.*`, `.zip`, `.7z`, bare `.gz`...),
+  else copied whole, so `.whl`/`.jar`/`.nupkg` stay zipped. `archives` (0.4.9+,
+  table STAGE + `envy.extract_all`): filename globs unpack anyway, `!` keeps
+  whole, unmatched include = error. Older envy ignores the key.
 
 ## output
 
@@ -562,7 +565,7 @@ install deploy vendor product package run export import use cache shell`.
 
 `envy.run(script|{lines}, {quiet, check, capture, interactive, env, cwd, shell})`,
 `envy.fetch(src, {dest})`, `envy.commit_fetch`, `envy.verify_hash`,
-`envy.extract`, `envy.extract_all(src, dst, {strip, only})`,
+`envy.extract`, `envy.extract_all(src, dst, {strip, only, archives})`,
 `envy.copy/move/remove/exists/is_file/is_dir`, `envy.path.*`, `envy.abspath`,
 `envy.template(str, vars)`, `envy.product(name)`, `envy.package(identity)`,
 `envy.options(schema)`, `envy.import`, `envy.extend`, loaders (see

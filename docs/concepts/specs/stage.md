@@ -50,6 +50,7 @@ instead of 10 GB of disk.
 | --- | --- |
 | `strip` | Leading path components to remove. Must be 0 or greater. |
 | `only` | Archive-relative paths or globs. Must list at least one entry if present. A leading `!` excludes. |
+| `archives` | Fetched filenames or globs to unpack whatever their extension. A leading `!` keeps a file whole. Since envy 0.4.9. See [Archive formats](#archive-formats). |
 
 Glob rules:
 
@@ -103,7 +104,8 @@ end
 
 `envy.extract_all(src_dir, dest_dir, opts?)` extracts every archive in a
 directory. `envy.extract(archive, dest_dir, opts?)` extracts one and returns the
-file count. Both accept the same `{ strip, only }` options as the table form.
+file count. Both accept the table form's `strip` and `only`, and
+`envy.extract_all` also takes `archives`.
 
 A function `STAGE` can also do nothing, which is how a spec says "this platform
 needs no staging":
@@ -137,6 +139,19 @@ Everything libarchive reads: `tar`, `tar.gz`, `tar.xz`, `tar.bz2`, `tar.zst`,
 `zip`, `7z`, `rar`, `iso`, and bare compressed streams. envy detects the format
 from content rather than the filename. A `.tgz` that is really a zip still works.
 Permissions, timestamps, and symlinks are preserved.
+
+Whether envy unpacks a fetched file at all depends on its extension, such as
+`.tar.gz`, `.zip`, or `.7z`. envy copies any other file into the package whole.
+A Python wheel, a `.jar`, and a `.nupkg` are zips under another name. To unpack
+one, name it in `archives`:
+
+```lua
+STAGE = { archives = { "*.whl" } }
+```
+
+An `archives` entry that matches no fetched file is an error. When an `only`
+list matches nothing, the error names any file that envy copied whole but could
+have read as an archive.
 
 ## See also
 
