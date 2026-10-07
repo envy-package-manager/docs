@@ -209,7 +209,8 @@ for src in pathlib.Path("templates").glob("*.in"):
          envy.import(...).DEFAULT_SHELL)
   ```
 
-  `PACKAGE_DEPOTS` is root-only for the same reason. See
+  `VENDOR_ROOT` works the same way. `PACKAGE_DEPOTS` is also root-only, but from
+  envy 0.4.12 an imported one is ignored instead of failing. See
   [`envy.import`](../reference/lua-api.md#envyimportpath).
 - **`envy.product` and `envy.package` both work inside `SHELL`.** envy
   synthesizes a consumer for the manifest-wide shell, holding an edge to each

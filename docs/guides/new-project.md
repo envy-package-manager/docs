@@ -97,7 +97,7 @@ Then sync:
 
 ```shell-session
 $ envy sync
-[envy.package-specs@r3] fetched (1.4s)
+[envy.package-specs@r3] installed (1.4s)
 [envy.cmake@r0] installed (8.2s)
 deploy: 3 product script(s) (3 created, 0 updated, 0 unchanged, 0 removed)
 $ cmake --version

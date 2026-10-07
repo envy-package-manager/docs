@@ -266,9 +266,8 @@ bootstrap.
 ## Vendoring is per repo, not per component
 
 [`VENDOR_ROOT`](/concepts/vendoring) is read from the root manifest only, like
-`DEFAULT_SHELL` and `PACKAGE_DEPOTS`, and every destination is anchored on that
-manifest's directory. A component that sets it has to splice the value up, or the
-import is an error:
+`DEFAULT_SHELL`, and every destination is anchored on that manifest's directory.
+A component that sets it has to splice the value up, or the import is an error:
 
 ```lua title="envy.lua"
 VENDOR_ROOT = common.VENDOR_ROOT
@@ -283,6 +282,23 @@ standalone and `third_party/nanocobs` when the superproject drives it. Unlike
 The simple answer is to declare vendoring in the root manifest, where the paths
 mean one thing. A component that has to vendor standalone as well can gate the
 path on `ENVY_IMPORTER`, the same way it gates a standalone-only entry.
+
+## The root manifest picks the depots
+
+A component can declare the [depot](/concepts/depots) it uses standalone. When a
+superproject imports the component, envy ignores that depot. It does not fetch
+the index or build the depot's `DEPENDS`. This needs envy 0.4.12. Earlier
+versions failed the import unless the root assigned the same value.
+
+To use the component's depot, assign it in the root manifest. To use it with the
+root's own depot, merge the lists:
+
+```lua title="envy.lua"
+PACKAGE_DEPOTS = envy.extend({ "s3://acme-envy-packages/packages.txt" },
+                             common.PACKAGE_DEPOTS)
+```
+
+Using a depot means trusting its prebuilt artifacts.
 
 ## See also
 

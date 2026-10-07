@@ -104,6 +104,18 @@ A pair is therefore idempotent, and `CHECK` is the only re-run gate. Nothing
 about a pair is cached: its lock entry is ephemeral and always purged, so every
 `sync` re-asks the question. Keep `CHECK` a fast query rather than a full audit.
 
+While `INSTALL` runs, its row shows the package's `[identity]` and the spec's
+[`DISPLAY`](../../reference/spec-globals.md#display). On success the row goes
+away and the package row says `setup complete`. On failure the row keeps its
+last output, and the error names the pair:
+
+```text
+error: SETUP.udev_rules.INSTALL shell script failed for acme.jlink@r1 (exit code 1)
+```
+
+Before envy 0.4.10 the label also held the options and pair name, as in
+`[acme.jlink@r1{["version"]="9.30"}#setup:udev_rules]`.
+
 ## Selection lives in the manifest
 
 Pairs are opt-in per project, by name:
