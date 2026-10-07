@@ -475,21 +475,32 @@ is `PACKAGES` and `BUNDLES` and anything else it set. Only `PACKAGES` and
 `BUNDLES` carry import bookkeeping. Assign the rest yourself:
 
 ```lua
-PACKAGE_DEPOTS = common.PACKAGE_DEPOTS
+VENDOR_ROOT = common.VENDOR_ROOT
 ```
 
-`PACKAGE_DEPOTS`, `DEFAULT_SHELL`, and `VENDOR_ROOT` (from envy 0.4.0) are read
-from the root manifest's globals and nowhere else, so from envy 0.3.1 on, leaving
-one behind in the sandbox is an error rather than a silent drop:
+envy reads `DEFAULT_SHELL` and `VENDOR_ROOT` from the root manifest only. An
+imported manifest that sets one is an error unless the root assigns the same
+value:
 
 ```text
-error: envy.import: /src/libs/common/envy.lua sets PACKAGE_DEPOTS, which is read
-       only from the root manifest; assign it there (e.g. PACKAGE_DEPOTS =
-       envy.import(...).PACKAGE_DEPOTS)
+error: envy.import: /src/libs/common/envy.lua sets VENDOR_ROOT, which is read
+       only from the root manifest; assign it there (e.g. VENDOR_ROOT =
+       envy.import(...).VENDOR_ROOT)
 ```
 
-Splicing the value up, as above, satisfies the check. So does the root assigning
-its own.
+Assigning it as above fixes the error. A different value in the root does not.
+
+`PACKAGE_DEPOTS` is also root-only, but from envy 0.4.12 an imported one is not
+an error. envy ignores it. It does not fetch the index or build the depot's
+`DEPENDS`. To use it, assign it in the root, or merge it with the root's own:
+
+```lua
+PACKAGE_DEPOTS = envy.extend({ "s3://acme-envy-packages/packages.txt" },
+                             common.PACKAGE_DEPOTS)
+```
+
+`envy.extend` rejects `nil`, so only merge components that declare a depot. An
+imported depot's `FETCH` function reads its own manifest's globals.
 
 An imported entry stays tied to the file that wrote it:
 
@@ -590,14 +601,14 @@ earlier than envy fetches bundles for anything else. A bundle whose identity
 starts with `local.` and whose source is a directory is read where it stands, so
 edits to it land without a copy. Every other shape goes into the cache, where the
 bundle's own package finds it complete a moment later, so nothing is fetched
-twice. A fetch this early has no package row to report on, so it says so in one
-line:
+twice. The fetch shows a progress bar, then an outcome row like any package:
 
 ```text
-bundle acme.specs@r1: fetching, the manifest reads it
+[acme.specs@r1] installed (1.2s)
 ```
 
-A cache hit stays quiet.
+A cache hit prints nothing. Before envy 0.4.11 the fetch printed
+`bundle acme.specs@r1: fetching, the manifest reads it` and no progress bar.
 
 Calling it anywhere but a manifest's top level, or naming an alias the calling
 file does not have, is an error that says which:

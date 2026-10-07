@@ -121,7 +121,7 @@ envy git-resolve https://github.com/acme/specs refs/heads/main
 | `spec 'x@r1' depends on 'y@r1' twice with different options` | One dependency list names an identity under two option sets. | Pick one, or give the second a distinct spec revision. |
 | `Dependency cannot specify 'platforms'` | `platforms` filters manifest `PACKAGES` entries only. | Wrap the entry in `if envy.PLATFORM == ... then`. |
 | `Package: unknown key 'x'; allowed keys are ...` | A typo, or a field that belongs on a different entry shape. | The message lists what this shape accepts. |
-| `envy.import: <file> sets DEFAULT_SHELL, which is read only from the root manifest` | An imported manifest declared a root-only global. | Splice it up: `DEFAULT_SHELL = envy.import("sub").DEFAULT_SHELL`. |
+| `envy.import: <file> sets DEFAULT_SHELL, which is read only from the root manifest` | An imported manifest set `DEFAULT_SHELL` or `VENDOR_ROOT`, and the root did not assign the same value. | Assign it in the root: `DEFAULT_SHELL = envy.import("sub").DEFAULT_SHELL`. |
 | `spec 'x@r1' is declared with conflicting sources in a and b` | Two declarations of one identity name different payloads. | Correct one. The two files named are the ones that wrote the entries. |
 | `Deadlock: no task is running while N wait(s) are blocked:` | A scheduling bug, not a manifest error. | The report lists every blocked wait and what it waits for. File it with the manifest and that list. |
 

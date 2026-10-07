@@ -221,7 +221,8 @@ DISPLAY = function(options) return options.repo end
 
 It appears on the outcome line as well, including when envy is not writing to a
 terminal. That is the case that matters in CI, where without it four instances
-of one spec produce four identical `[acme.github@r0]` lines.
+of one spec produce four identical `[acme.github@r0]` lines. From envy 0.4.10 it
+also labels the package's [`SETUP`](/concepts/specs/setup) pair rows.
 
 `DISPLAY` only labels the rows. A spec instantiated several times must still
 give each instance its own

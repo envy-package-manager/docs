@@ -13,9 +13,9 @@ envy = per-project package manager. Lua manifest `envy.lua` at project root pins
 everything incl. envy itself. No install step, server, registry, lockfile.
 Committed bootstrap `<bin>/envy` + `envy.bat` downloads pinned envy on first run.
 
-**Current release 0.4.9.** `(0.4.N+)` = minimum version, check the project's
-`@envy version`. Unmarked = 0.3.0+. Newest: `STAGE`/`extract_all` `archives`
-(0.4.9), module reads the loading file's globals (0.4.8), `ENVY_BUNDLE` (0.4.7).
+**Current release 0.4.12.** `(0.4.N+)` = minimum version, check the project's
+`@envy version`. Unmarked = 0.3.0+. Newest: imported `PACKAGE_DEPOTS` inert
+(0.4.12), bundle/SETUP pair rows = package rows (0.4.10-11), `archives` (0.4.9).
 
 Release assets under
 `https://github.com/envy-package-manager/envy/releases/download/v<ver>/`:
@@ -25,7 +25,7 @@ Release assets under
 ## manifest + spec
 
 ```lua
--- @envy version "0.4.9"
+-- @envy version "0.4.12"
 -- @envy sha256sums "9f2c...e10b"
 -- @envy bin "bin"
 -- @envy deploy "true"
@@ -274,7 +274,8 @@ Same manifest, specs, cache layout. Not a port.
   `VENDOR` (selectors: what of `pkg/` a vendoring manifest copies), `DISPLAY`
   (0.4.2+).
 - SETUP = host work that is NOT part of the package hash. Runs only if selected
-  (`setup = {"pair"}` on the entry).
+  (`setup = {"pair"}` on the entry). Pair row = `[identity]` + DISPLAY, gone on
+  success (0.4.10+). Fail: `SETUP.<name>.INSTALL shell script failed for <id>`.
 - **PRODUCTS runs BEFORE OPTIONS**, gets the entry's options raw: unvalidated,
   no defaults, `{}` if none. Every key may be nil. `opts.target:lower()` →
   `attempt to index a nil value (field 'target')`, and `required` does NOT save
@@ -298,10 +299,10 @@ Same manifest, specs, cache layout. Not a port.
   Adds to identity, reaches the outcome line. One printable line: any byte
   `< 0x20` or `0x7f` = error. No spec sets one = no column.
 - **no work = no row (0.4.2+).** Rows only for timed outcomes (`installed`,
-  `fetched`, `imported from depot`), a SETUP pair that ran, a vendor copy that
-  wrote. `cache hit`, `setup complete`, `local bundle` silent. Warm `install`
-  writes NOTHING to the terminal (0.4.3+). `deploy:` summary only when a wrapper
-  changed. **Silence ≠ failure: check exit code.**
+  bundles too 0.4.11+, `imported from depot`), a SETUP pair that ran, a vendor
+  copy that wrote. `cache hit`, `setup complete`, `local bundle` silent. Warm
+  `install` writes NOTHING to the terminal (0.4.3+). `deploy:` summary only when
+  a wrapper changed. **Silence ≠ failure: check exit code.**
 - off a TTY every package reports, cache hits too: piped run lists MORE than
   terminal. `--verbose` narrates all.
 - short/empty CI log: stderr not captured (`2>&1`), global `-q`, Windows `>`
@@ -428,9 +429,9 @@ absolute path, skip this. Copy, not move/link. Cache stays authoritative.
 - `loadenv_bundle`: fetches the bundle DURING manifest global scope, so entries
   go straight into PACKAGES. `BUNDLES` must be assigned ABOVE the call. Fragment:
   own `BUNDLES` then root's. `local.` dir bundle read in place, else cached once.
-  Prints `bundle <id>: fetching, the manifest reads it`. Refused: outside
-  manifest scope, unknown alias (names alias + file), custom-fetch bundle.
-  Trace `lua_ctx_loadenv_bundle`.
+  Row: bar → `installed (Xs)` (0.4.11+), hit silent. Refused: outside manifest
+  scope, unknown alias (names alias + file), custom-fetch bundle. Trace
+  `lua_ctx_loadenv_bundle`.
 - returned entries parse like literal ones: `bundle` = CONSUMER's alias (any,
   even another bundle), `vendor` ok.
 - **`ENVY_BUNDLE`** (0.4.7+): `{ identity, alias, root }` in a module that
@@ -476,8 +477,12 @@ options-hash names.
   messages) and custom-fetch cache key = imported file. Project root, SETUP cwd
   = root.
 - only `PACKAGES`/`BUNDLES` tagged, splice others by hand. Root-only
-  `PACKAGE_DEPOTS`/`DEFAULT_SHELL`/`VENDOR_ROOT`: set in an import without the
-  root holding that value = error. `VENDOR_ROOT = sub.VENDOR_ROOT`.
+  `DEFAULT_SHELL`/`VENDOR_ROOT` set in an import: root must assign SAME value,
+  else error. `VENDOR_ROOT = sub.VENDOR_ROOT`.
+- imported `PACKAGE_DEPOTS` (0.4.12+): ignored until root assigns it. No fetch,
+  no DEPENDS build, no error, no `ENVY_IMPORTER` gate needed. Merge:
+  `envy.extend({...}, a.PACKAGE_DEPOTS, b.PACKAGE_DEPOTS)`, nil arg = error.
+  Using a depot = trusting its artifacts.
 - `ENVY_IMPORTER` = importer's absolute path in the imported file (and in modules
   it loads, 0.4.8+), `nil` standalone. `if not ENVY_IMPORTER then` = standalone
   gate.
