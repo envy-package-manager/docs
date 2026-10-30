@@ -99,12 +99,31 @@ event carrying the same classification. See
 
 **A git source will not resolve**
 
-A git source needs a full commit sha in `ref`. Branches and tags are not
-reproducible, and a short sha can be ambiguous. Resolve it once:
+A git source needs a full commit sha in `ref`. From envy 0.5.0 a short sha is an
+error:
+
+```text
+error: Failed to fetch git spec: git-resolve: ref not found: ded36a39bbf1; a git ref must be a full commit sha or an advertised branch or tag (`envy git-resolve` pins one)
+```
+
+Branch and tag names still work, but they move. Resolve the name once and pin
+the sha:
 
 ```bash
 envy git-resolve https://github.com/acme/specs refs/heads/main
 ```
+
+**A submodule directory is empty**
+
+A git source checks out no submodules unless asked. Add `submodules = true`, or
+a list of selectors, next to its `ref`. When the key goes into a spec's `FETCH`
+for a package that is already installed, bump the spec's revision too. Editing
+`FETCH` does not change the cache key. See
+[Submodules](/concepts/specs/fetch#submodules).
+
+`submodule selector matched nothing: <selector>` means an include names no
+submodule in the tree. Check the path against the parent's `.gitmodules`, and
+remember an excluded submodule hides everything nested in it.
 
 ## Resolution
 
@@ -250,7 +269,7 @@ itself is the same.
 **Several rows in my log are the same `[identity]` and I cannot tell them apart**
 
 That is one spec instantiated several times. Give the spec a
-[`DISPLAY`](./spec-globals.md#display) — a function of its options — and each
+[`DISPLAY`](./spec-globals.md#display), a function of its options, and each
 row will name the instance it is working on.
 
 **`DISPLAY must be a single line of printable text`**

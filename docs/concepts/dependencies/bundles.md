@@ -39,6 +39,7 @@ moves together.
 | `identity` | Required. The bundle's own identity, which the bundle file must declare. |
 | `source` | Required. A git URL, an https URL, a local path, or a `{ fetch, dependencies }` table. |
 | `ref` | Required for a git source. A full commit sha. |
+| `submodules` | Git sources only. `true`, or a list of path selectors, for a bundle repository that pulls specs in as submodules. See [Submodules](../specs/fetch.md#submodules). Requires envy 0.5.0. |
 | `sha256` | Integrity pin for an archive source. |
 
 An alias is scoped to the manifest that wrote it. An entry pulled in with

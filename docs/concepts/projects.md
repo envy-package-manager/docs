@@ -89,6 +89,7 @@ from.
 | `source` | string \| table | Where the spec file comes from. A URL, a local path, a git URL, or a table `{ fetch = function, dependencies = { ... } }` for a spec that has to be fetched by code. See [fetch dependencies](./dependencies/fetch-dependencies.md). Mutually exclusive with `bundle` and with `weak`. |
 | `bundle` | string \| table | Take the spec from a [bundle](./dependencies/bundles.md). Either a `BUNDLES` alias or an inline declaration table. Mutually exclusive with `source`. |
 | `ref` | string | Commit sha. **Required** when `source` is a git URL. |
+| `submodules` | boolean \| array of string | Git sources only. Check out the repository's submodules, `true` for all or a list of path selectors. See [Submodules](./specs/fetch.md#submodules). Requires envy 0.5.0. |
 | `sha256` | string | Integrity pin for a downloaded spec file. |
 | `options` | table | The settings this package is built with. Part of its identity. Functions are rejected, because options have to hash. |
 | `platforms` | array of string | Restrict this entry to some platforms, for example `"linux"` or `"darwin-arm64"`. See [Platforms](./specs/platforms.md). |

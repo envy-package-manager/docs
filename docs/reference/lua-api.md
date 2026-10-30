@@ -271,7 +271,9 @@ These belong to the `FETCH` phase. See
 
 Downloads one or many sources into `dest` and returns the basename it wrote, or
 an array of them for an array argument. `source` is a URL string, a
-`{ source, sha256, ref, post_data, dest }` table, or an array of either.
+`{ source, sha256, ref, submodules, post_data, dest }` table, or an array of
+either. The table keys mean what they do in a [`FETCH`](/concepts/specs/fetch)
+table. From envy 0.5.0 any other key is an error.
 
 ```lua
 FETCH = function(tmp_dir, opts)

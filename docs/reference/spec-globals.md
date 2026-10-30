@@ -49,8 +49,8 @@ exception is the `tmp_dir` handed to a `source.fetch` function, which does not.
 
 `options` is the validated table everywhere except `PRODUCTS`, which is resolved
 before `OPTIONS` runs and receives the manifest entry's options as written. Guard
-every read in a `PRODUCTS` function —
-[details](/concepts/specs/options#options-in-verbs).
+every read in a `PRODUCTS` function. See
+[Options in verbs](/concepts/specs/options#options-in-verbs).
 
 Return values:
 
@@ -71,11 +71,13 @@ Return values:
 | --- | --- |
 | `source` | URL, local path, or git URL. Required. |
 | `sha256` | Verifies the download, and lets the cache reuse it. |
-| `ref` | Commit for a git source. |
+| `ref` | Required for a git source. A full commit sha, or a branch or tag name. |
+| `submodules` | Git sources only. `true`, or a list of path selectors. See [Submodules](/concepts/specs/fetch#submodules). Requires envy 0.5.0. |
 | `dest` | Rename the downloaded file. A plain filename, no separators. |
 | `post_data` | HTTP POST body. HTTP and HTTPS only. |
 
-An array of these tables fetches several files.
+An array of these tables fetches several files. From envy 0.5.0 any other key is
+an error.
 
 ## `STAGE` table fields
 
@@ -145,6 +147,7 @@ A string value is shorthand for `{ value = "...", script = true }`.
 | `source` | URL, path, git URL, or `{ fetch, dependencies }`. Mutually exclusive with `weak`. |
 | `bundle` | Alias or inline bundle table, when the spec comes from a bundle. |
 | `ref`, `sha256` | Pins for the spec source. |
+| `submodules` | Check out the spec repository's submodules, for a git `source`. Requires envy 0.5.0. |
 | `options` | Part of the dependency's identity. |
 | `needed_by` | `check`, `import`, `fetch`, `stage`, `build`, or `install`. Defaults to `build`. |
 | `product` | Ask for one product rather than the whole package. |
@@ -157,8 +160,8 @@ filtering is a manifest `PACKAGES` field, so a conditional dependency is written
 with `if envy.PLATFORM == ... then` around the entry.
 
 A `source.dependencies` entry is narrower still. It takes `spec`, `source`,
-`options`, `product`, `ref` and `sha256`, and refuses `needed_by`, which a fetch
-prerequisite cannot vary. The table under `weak` is a complete strong
+`options`, `product`, `ref`, `submodules` and `sha256`, and refuses `needed_by`,
+which a fetch prerequisite cannot vary. The table under `weak` is a complete strong
 declaration, so it carries its own `source` and refuses `bundle`, `setup`,
 `weak`, and `needed_by`, which it inherits from the entry above it.
 
@@ -216,7 +219,7 @@ DISPLAY = function(options) return options.repo end
 | Forms | A string, or a function of the validated options. |
 | Resolved | Once, after `OPTIONS` validates, before any fetch. |
 | `nil` | Returning it is the same as omitting `DISPLAY` entirely. |
-| Content | One line of printable text. Any control character — newline, tab, NUL, ESC — is an error, since envy measures the row's width in order to erase it later. |
+| Content | One line of printable text. Any control character (newline, tab, NUL, ESC) is an error, since envy measures the row's width in order to erase it later. |
 | Width | Padded to its own column, so the bars and outcomes below it stay aligned. Keep it short; a long one pushes every row's status to the right. |
 
 It appears on the outcome line as well, including when envy is not writing to a
