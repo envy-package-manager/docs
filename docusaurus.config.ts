@@ -1,9 +1,34 @@
+import {readFileSync, writeFileSync} from 'node:fs';
+import {join} from 'node:path';
 import {themes as prismThemes} from 'prism-react-renderer';
-import type {Config} from '@docusaurus/types';
+import type {Config, Plugin} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const organizationName = 'envy-package-manager';
 const projectName = 'docs';
+
+// Overwrite the built /agents page with the raw markdown in a bare <pre>: no
+// JS, no CSS, no navbar. ~33 KB instead of ~90 KB. The client module turns
+// in-site navigation to /agents into a full page load so humans get it too.
+function agentsPlainHtml({siteDir}: {siteDir: string}): Plugin {
+  return {
+    name: 'agents-plain-html',
+    getClientModules() {
+      return [join(siteDir, 'src/agents-full-load.ts')];
+    },
+    async postBuild({outDir}) {
+      const md = readFileSync(join(siteDir, 'docs/agents.md'), 'utf8')
+        .replace(/^---\n[\s\S]*?\n---\n+/, '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;');
+      writeFileSync(
+        join(outDir, 'agents/index.html'),
+        `<!doctype html>\n<html lang="en">\n<meta charset="utf-8">\n` +
+          `<title>envy for agents</title>\n<pre style="white-space:pre-wrap">\n${md}</pre>\n`,
+      );
+    },
+  };
+}
 
 const config: Config = {
   title: 'envy',
@@ -33,6 +58,8 @@ const config: Config = {
     defaultLocale: 'en',
     locales: ['en'],
   },
+
+  plugins: [agentsPlainHtml],
 
   presets: [
     [

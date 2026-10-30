@@ -8,10 +8,6 @@
   --ifm-color-primary-lightest: #54d100;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
-
-  --envy-status-border: #d97706;
-  --envy-status-bg: #fef6e7;
-  --envy-status-text: #7c4a03;
 }
 
 [data-theme='dark'] {
@@ -23,10 +19,6 @@
   --ifm-color-primary-lighter: #92ff4a;
   --ifm-color-primary-lightest: #a0ff61;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
-
-  --envy-status-border: #fbbf24;
-  --envy-status-bg: #33280d;
-  --envy-status-text: #fcd77a;
 }
 
 .navbar__logo {
@@ -126,35 +118,4 @@
   .screencast-frame__loading::before {
     animation-duration: 2.4s;
   }
-}
-
-.status-banner {
-  margin: 0 0 2.5rem;
-  padding: 1.25rem 1.5rem 1.4rem;
-  border: 2px solid var(--envy-status-border);
-  border-left-width: 8px;
-  border-radius: 8px;
-  background-color: var(--envy-status-bg);
-}
-
-.status-banner__eyebrow {
-  margin: 0;
-  font-size: 0.8rem;
-  font-weight: var(--ifm-font-weight-bold);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--envy-status-text);
-}
-
-.status-banner__headline {
-  margin: 0.15rem 0 0.6rem;
-  font-size: clamp(1.35rem, 4vw, 2rem);
-  font-weight: var(--ifm-font-weight-bold);
-  line-height: 1.15;
-  text-wrap: balance;
-  color: var(--envy-status-text);
-}
-
-.status-banner__body p:last-child {
-  margin-bottom: 0;
 }

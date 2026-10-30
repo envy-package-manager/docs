@@ -12,7 +12,10 @@ Live at <https://envy-package-manager.github.io/docs/>.
 > One asset is still a stand-in: the Open Graph card.
 >
 > `docs/agents.md` is a maximal-density summary of the whole site. Update it
-> whenever behavior changes.
+> whenever behavior changes. The build replaces its page with the raw file in a
+> bare `<pre>` (`agentsPlainHtml` in `docusaurus.config.ts`), so keep it to plain
+> Markdown: no admonitions, no MDX, and no hard wrapping. One line per paragraph
+> or list item; every newline is a token an agent pays for.
 
 ## Requirements
 
