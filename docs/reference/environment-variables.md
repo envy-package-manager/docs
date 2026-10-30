@@ -19,6 +19,7 @@ of these.
 | `ENVY_FETCH_BUDGET_MS` | How long envy keeps retrying one transient download, measured from its first failure. Default 90000, clamped to 0 through 3600000. Requires envy 0.4.6. See [retries](#download-retries). |
 | `ENVY_FETCH_ATTEMPTS` | Ceiling on attempts for one download, counting the first try. Default 10 from envy 0.4.6, 3 before that. Clamped to 1 through 100. The budget is normally what stops a retry loop. |
 | `ENVY_FETCH_RETRY_BASE_MS` | Base backoff between those attempts, in milliseconds. Default 1000, clamped to 0 through 60000. `0` disables the wait. |
+| `ENVY_GIT_TIMEOUT_MS` | How long a git transfer may go without data before it fails as a timeout, in milliseconds. Default 60000, 1 through 3600000. Connecting is capped at 30000 whatever the value. Requires envy 0.5.0. |
 
 All three fetch knobs are read once per process. They exist for CI and for tests
 that cannot afford real backoff.
@@ -123,6 +124,13 @@ wait, jittered upward but never back below what it asked for. A cooldown longer
 than the budget has left ends the fetch rather than coming back early to earn the
 same refusal. `s3://` sources are not retried here, because the AWS SDK already
 retries internally.
+
+Git fetches follow the same rules. From envy 0.5.0 each repository retries on
+its own, so a dropped connection to one [submodule](/concepts/specs/fetch#submodules)
+does not restart the others. envy also bounds git's network waits on every
+platform: 30 seconds to connect, and 60 seconds with no data moving. A git
+server that accepts a connection and then goes quiet fails as a `timeout` and is
+retried, where earlier releases waited on it forever.
 
 Since a minute and a half of silence would read as a hang, a package waiting out
 a backoff says so on its own row, counting down:

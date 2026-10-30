@@ -56,7 +56,9 @@ PACKAGES = {
    git, and a bundle `ref` for a whole bundle of specs.
 3. **Artifacts.** A `sha256` inside each spec's `FETCH`, usually from a
    fingerprint table keyed by version and platform. See
-   [FETCH](./specs/fetch.md#sha256-and-caching).
+   [FETCH](./specs/fetch.md#sha256-and-caching). A git source's `ref` pins its
+   [submodules](./specs/fetch.md#submodules) too, because the commit records
+   theirs.
 4. **Tool versions.** `options`, which are part of the package's identity, so
    changing one names a different package rather than mutating an existing one.
 
@@ -120,8 +122,8 @@ can stamp scripts from a version the manifest does not pin. envy warns when that
 happens.
 
 One case is an error rather than a hand-off. A manifest that resolves a
-[project-local cache](./cache.md) — through `@envy cache-local`, `cache-mode`,
-`state-dir`, or a marker left by `envy cache --local` — while pinning an envy
+[project-local cache](./cache.md), through `@envy cache-local`, `cache-mode`,
+`state-dir`, or a marker left by `envy cache --local`, while pinning an envy
 older than 0.2.0 is refused. That envy does not understand those directives, so
 it would use the shared cache and exit 0, which is exactly what a local cache
 exists to prevent.

@@ -17,7 +17,7 @@ Downloads land in the entry's `fetch/` directory. Several downloads in one
 | Shape | Meaning |
 | --- | --- |
 | string | One URL. The filename comes from the URL. |
-| table | One download `{ source, sha256?, ref?, dest?, post_data? }`, or an array of URLs and tables. |
+| table | One download `{ source, sha256?, ref?, submodules?, dest?, post_data? }`, or an array of URLs and tables. |
 | function `FETCH(tmp_dir, opts)` | Compute the download set and return it, or download imperatively with `envy.fetch` and return nothing. |
 | omitted | Valid only for [user-managed](./user-managed.md) specs. |
 
@@ -43,9 +43,17 @@ FETCH = {
 | --- | --- |
 | `source` | Required. The URL. |
 | `sha256` | Expected hash. Verified on download, and again before reusing a cached file. |
-| `ref` | Commit sha, branch, or tag. Required for git sources. |
+| `ref` | Required for git sources. A full commit sha, or a branch or tag name. See [git sources](#git-sources). |
+| `submodules` | Git sources only. `true` for every submodule, or a list of path selectors. See [submodules](#submodules). Requires envy 0.5.0. |
 | `dest` | Override the filename. Must be a plain filename with no path separators and no `..`. |
 | `post_data` | Body for a POST request. HTTP and HTTPS only. |
+
+From envy 0.5.0 any other key is an error that lists the accepted ones. Earlier
+releases ignored it:
+
+```text
+error: local.grpc-src@r0: unknown key 'submodule'; allowed keys are dest, post_data, ref, sha256, source, submodules
+```
 
 ### table, several downloads
 
@@ -177,18 +185,119 @@ entirely.
 ## git sources
 
 ```lua
-FETCH = { source = "https://github.com/org/tool.git",
-          ref = "7bc9a0bfe050ef97e1712ff61c6f11952799e951" }
+FETCH = {
+  source = "https://github.com/grpc/grpc.git",
+  -- envy git-resolve https://github.com/grpc/grpc v1.85.1
+  ref = "558b7e3b09e42e2160018732acbbf56c9094c84d",
+}
 ```
 
-A `ref` is required. Use
+A `ref` is required. Pin a full commit sha, and use
 [`envy git-resolve`](../../reference/cli/git-resolve.md) to turn a tag or branch
-into the sha you pin. Record the command in a comment so the next person can
-advance it.
+into one. Record the command in a comment so the next person can advance it.
 
-Two things differ from a file download. A clone lands in the staging tree rather
-than `fetch/`. And a fetch containing a git source is not marked cacheable,
-because a repository is a working tree rather than a verifiable artifact.
+A branch or tag name also works, because envy looks it up in the remote's ref
+list. It is not a pin, though, since the name can move. From envy 0.5.0 a short
+sha or an expression such as `HEAD~1` is an error:
+
+```text
+error: Fetch failed for local.grpc-src@r0:
+  https://github.com/grpc/grpc.git: git-resolve: ref not found: 558b7e3b09e4; a git ref must be a full commit sha or an advertised branch or tag (`envy git-resolve` pins one)
+```
+
+envy fetches only the pinned commit, with no history, when the server allows
+it. A commit that a branch or tag points at comes shallow from any server. Any
+other commit comes shallow from servers that accept a fetch by commit id, which
+GitHub, GitLab, and googlesource do. Otherwise envy falls back to the full
+history. A repository on a local path is always fetched in full.
+
+The only tag that comes along is one that names the pinned commit. So
+`git describe --tags` works on a tagged release and fails on other commits. A
+spec that needs a version string should build it from its options.
+
+Two things differ from a file download. The checkout lands in the stage
+directory rather than `fetch/`, in a directory named after the URL's last
+component (`grpc.git` here) unless `dest` renames it. The default `STAGE` and
+`INSTALL` carry it into the package as is, `.git` included. And a fetch
+containing a git source is not marked cacheable, because a repository is a
+working tree rather than a verifiable artifact.
+
+### Submodules
+
+From envy 0.5.0, `submodules = true` checks out every submodule at the commit
+its parent records, and their submodules in turn:
+
+```lua
+FETCH = {
+  source = "https://github.com/grpc/grpc.git",
+  -- envy git-resolve https://github.com/grpc/grpc v1.85.1
+  ref = "558b7e3b09e42e2160018732acbbf56c9094c84d",
+  submodules = true,
+}
+```
+
+For gRPC v1.85.1 that is 39 submodules and about 150 MB of download. No extra
+pin is needed. The parent's commit records each submodule's commit, and every
+object is checked against its hash. One `ref` pins the whole tree.
+
+To take only some of them, list selectors instead. A selector is a path from the
+top of the parent repository, written in envy's selector language (see
+[`STAGE`](./stage.md)). A leading `!` excludes:
+
+```lua
+FETCH = {
+  source = "https://github.com/grpc/grpc.git",
+  -- envy git-resolve https://github.com/grpc/grpc v1.85.1
+  ref = "558b7e3b09e42e2160018732acbbf56c9094c84d",
+  submodules = { "!third_party/bloaty", "!third_party/opentelemetry-cpp" },
+}
+```
+
+That skips two submodules and the 19 nested inside them, which leaves 18
+submodules and about 108 MB.
+
+| Selector | Effect |
+| --- | --- |
+| `"!third_party/bloaty"` | Skip that submodule and everything nested in it. |
+| `"third_party/protobuf"` | Take that submodule and everything nested in it. With any include present, unlisted submodules are skipped. |
+| `"third_party/bloaty/third_party/re2"` | Take a nested submodule. envy also fetches each submodule on its path, because fetching one is the only way to learn what it holds. |
+
+An include that matches nothing is an error, since it is almost always a typo.
+An exclude that matches nothing is fine. `submodules = {}` is an error, so write
+`true` to take them all. `false` is the same as leaving the key out.
+
+The result has the layout `git clone --recurse-submodules` produces: each
+submodule's git directory under `.git/modules/<name>`, and its URL in
+`.git/config`. `git submodule status` reads clean. envy also follows git on
+these points:
+
+- A relative URL such as `../lib.git` resolves against the parent's URL.
+- A submodule marked `update = none` in `.gitmodules` is skipped.
+- The `branch` and `shallow` settings in `.gitmodules` are ignored. The commit
+  the parent records is the one checked out.
+
+A submodule with no URL in `.gitmodules` is an error. So is a submodule whose URL
+is a local path when its parent came from a server.
+
+Up to eight repositories download at once. Each one retries on its own after a
+transport failure, so one dropped connection does not restart the tree. The
+package row shows the parent's fetch first, then counts repositories across the
+whole tree, with a row for each submodule in flight:
+
+```text
+[local.grpc-src@r0] 17/18 submodules 107.54MB grpc.git: 94.4%
+  third_party/boringssl-with-bazel checkout 8153/8601 files: 94.8%
+```
+
+The total grows as nested submodules turn up, so the bar can move backward.
+
+`submodules` in `FETCH` is part of the spec. A spec's contents are not part of
+its packages' cache key, so an installed package keeps its old tree when you edit
+the key. Bump the spec's revision, `@r0` to `@r1`, as for any change to what a
+spec fetches. See [Reproducibility](../reproducibility.md#known-limits).
+
+To check a repository's submodules before writing the spec, run
+[`envy fetch --submodules`](../../reference/cli/fetch.md#to-check-a-repositorys-submodules-before-pinning-it).
 
 ## Supported transports
 

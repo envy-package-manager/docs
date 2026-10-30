@@ -94,12 +94,26 @@ OPTIONS = {
 | --- | --- |
 | `required` | Absent is an error. Anything not `required` is optional. There are no defaults, so handle `nil` in your verbs. |
 | `type` | One of `string`, `boolean`, `int`, `float`, `table`, `list`, `semver`. `list` means a sequential array, so gaps are rejected. `semver` parses the value as a semantic version. |
-| `range` | For `semver`, a semver range such as `">=1.2 <2"`. Otherwise a numeric range: space-separated `>=`, `>`, `<=`, `<`, `==` terms, for example `">=1 <=64"`. Strings that parse as numbers are accepted. |
+| `range` | For `semver`, an npm-style range such as `">=1.2 <2"`, `"^1.4"`, or `"~3.9 \|\| >=4.1"`. Otherwise a numeric range: space-separated `>=`, `>`, `<=`, `<`, `==` terms, for example `">=1 <=64"`. Strings that parse as numbers are accepted. |
 | `choices` | Allowed values. With `type = "list"`, every element must be one of them. |
 | `validate` | A function receiving the value. Return `nil` or `true` to accept, `false` to reject, or a string to reject with that message. |
 
 Undeclared options are rejected, and the error lists what the spec accepts, so a
 misspelled `verison` is caught immediately.
+
+From envy 0.4.13 a `semver` range must parse in full. Earlier releases stopped
+at the first term they could not read and accepted the value anyway. The error
+points at the problem:
+
+```text
+error: option 'version' has invalid range '>=1.0.0 garbage' for local.sv@r0
+bad range at column 9: expected a version
+  >=1.0.0 garbage
+          ^
+```
+
+Hyphen ranges such as `"1.0.0 - 2.0.0"` are an error too. Write
+`">=1.0.0 <=2.0.0"` instead. `!=` excludes one version.
 
 Use `validate` when the rule is about the value's shape:
 
@@ -189,8 +203,8 @@ the manifest.
 
 `PRODUCTS = function(opts)` is the exception. It runs *before* `OPTIONS`, so it
 receives the manifest entry's options exactly as written, with no validation
-against the schema. The table is always present — empty if the entry declared no
-`options` — but any individual key may be `nil`:
+against the schema. The table is always present (empty if the entry declared no
+`options`), but any individual key may be `nil`:
 
 ```lua
 -- Wrong: paths[nil] is nil, and indexing that throws "attempt to index a nil

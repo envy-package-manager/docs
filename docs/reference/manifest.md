@@ -54,7 +54,7 @@ Rules:
 | Global | Type | Meaning |
 | --- | --- | --- |
 | `PACKAGES` | array | Package entries. Required. |
-| `BUNDLES` | table | Alias to `{ identity, source, ref, sha256 }`. |
+| `BUNDLES` | table | Alias to `{ identity, source, ref, submodules, sha256 }`. |
 | `PACKAGE_DEPOTS` | array | Depot index URIs, or `{ DEPENDS, FETCH }` tables. Root manifest only. |
 | `DEFAULT_SHELL` | constant, table, or function | Shell for string verbs. See [Shells & Scripts](/concepts/shells). Root manifest only. |
 | `VENDOR_ROOT` | string | Project-relative directory that `vendor = true` entries land under. See [Vendoring](/concepts/vendoring). Root manifest only. Requires envy 0.4.0. |
@@ -70,7 +70,8 @@ available. See [Lua API](./lua-api.md).
 | `source` | string | URL, path, or git URL. Mutually exclusive with `bundle`. A `{ fetch, dependencies }` table is rejected here, because nothing could call the function. See [Fetch Dependencies](/concepts/dependencies/fetch-dependencies#where-it-can-be-declared). |
 | `bundle` | string or table | A `BUNDLES` alias, or an inline bundle table. Requires `spec`. |
 | `sha256` | string | Pins a downloaded spec file. |
-| `ref` | string | Commit for a git source. |
+| `ref` | string | Required for a git source. A full commit sha, or a branch or tag name. A short sha is an error from envy 0.5.0. |
+| `submodules` | boolean or array of strings | Git sources only. Check out the spec repository's submodules: `true` for all, or path selectors. Part of the spec's cache key. See [Submodules](/concepts/specs/fetch#submodules). Requires envy 0.5.0. |
 | `options` | table | Part of the package identity. Functions are rejected. |
 | `platforms` | array of strings | Skip this entry on other platforms. |
 | `setup` | array of strings | Select [`SETUP`](/concepts/specs/setup) pairs by name. |
@@ -86,7 +87,7 @@ Since envy 0.3.1 an unknown key is an error rather than an inert field, and the
 message lists what the entry shape accepts:
 
 ```text
-error: /src/app/envy.lua: PACKAGES[2]: Package: unknown key 'platfroms'; allowed keys are ENVY_BASE, ENVY_BUNDLES, needed_by, options, platforms, product, ref, setup, sha256, source, spec, vendor
+error: /src/app/envy.lua: PACKAGES[2]: Package: unknown key 'platfroms'; allowed keys are ENVY_BASE, ENVY_BUNDLES, needed_by, options, platforms, product, ref, setup, sha256, source, spec, submodules, vendor
 ```
 
 The wrapper names the file and the index, so a typo in a fifty-entry manifest
@@ -131,9 +132,10 @@ PACKAGES = {
 ```
 
 An entry that takes its spec from a `bundle` is its own narrower shape, without
-`source`, `sha256`, or `ref`, since the bundle declaration carries those. It can
-carry `vendor` from envy 0.4.6 on. Before that the key was rejected there as
-unknown, which took vendoring away from any spec that moved into a bundle.
+`source`, `sha256`, `ref`, or `submodules`, since the bundle declaration carries
+those. It can carry `vendor` from envy 0.4.6 on. Before that the key was
+rejected there as unknown, which took vendoring away from any spec that moved
+into a bundle.
 
 ## Bundle entry fields
 
@@ -141,7 +143,8 @@ unknown, which took vendoring away from any spec that moved into a bundle.
 | --- | --- |
 | `identity` | Required. The bundle's `BUNDLE` value, `namespace.name@revision`. |
 | `source` | Required. Git URL, archive URL, local path, or a `{ fetch, dependencies }` table for a [custom fetch](/concepts/dependencies/fetch-dependencies). |
-| `ref` | Commit for a git source. Required in practice, since a moving ref is not reproducible. |
+| `ref` | Required for a git source. A full commit sha, since a branch or tag name moves. |
+| `submodules` | Git sources only. `true` or path selectors, for a bundle whose specs live in submodules. Part of the bundle's cache key. Requires envy 0.5.0. |
 | `sha256` | For an archive source. |
 
 Declaring the same bundle identity twice with different sources or refs is an

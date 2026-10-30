@@ -148,6 +148,13 @@ So a spec that installs a Homebrew formula can insist Homebrew exists first,
 without the project needing to know. Selecting a pair also selects everything it
 `DEPENDS` on.
 
+A package envy needs before it has read every spec takes selections from the
+manifest only. That covers a [fetch dependency](../dependencies/fetch-dependencies.md),
+a `PACKAGE_DEPOTS` or `DEFAULT_SHELL` dependency, and anything those depend on.
+From envy 0.4.13 a spec that selects a pair on one is an error naming the spec,
+the pair, and why the package is needed early. Select the pair in the package's
+`PACKAGES` entry instead.
+
 ## Per-platform pairs
 
 One spec can carry a pair per platform and let the filter decide. `PLATFORMS` on

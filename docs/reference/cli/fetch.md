@@ -13,7 +13,8 @@ needs a redirect follow, or a wrong S3 prefix, shows up here rather than mid-syn
 ## Usage
 
 ```
-envy fetch <source> <destination> [--ref=<ref>] [--manifest-root=<path>]
+envy fetch <source> <destination> [--ref=<ref>] [--submodules]
+           [--submodule-filter=<selector>]... [--manifest-root=<path>]
 ```
 
 ## Arguments and flags
@@ -22,7 +23,9 @@ envy fetch <source> <destination> [--ref=<ref>] [--manifest-root=<path>]
 | --- | --- |
 | `source` | The URI to fetch. Required. |
 | `destination` | File path to write, or a directory path for a git clone. Required. `fetch` never guesses a filename. |
-| `--ref <ref>` | Branch, tag, or commit sha. Required for git sources and meaningless for others. |
+| `--ref <ref>` | Full commit sha, branch, or tag. Required for git sources and meaningless for others. A short sha is an error from envy 0.5.0. |
+| `--submodules` | Check out every git submodule, recursively. Requires envy 0.5.0. |
+| `--submodule-filter <selector>` | Check out the submodules this path selector picks. A leading `!` excludes. Repeat for several. Implies `--submodules`. Requires envy 0.5.0. |
 | `--manifest-root <path>` | Root that relative local-file sources resolve against. Defaults to the current directory. |
 
 Supported transports, matching `FETCH`:
@@ -32,7 +35,7 @@ Supported transports, matching `FETCH`:
 | `https://`, `http://` | TLS verified against the system trust store. |
 | `ftp://`, `ftps://` | |
 | `s3://bucket/key` | Uses your ambient AWS credentials and region config. |
-| `git://`, `git+ssh://`, `https://host/repo.git` | Clone at `--ref`. SSH keys come from your agent. |
+| `git://`, `git+ssh://`, `https://host/repo.git` | Check out `--ref`, shallow where the server allows. SSH keys come from your agent. |
 | local paths | Absolute, or relative to `--manifest-root`. |
 
 ## Examples
@@ -57,6 +60,21 @@ envy fetch https://github.com/org/tool.git /tmp/tool --ref v1.5.23
 Git sources require `--ref`, exactly as in a spec. A fetch without one is an
 error rather than an implicit default branch. Combine with
 [`git-resolve`](./git-resolve.md) to pin the sha you got.
+
+### To check a repository's submodules before pinning it
+
+```shell-session
+$ envy fetch https://github.com/grpc/grpc.git /tmp/grpc \
+    --ref 558b7e3b09e42e2160018732acbbf56c9094c84d \
+    --submodule-filter '!third_party/bloaty' \
+    --submodule-filter '!third_party/opentelemetry-cpp'
+[fetch] 18/18 submodules 107.53MB https://github.com/grpc/grpc.git: 100.0%
+```
+
+The flags take the same selectors as `submodules` in a spec, so the tree in
+`/tmp/grpc` is the tree the spec will get. See
+[submodules](/concepts/specs/fetch#submodules) for the selector rules. Without
+either flag, submodule directories stay empty.
 
 ### To verify an internal artifact store is reachable
 
