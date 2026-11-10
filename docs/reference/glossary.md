@@ -5,9 +5,14 @@ title: Glossary
 
 # Glossary
 
+- **Activation**: applying a project to a shell: its bin directory on `PATH`,
+  `ENVY_PROJECT_ROOT`, and every installed package's `ENV`. Done by the shell
+  hook or `envy activate`, undone by `envy deactivate`.
 - **Bundle**: a versioned container distributing many specs behind one pin.
 - **Cache**: the per-user, content-addressed store shared by all projects.
 - **Depot**: an optional remote store of prebuilt package artifacts.
+- **ENV**: a spec global naming the environment variables a package sets for
+  activated shells and for the builds of packages that depend on it.
 - **Fetch dependency**: a package installed before another package's *spec* can
   be fetched, declared in `source.dependencies`.
 - **Identity**: a spec's namespaced, versioned name, `ns.name@rev`. The revision

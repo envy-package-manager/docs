@@ -5,13 +5,13 @@ title: Shell Hooks
 
 # Shell Hooks
 
-The convenience layer. Your shell notices envy projects as you `cd`, and manages
-`PATH` for you.
+The convenience layer. Your shell activates envy projects as you `cd` into them
+and restores your own environment as you leave.
 
 This is optional. [Product scripts](./product-scripts.md) already work with no
 shell setup, and [`envy run`](./envy-run.md) covers one-shot activation. Hooks
 are for the case where you want `cmake` to mean the project's cmake without
-typing a path.
+typing a path, and `cargo` to find the project's `CARGO_HOME`.
 
 ## Setup
 
@@ -34,24 +34,59 @@ Inside a project:
 
 - The project's `@envy bin` directory is prepended to `PATH`.
 - `ENVY_PROJECT_ROOT` is set to the manifest's directory.
+- Every installed package's [`ENV`](./package-env.md) is applied (envy 0.6.0+).
 - The prompt gains a 🦝 marker.
 
-Outside, all three are removed. Switching directly between two projects removes
-the first project's bin directory and adds the second's, in one step.
+Outside, every variable the project changed goes back to what it was, byte for
+byte, and the marker goes away. Switching directly between two projects leaves
+the first and enters the second in one step.
 
 ```shell-session
 $ cd ~/work/firmware
-envy: entering firmware — tools added to PATH
+envy: entering firmware — 3 variables set
 $ which cmake
 /Users/you/work/firmware/bin/cmake
 $ cd ~/work/webapp
-envy: leaving firmware — PATH restored
-envy: entering webapp — tools added to PATH
+envy: leaving firmware — environment restored
+envy: entering webapp — 2 variables set
 $ cd ~
-envy: leaving webapp — PATH restored
+envy: leaving webapp — environment restored
 ```
 
 Those messages go to stderr, so they never contaminate a piped command.
+
+### How it activates
+
+When you enter a project, the hook runs that project's own launcher,
+`<bin>/envy activate <shell>`, and evaluates what it prints. When you leave the
+last project, it runs `envy deactivate <shell>` with the binary that activated.
+Both are [CLI commands](../../reference/cli/activate.md) you can also run by
+hand. The launcher re-execs into the envy the project pins, so each project is
+activated by its own version.
+
+`envy install` and `envy sync` mark the project when they finish. At the next
+prompt, every shell activated in that project refreshes and picks up what was
+installed:
+
+```text
+envy: refreshed proj — 4 variables set
+```
+
+Activation skips packages that are not installed yet, with a warning to run
+`envy install`. It never installs anything itself.
+
+A project pinned to an envy older than 0.6.0 has no `activate` command. There
+the hook falls back to what it did before: the bin directory on `PATH` and
+`ENVY_PROJECT_ROOT`, with the messages `tools added to PATH` and `PATH
+restored`. A bin directory without an `envy` launcher in it gets the same
+fallback.
+
+### Nested shells
+
+Activation lives in exported variables, so a subshell, a tmux pane, or an editor
+launched from an activated shell inherits it without activating again. The
+variables are listed under
+[Activation state](../../reference/environment-variables.md#activation-state).
 
 ## It agrees with envy
 
@@ -66,16 +101,21 @@ bootstrap script, and envy. They share one rule. A directive-shaped comment down
 inside `PACKAGES` therefore cannot make the hook put one project's bin
 directory on `PATH` while envy resolves another's.
 
-## Almost no performance cost
+## What it costs
 
-The hook never runs envy, and it never shells out to `head` or `grep` to read a
-manifest header. bash, zsh and PowerShell each parse it with their own regex
-support, over one pass of the file. The zsh hook goes furthest and returns
-through `REPLY`, so a `cd` forks nothing at all. bash uses a handful of `$(...)`
-substitutions, and fish calls `sed` and `realpath`. A fork costs a millisecond
-or two either way.
+Shell startup outside a project runs no envy. Neither does a `cd` between
+directories of the same project. The hook finds the project without shelling out
+to `head` or `grep`. bash, zsh and PowerShell each parse the manifest header with
+their own regex support, over one pass of the file. The zsh hook goes furthest
+and returns through `REPLY`, so a `cd` inside a project forks nothing at all.
+bash uses a handful of `$(...)` substitutions, and fish calls `sed` and
+`realpath`.
 
-So the hook can run on every directory change without anyone noticing.
+Entering or leaving a project runs one envy process. The first time you enter a
+project whose pinned envy is not in the cache yet, the launcher downloads it.
+
+The check for a finished `envy install` runs at every prompt. It is one builtin
+`read` of a small file, with no fork.
 
 ## The prompt marker
 
@@ -105,12 +145,18 @@ be placed anywhere rather than prepended.
 
 | Variable | Effect |
 | --- | --- |
-| `ENVY_SHELL_HOOK_DISABLE=1` | The hook returns immediately. Nothing is added or removed. |
-| `ENVY_SHELL_NO_ENTER_EXIT_ANNOUNCE=1` | No entering and leaving messages. |
+| `ENVY_SHELL_HOOK_DISABLE=1` | The hook returns immediately. Nothing is activated or restored. |
+| `ENVY_SHELL_NO_ENTER_EXIT_ANNOUNCE=1` | No entering, leaving, or refreshed messages. |
 | `ENVY_SHELL_NO_ICON=1` | No prompt marker. |
 
 `ENVY_PROJECT_ROOT` is the hook's output rather than its input. Scripts can read
 it to find the project without walking the tree themselves.
+
+Restoring on leave is wholesale. A variable activation touched returns to its
+value from before you entered, including any edit you made to it inside the
+project. envy never applies activation to its own builds, so `envy install` from
+an activated shell builds the same thing as from a plain one. See
+[Package Environment](./package-env.md#activation-never-reaches-a-build).
 
 ## Hooks are a user-wide feature
 
@@ -170,7 +216,8 @@ cache>/shell/` and run an envy command in a project that is not on a local tree.
 ## When not to use hooks
 
 - **In CI.** A job should call `./bin/<tool>` or `envy run` explicitly, so the
-  build does not depend on a login shell having been configured.
+  build does not depend on a login shell having been configured. Use
+  `envy run --activate` where a tool needs its package's `ENV`.
 - **In scripts.** Same reason. A script that relies on an interactive shell's
   `PATH` works on your machine and nowhere else.
 - **In editors and task runners.** Many spawn a non-login shell.
@@ -179,5 +226,7 @@ cache>/shell/` and run an envy command in a project that is not on a local tree.
 ## See also
 
 - [`envy shell`](../../reference/cli/shell.md) for the command and its output.
+- [`envy activate`](../../reference/cli/activate.md) and [`envy deactivate`](../../reference/cli/deactivate.md) for what the hook runs.
+- [Package Environment](./package-env.md) for `ENV`.
 - [Shell Integration](../../getting-started/shell-integration.md) for the setup walkthrough.
 - [Product Scripts](./product-scripts.md) for the mechanism hooks put on `PATH`.

@@ -28,16 +28,38 @@ that cannot afford real backoff.
 
 | Variable | Set by | Value |
 | --- | --- | --- |
-| `ENVY_PROJECT_ROOT` | [`envy run`](./cli/run.md), the [shell hook](/concepts/environment/shell-hooks), and each deployed [product script](/concepts/environment/product-scripts) | The governing manifest's directory. A product script stamps it as a hop relative to its own bin directory, and only for a root manifest. |
-| `PATH` | `envy run`, the shell hook, and each deployed product script | The project's bin directory, prepended. |
+| `ENVY_PROJECT_ROOT` | [`envy run`](./cli/run.md), [`envy activate`](./cli/activate.md) (and so the [shell hook](/concepts/environment/shell-hooks)), and each deployed [product script](/concepts/environment/product-scripts) | The governing manifest's directory. A product script stamps it as a hop relative to its own bin directory, and only for a root manifest. |
+| `PATH` | `envy run`, `envy activate`, and each deployed product script | The project's bin directory, prepended. |
+| A package's [`ENV`](/concepts/environment/package-env) | `envy activate` and `envy run --activate` | Whatever installed packages declare. Requires envy 0.6.0. |
 
-`envy run` sets both for the child process only. The shell hook sets both in your
-interactive shell and undoes them when you leave the project. A product script
-sets them for the tool it execs, so a tool that shells out to a sibling product
-finds it.
+`envy run` sets them for the child process only. Activation sets them in your
+interactive shell, and deactivation restores what was there before. A product
+script sets `PATH` and `ENVY_PROJECT_ROOT` for the tool it execs, so a tool that
+shells out to a sibling product finds it.
 
-Nothing else is injected. A phase's `envy.run` inherits the ambient environment,
-plus whatever you pass in `opts.env`.
+A phase's `envy.run` and string verbs start from the environment as it was
+before any activation, add the `ENV` of the packages the phase depends on, then
+apply `opts.env`. See
+[Package Environment](/concepts/environment/package-env#in-builds).
+
+## Activation state
+
+`envy activate` records what it changed in exported variables, so
+`envy deactivate` can undo it and nested shells inherit it. Requires envy 0.6.0.
+Do not set these yourself.
+
+| Variable | Meaning |
+| --- | --- |
+| `ENVY_ACTIVATE_VARS` | `:`-separated names of the variables activation changed. |
+| `ENVY_ACTIVATE_ORIG__<NAME>` | `<NAME>`'s value before activation. Absent means it was unset. |
+| `ENVY_ACTIVATE_ROOT` | The activated project's directory. |
+| `ENVY_ACTIVATE_KEY` | The hook's spelling of that directory. Set only by the hook. |
+| `ENVY_ACTIVATE_EXE` | The envy binary that activated. The hook deactivates with it. |
+| `ENVY_ACTIVATE_GENFILE`, `ENVY_ACTIVATE_GEN` | The file `envy install` and `envy sync` touch when they finish, and its contents at activation. A mismatch at the next prompt makes the hook refresh. |
+| `ENVY_ACTIVATE_SCHEMA` | The state format. An envy that cannot read it says to restart your shell. |
+
+envy removes every `ENVY_ACTIVATE_*` variable, and puts back every variable they
+list, before it runs a verb. That is why activation never reaches a build.
 
 ## Shell hook controls
 
@@ -47,10 +69,10 @@ Read by the hook scripts, not by the binary. See
 | Variable | Effect when set to `1` |
 | --- | --- |
 | `ENVY_SHELL_HOOK_DISABLE` | The hook does nothing. Useful in scripts and in CI where the hook is installed but unwanted. |
-| `ENVY_SHELL_NO_ENTER_EXIT_ANNOUNCE` | No `entering`/`leaving` messages on stderr. |
+| `ENVY_SHELL_NO_ENTER_EXIT_ANNOUNCE` | No `entering`/`leaving`/`refreshed` messages on stderr. `envy activate` and `envy deactivate` read it too. |
 | `ENVY_SHELL_NO_ICON` | No 🦝 prompt marker. |
 
-Variables the hook keeps for itself, such as `_ENVY_BIN_DIR` and
+Variables the hook keeps for itself, such as `_ENVY_PROMPT_ACTIVE` and
 `_ENVY_ORIG_PS1`, start with an underscore and are not exported. Do not set them.
 
 ## Windows

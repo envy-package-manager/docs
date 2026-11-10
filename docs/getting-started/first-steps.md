@@ -107,9 +107,10 @@ renaming a *product* does.
    in CI. See [Product Scripts](/concepts/environment/product-scripts).
 2. **[`envy run`](../reference/cli/run.md).** `envy run make -j` puts the bin
    directory on `PATH` for one command and sets `ENVY_PROJECT_ROOT`. Good for
-   scripts, git hooks, and CI.
+   scripts, git hooks, and CI. `envy run --activate` also applies the packages'
+   [`ENV`](/concepts/environment/package-env).
 3. **[Shell integration](./shell-integration.md).** `cd` into the project and its
-   tools are on `PATH` until you leave.
+   tools are on `PATH`, with its packages' variables set, until you leave.
 
 All three reach the same packages. Pick by context rather than by preference:
 wrappers and `envy run` are deterministic anywhere, hooks are for interactive

@@ -29,7 +29,8 @@ and errors go to stderr. The commands whose output is the answer write it to
 stdout: [`product`](./product.md), [`package`](./package.md),
 [`hash`](./hash.md), [`export`](./export.md),
 [`merge-depot`](./merge-depot.md), [`git-resolve`](./git-resolve.md),
-[`import`](./import.md) for a single archive, [`cache`](./cache.md), and
+[`import`](./import.md) for a single archive, [`cache`](./cache.md),
+[`activate`](./activate.md) and [`deactivate`](./deactivate.md) (shell code), and
 `version --licenses`. Piping never captures decoration.
 
 **Manifest-aware commands find the manifest by
@@ -50,7 +51,7 @@ value, so a `--project` you type still wins.
 `@envy version` names a version other than the running binary, envy downloads
 that version and hands off to it before doing any work. You get the version the
 project pins, not the one you typed. `sync`, `install`, `deploy`, `vendor`,
-`product`, `package`, `run`, `export`, and `import` do this. [`use`](./use.md) and
+`product`, `package`, `run`, `activate`, `export`, and `import` do this. [`use`](./use.md) and
 [`cache`](./cache.md) do not. They read the manifest header as text, so they keep
 working when the pinned version cannot run. Set `ENVY_NO_REEXEC` to suppress the
 hand-off while debugging. See
@@ -104,7 +105,7 @@ fails instead of silently doing less.
 | `-q`, `--quiet` | Warnings and errors only. |
 | `--trace[=<sinks>]` | Structured machinery events for the scheduler, cache, locks, and IO. Comma-separated sinks: `stderr` for human-readable text, `file:<path>` for JSONL. Bare `--trace` means `stderr`. Independent of log level. See [Logging & Tracing](../observability.md). |
 | `--cache-root <path>` | Override the cache root. Env: `ENVY_CACHE_ROOT`. |
-| `--project <dir>` | Walk up from `<dir>` instead of the current directory to find the manifest. Honored by every command that loads one: `sync`, `install`, `deploy`, `vendor`, `product`, `package`, `run`, `export`, `import`, `use`, `cache`, and `shell`. Repeatable, last value wins. The directory must exist. |
+| `--project <dir>` | Walk up from `<dir>` instead of the current directory to find the manifest. Honored by every command that loads one: `sync`, `install`, `deploy`, `vendor`, `product`, `package`, `run`, `activate`, `export`, `import`, `use`, `cache`, and `shell`. Repeatable, last value wins. The directory must exist. |
 | `-v`, `--version` | Print version info. Alias for [`envy version`](./version.md). |
 | `-h`, `--help` | Print help. Works per subcommand: `envy sync --help`. |
 
@@ -129,6 +130,8 @@ fails instead of silently doing less.
 | [`envy init`](./init.md) | Initialize a project: manifest, bootstrap scripts, editor config. |
 | [`envy use`](./use.md) | Retarget the manifest's pinned envy version. |
 | [`envy shell`](./shell.md) | Print the shell-profile line that enables shell hooks. |
+| [`envy activate`](./activate.md) | Print shell code that activates the project: bin directory, `ENVY_PROJECT_ROOT`, and packages' `ENV`. |
+| [`envy deactivate`](./deactivate.md) | Print shell code that restores the environment from before activation. |
 | [`envy cache`](./cache.md) | Show cache location and disk usage. |
 
 ### Spec authoring

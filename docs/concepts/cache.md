@@ -20,6 +20,7 @@ deleted, moved, or rebuilt without touching a single project.
 
 ```
 ~/Library/Caches/envy/
+├── activate/             # one small marker per project, bumped by install and sync
 ├── envy/
 │   ├── 0.1.9/
 │   ├── 0.1.10/
@@ -28,11 +29,13 @@ deleted, moved, or rebuilt without touching a single project.
 │   └── latest            # a bare version string, no newline
 ├── locks/                # per-entry lock files, empty between runs
 ├── packages/
-│   └── envy.cmake@r0/
-│       └── darwin-arm64-blake3-49a9b2620de8c380/
-│           ├── envy-complete
-│           ├── envy-vendor-1f04c8e1a9b23d7c   # only for a vendored package
-│           └── pkg/      # the installed package
+│   ├── envy.cmake@r0/
+│   │   └── darwin-arm64-blake3-49a9b2620de8c380/
+│   │       ├── envy-complete
+│   │       ├── envy-vendor-1f04c8e1a9b23d7c   # only for a vendored package
+│   │       └── pkg/      # the installed package
+│   └── envy.github~hidapi@r1/      # a spec with a DISPLAY, labeled
+│       └── darwin-arm64-blake3-.../
 ├── shell/                    # user-wide tree only, never a project-local one
 │   ├── hook.bash
 │   ├── hook.zsh
@@ -45,11 +48,13 @@ deleted, moved, or rebuilt without touching a single project.
             └── pkg/      # the fetched spec or bundle
 ```
 
-Five things live there. envy's own binaries, one directory per version, so
+Six things live there. envy's own binaries, one directory per version, so
 several projects can pin several versions. Fetched specs and bundles. Installed
 package trees. The shell hook files
-[`envy shell`](../reference/cli/shell.md) points your profile at. And lock files,
-which exist only while work is in flight.
+[`envy shell`](../reference/cli/shell.md) points your profile at. Lock files,
+which exist only while work is in flight. And, from envy 0.6.0, one tiny file
+per project under `activate/`, which `envy install` and `envy sync` rewrite so
+activated shells know to [refresh](./environment/shell-hooks.md#how-it-activates).
 
 Two of those are worth a note:
 
@@ -102,6 +107,14 @@ ask for cmake 4.4.0 installs nothing.
 Bumping an option does not modify an entry, it names a new one. The old tree stays
 until you delete it, which is why `envy cache` sometimes shows two variants of
 one identity.
+
+From envy 0.6.0, a spec's [`DISPLAY`](../reference/spec-globals.md#display) text
+labels the identity directory: `envy.github~hidapi@r1`. envy keeps
+letters, digits, `.`, `-`, and `_`, turns each other run of characters into one
+`-`, and caps the label at 32 bytes. The label is not part of the hash, the
+lock, or the depot key. It is part of the path, though, so editing a `DISPLAY`
+installs into a new directory and leaves the old one behind. Upgrading to 0.6.0
+does the same once for every spec that has a `DISPLAY`.
 
 Left out of the hash on purpose: [setup-pair selections](./specs/setup.md) and
 depot configuration. The same artifact serves a machine that selected `udev_rules` and

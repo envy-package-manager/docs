@@ -31,7 +31,8 @@ envy import --dir <dir> [--checksums=<file>] [--manifest=<path>]
 
 **A single archive** needs no manifest and no project. The
 `<identity>-<platform>-<arch>-blake3-<hash>.tar.zst` filename tells envy where
-the bytes belong. It unpacks them into that cache entry, marks it complete, and
+the bytes belong, including a `~label` after the name from a spec's `DISPLAY`
+(envy 0.6.0+). It unpacks them into that cache entry, marks it complete, and
 prints the resulting package path to stdout. An archive of a non-`EXPORTABLE` spec
 restores its `fetch/` tree instead and prints `fetch-only import: <path>`. A
 cache entry that already exists is left alone and reported as `cached`.

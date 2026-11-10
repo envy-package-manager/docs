@@ -6,13 +6,14 @@ title: envy shell
 # `envy shell`
 
 Print the line to add to your shell profile to enable
-[shell hooks](/concepts/environment/shell-hooks), which manage `PATH` per
-project as you `cd` around.
+[shell hooks](/concepts/environment/shell-hooks), which activate each project as
+you `cd` into it and restore your environment as you leave.
 
 This command does not create the hook file. envy maintains it in the user-wide
 cache during self-deploy, so any earlier envy command has already put it there.
-`shell` finds the one for your shell and prints how to source it. The hook is
-pure shell: no envy process runs on `cd`, and it updates itself across envy
+`shell` finds the one for your shell and prints how to source it. Shell startup
+runs no envy. Entering a project runs that project's
+[`envy activate`](./activate.md), and the hook updates itself across envy
 versions.
 
 The hook root is `--cache-root` or `ENVY_CACHE_ROOT` if set, otherwise the
@@ -58,7 +59,8 @@ envy shell zsh
 ```
 
 Paste that line into `~/.zshrc`, restart, and `cd` into any envy project. Its
-tools are on `PATH`, with a 🦝 marker in the prompt. `cd` out and they are gone.
+tools are on `PATH`, its packages' variables are set, and the prompt has a 🦝
+marker. `cd` out and your environment is back as it was.
 
 ### To set up the other supported shells
 
@@ -103,4 +105,5 @@ ls "$(envy cache --user-wide-root)/shell"
 
 - [Shell Integration](/getting-started/shell-integration) for setup, the prompt marker, and the opt-out variables.
 - [Shell Hooks](/concepts/environment/shell-hooks) for what the hook does on `cd`.
+- [`envy activate`](./activate.md) for what the hook runs on entry.
 - [`envy run`](./run.md) for one-shot activation with no profile edit.

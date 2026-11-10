@@ -22,6 +22,7 @@ Terse companion to [Anatomy of a Spec](/concepts/specs).
 | `DEPENDENCIES` | array of entry tables | none |
 | `PLATFORMS` | array of strings, `darwin`, `linux`, `windows`, optionally `-arm64` or `-x86_64` | every platform |
 | `DISPLAY` | string or function of the options | the package's rows say nothing beyond their identity. Requires envy 0.4.2 |
+| `ENV` | table or function | the package sets no variables. Requires envy 0.6.0 |
 | `USER_MANAGED` | boolean or function | `false`, meaning cache-managed |
 | `EXPORTABLE` | boolean | `false`, so only fetched bytes are kept for export |
 | `VENDOR` | array of selector strings | the whole install directory is copied when a manifest [vendors](/concepts/vendoring) this package. Requires envy 0.4.0 |
@@ -41,6 +42,7 @@ SETUP.<name>.INSTALL(pkg_dir, options)
 PRODUCTS(options)
 OPTIONS(options)
 DISPLAY(options)
+ENV(pkg_path, root, options)             -- pkg_path is nil for user-managed
 USER_MANAGED()
 ```
 
@@ -63,6 +65,7 @@ Return values:
 | `PRODUCTS` | the products table |
 | `OPTIONS` | nothing, `true`, `false`, or an error message string |
 | `DISPLAY` | one line of printable text, or `nil` for none |
+| `ENV` | a table of variables, or `nil` for none |
 | `USER_MANAGED` | boolean |
 
 ## `FETCH` table fields
@@ -72,7 +75,7 @@ Return values:
 | `source` | URL, local path, or git URL. Required. |
 | `sha256` | Verifies the download, and lets the cache reuse it. |
 | `ref` | Required for a git source. A full commit sha, or a branch or tag name. |
-| `submodules` | Git sources only. `true`, or a list of path selectors. See [Submodules](/concepts/specs/fetch#submodules). Requires envy 0.5.0. |
+| `submodules` | Git sources only. `true`, a list of path selectors, or a function that decides per submodule (envy 0.5.1+). See [Submodules](/concepts/specs/fetch#submodules). Requires envy 0.5.0. |
 | `dest` | Rename the downloaded file. A plain filename, no separators. |
 | `post_data` | HTTP POST body. HTTP and HTTPS only. |
 
@@ -235,6 +238,49 @@ from the same options `DISPLAY` uses.
 
 If no spec sets a `DISPLAY`, output is unchanged from earlier versions and the
 column is absent.
+
+From envy 0.6.0 `DISPLAY` also labels the package's
+[cache directory](/concepts/cache#content-addressing), so several instances of
+one spec can be told apart on disk:
+
+```text
+packages/acme.github~libusb-hidapi@r0/
+packages/acme.github~cesanta-mongoose@r0/
+```
+
+The label is never part of the hash, but it is part of the path. Editing a
+spec's `DISPLAY` moves its entries, so the next run installs into a new
+directory and leaves the old one behind.
+
+## `ENV`
+
+Variables this package sets for its consumers. Requires envy 0.6.0. See
+[Package Environment](/concepts/environment/package-env) for the full rules.
+
+```lua
+ENV = function(pkg_path, root, options)
+  return {
+    RUSTUP_HOME = envy.path.join(pkg_path, "rustup"),
+    CARGO_HOME  = envy.path.join(root, ".cargo"),
+    PATH        = { prepend = envy.path.join(pkg_path, "bin") },
+  }
+end
+```
+
+| Value | Effect |
+| --- | --- |
+| `"text"` | Set the variable. |
+| `false` | Unset it. |
+| `{ prepend, append, sep }` | Add strings or lists of strings around the current value. `sep` defaults to the platform path separator. |
+| `nil` | Leave it alone. |
+
+| Consumer | `root` | Applied by |
+| --- | --- | --- |
+| An activated shell | the project root | the shell hook, `envy activate`, `envy run --activate` |
+| A dependent package's verbs | the dependent's temporary directory | string verbs, `envy.run`, SETUP pairs |
+
+Names must match `[A-Za-z_][A-Za-z0-9_]*`. `ENVY_` names are reserved. A table
+is checked when the spec loads. A package's `ENV` never applies to its own verbs.
 
 ## Identity syntax
 

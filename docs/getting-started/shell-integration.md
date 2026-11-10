@@ -5,9 +5,9 @@ title: Shell Integration
 
 # Shell Integration
 
-Optional. Teach your shell to put each project's bin directory on `PATH` as you
-`cd` around, so `cmake` means the project's cmake without a path or a wrapper
-prefix.
+Optional. Teach your shell to activate each project as you `cd` around: its bin
+directory on `PATH`, so `cmake` means the project's cmake without a path or a
+wrapper prefix, plus any variables its packages declare.
 
 ## Setup
 
@@ -68,22 +68,25 @@ user-wide cache, or set `ENVY_CACHE_ROOT`. See
 
 ```shell-session
 $ cd ~/work/firmware
-envy: entering firmware — tools added to PATH
+envy: entering firmware — 3 variables set
 $ which cmake
 /Users/you/work/firmware/bin/cmake
 $ echo $ENVY_PROJECT_ROOT
 /Users/you/work/firmware
 $ cd ~/work/webapp
-envy: leaving firmware — PATH restored
-envy: entering webapp — tools added to PATH
+envy: leaving firmware — environment restored
+envy: entering webapp — 2 variables set
 $ cd ~
-envy: leaving webapp — PATH restored
+envy: leaving webapp — environment restored
 ```
 
-On every directory change the hook finds the governing `envy.lua`, prepends its
-bin directory to `PATH`, sets `ENVY_PROJECT_ROOT`, and adds a 🦝 marker to the
-prompt. Leaving undoes all of it. Switching between projects does both in one
-step.
+On every directory change the hook finds the governing `envy.lua`. Entering a
+project, it activates it: the bin directory goes first on `PATH`,
+`ENVY_PROJECT_ROOT` is set, every installed package's
+[`ENV`](/concepts/environment/package-env) is applied, and the prompt gains a 🦝
+marker. Leaving restores every variable the project changed. Switching between
+projects does both in one step. After `envy install` or `envy sync`, the next
+prompt refreshes the activation with what was installed.
 
 ![A terminal session. python3 -V prints the system Python, then a different
 version inside each of two project directories, then the system one again after
@@ -93,10 +96,10 @@ The messages go to stderr, so a piped command is unaffected.
 
 ## What it costs
 
-Close to nothing. The hook is pure shell, and envy is never invoked at shell
-startup or on `cd`. The manifest header is read with the shell's own regex
-support rather than by piping through `head` and `grep`, so a `cd` costs at most
-a fork or two, and on zsh none at all.
+Close to nothing. Finding the project is pure shell: the manifest header is read
+with the shell's own regex support rather than by piping through `head` and
+`grep`. A `cd` within a project costs at most a fork or two, and on zsh none at
+all. Entering a project runs its launcher once, and leaving runs envy once.
 
 It also resolves manifests by the same rules envy itself uses, so the tools on
 your `PATH` always belong to the project envy would act on. See
@@ -107,7 +110,7 @@ your `PATH` always belong to the project envy would act on. See
 | Variable | Effect |
 | --- | --- |
 | `ENVY_SHELL_HOOK_DISABLE=1` | Disable the hook entirely. |
-| `ENVY_SHELL_NO_ENTER_EXIT_ANNOUNCE=1` | Keep the `PATH` management, drop the messages. |
+| `ENVY_SHELL_NO_ENTER_EXIT_ANNOUNCE=1` | Keep the activation, drop the messages. |
 | `ENVY_SHELL_NO_ICON=1` | Keep everything, drop the prompt marker. |
 
 The marker also stays off where the terminal cannot render it, and there the

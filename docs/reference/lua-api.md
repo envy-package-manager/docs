@@ -43,10 +43,31 @@ envy.loadenv_bundle: manifest scope only; a spec reaches a bundle it declared wi
 | `envy.ARCH` | `"arm64"` or `"x86_64"` |
 | `envy.PLATFORM_ARCH` | the two joined, for example `"darwin-arm64"` |
 | `envy.EXE_EXT` | `".exe"` on Windows, `""` elsewhere |
+| `envy.PROJECT_ROOT` | the root manifest's directory, symlinks resolved. `nil` under `envy lua`, which has no project. Requires envy 0.6.0. |
 | `ENVY_SHELL.BASH`, `.SH`, `.CMD`, `.POWERSHELL` | shell selectors for `envy.run` and `DEFAULT_SHELL` |
 
 `ENVY_SHELL` is a top-level global, not a field of `envy`. All four constants
 exist on every platform, and an incompatible choice is rejected when used.
+
+`envy.PROJECT_ROOT` has one value for the whole run. The manifest, a spec's
+top level, every phase, and bundle loading all see the same directory, and it is the working directory SETUP verbs and
+`DEFAULT_SHELL` run in. Do not bake it into a cache-managed payload, since cache
+entries are shared across projects. It suits SETUP pairs, which do host work
+outside the cache:
+
+```lua
+SETUP = {
+  hooks = {
+    CHECK = function()
+      return envy.exists(envy.path.join(envy.PROJECT_ROOT, ".git/hooks/pre-commit"))
+    end,
+    INSTALL = function(pkg_dir)
+      envy.copy(envy.path.join(pkg_dir, "pre-commit"),
+                envy.path.join(envy.PROJECT_ROOT, ".git/hooks/pre-commit"))
+    end,
+  },
+}
+```
 
 ```lua
 FETCH = function(tmp_dir, opts)
@@ -184,7 +205,7 @@ end
 | Option | Default | Meaning |
 | --- | --- | --- |
 | `cwd` | the phase's directory | Working directory. |
-| `env` | inherited | Table merged over the inherited environment. |
+| `env` | inherited | Table of strings merged over the inherited environment. It cannot unset a variable. |
 | `shell` | the platform default or `DEFAULT_SHELL` | `ENVY_SHELL.*` or a shell config table. |
 | `quiet` | `false` | Suppress the child's output. |
 | `capture` | `false` | Put stdout and stderr in the result. |
@@ -200,6 +221,21 @@ end
 
 `check = false` is how you inspect an exit code. With the default, a non-zero exit
 aborts the phase.
+
+From envy 0.6.0 the inherited environment is the one from before any shell
+[activation](/concepts/environment/package-env#activation-never-reaches-a-build),
+plus the [`ENV`](/concepts/environment/package-env#in-builds) of the packages
+this phase depends on. `opts.env` goes on top. String verbs get the same
+environment. So does Lua's `os.getenv`, without the dependencies' `ENV`.
+
+`os.execute` and `io.popen` are not available, because they would start a
+process with the live environment. Call `envy.run`, and use `capture = true` in
+place of `io.popen`:
+
+```text
+os.execute is unavailable; use envy.run
+io.popen is unavailable; use envy.run (capture = true)
+```
 
 Scripts are not portable by themselves. The interpreter is bash on macOS and
 Linux and PowerShell on Windows, so branch on `envy.PLATFORM`, pass
@@ -287,6 +323,10 @@ end
 
 `dest` inside a source table renames the downloaded file, and it has to be a
 plain filename with no separators.
+
+`submodules` also takes a function here and in a `FETCH` table (envy 0.5.1+). It
+is asked about each submodule found and returns a boolean. See
+[Submodules](/concepts/specs/fetch#choosing-submodules-with-a-function).
 
 ### `envy.commit_fetch(files)`
 
