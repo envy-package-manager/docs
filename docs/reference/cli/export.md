@@ -41,7 +41,11 @@ envy export [<queries>...] [-o <dir>] [--manifest=<path>]
 
 Archive names are `<identity>-<platform>-<arch>-blake3-<hash>.tar.zst`, the same
 encoding [`envy import`](./import.md) parses back and [`envy hash`](./hash.md)
-expects in a directory.
+expects in a directory. From envy 0.6.0, a spec with a
+[`DISPLAY`](../spec-globals.md#display) puts its label after the name,
+`envy.github~hidapi@r1-darwin-arm64-blake3-<hash>.tar.zst`. Depot lookups
+ignore the label, so a depot published before 0.6.0 still serves those
+packages.
 
 ## Examples
 

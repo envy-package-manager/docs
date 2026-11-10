@@ -34,8 +34,8 @@ the tree. On Windows it spawns, waits, and forwards the code.
 ## Usage
 
 ```
-envy run <command> [args...]
-envy run -- <script-path> [args...]
+envy run [--activate] <command> [args...]
+envy run [--activate] -- <script-path> [args...]
 ```
 
 ## Behavior
@@ -44,8 +44,10 @@ envy run -- <script-path> [args...]
 | --- | --- |
 | `PATH` | The manifest's `@envy bin` directory, prepended. A missing `@envy bin`, or a bin directory that does not exist, is an error. |
 | `ENVY_PROJECT_ROOT` | The governing manifest's directory. |
+| Other variables | Passed through unchanged, unless `--activate` is given. Packages' `ENV` applies only under `--activate`. |
 | Discovery | Anchored at the first argument's directory if that argument is an existing file, otherwise at the current directory. `--` forces the anchor to the path that follows it. A global `--project <dir>` outranks both. |
-| Flags | None of its own. `envy run --verbose make` passes `--verbose` to `make`. [Global flags](./index.md#global-flags) go before `run`. |
+| `--activate` | Run in the project's activated environment, the one [`envy activate`](./activate.md) would load: every installed package's [`ENV`](/concepts/environment/package-env) as well as `PATH` and `ENVY_PROJECT_ROOT`. Any activation already in your environment is undone first. Requires envy 0.6.0. |
+| Other flags | None. `envy run --verbose make` passes `--verbose` to `make`, and so does anything after the command, so `--activate` goes right after `run`. [Global flags](./index.md#global-flags) go before `run`. |
 | Tracing | `run` emits no `manifest_resolved` event: it replaces its own process with the child before the trace drains. What it resolved is visible in the child's `PATH`. |
 | Installs | Nothing directly. Whatever the child asks envy for is installed then. |
 | Exit code | Whatever the child returned. |
@@ -129,6 +131,17 @@ envy has no `execvp` there, so it spawns the child, waits, and forwards its exit
 code. The observable behavior is identical, with one extra process in the tree
 while it runs.
 
+### To run a tool that needs its package's variables
+
+```bash
+envy run --activate cargo build --release
+```
+
+`--activate` applies every installed package's `ENV`, so cargo sees the
+`CARGO_HOME` and `RUSTUP_HOME` its spec declares. A plain `envy run` passes your
+environment through with only the bin directory added. Packages that are not
+installed are skipped with a warning, as `envy activate` does.
+
 ### To get an interactive shell with the project active
 
 ```bash
@@ -136,7 +149,8 @@ envy run "$SHELL"
 ```
 
 A subshell where `envy` resolves to the pinned version and the project root is
-already set. Exit it and your environment is untouched. The persistent
+already set. `envy run --activate "$SHELL"` also applies the packages'
+variables. Exit it and your environment is untouched. The persistent
 alternative is [shell integration](/getting-started/shell-integration).
 
 ### To propagate exit codes in CI

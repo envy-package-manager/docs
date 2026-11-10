@@ -69,6 +69,21 @@ If a project *does* deploy wrappers, `run` makes them visible too, since they
 live in the same bin directory. `envy run make -j` then lets a Makefile call
 `cmake` by name.
 
+## `--activate`
+
+From envy 0.6.0, `envy run --activate <command>` gives the child the project's
+full activated environment, the one an activated shell has. That adds every
+installed package's [`ENV`](./package-env.md) to the bin directory and
+`ENVY_PROJECT_ROOT`:
+
+```bash
+envy run --activate cargo build --release
+```
+
+Use it in CI and scripts for tools that read variables, such as a toolchain that
+needs `CARGO_HOME` or `JAVA_HOME`. The flag goes right after `run`, since
+everything after the command belongs to the command.
+
 ## Anchoring
 
 Which project you get is [discovery](/concepts/projects#manifest-discovery), with
@@ -118,4 +133,5 @@ envy run ./scripts/test.sh || exit $?
 
 - [`envy run`](../../reference/cli/run.md) for the full CLI reference.
 - [Product Scripts](./product-scripts.md) and [Shell Hooks](./shell-hooks.md) for the other two activation paths.
+- [Package Environment](./package-env.md) for what `--activate` adds.
 - [`envy product`](../../reference/cli/product.md) for what your scripts call.

@@ -74,7 +74,9 @@ $ cat /tmp/depot/packages.txt
 
 Each archive is named `<identity>-<platform>-<arch>-blake3-<hash>.tar.zst`, which
 is the cache entry directory name with the identity in front. envy derives the
-lookup key from that filename, so do not rename the files.
+lookup key from that filename, so do not rename the files. A spec with a
+`DISPLAY` adds a label after the name, such as
+`envy.github~hidapi@r1-...`, which the lookup ignores.
 
 For a real depot, `--depot-prefix` rewrites the second column to the URL
 consumers will see:

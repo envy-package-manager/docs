@@ -191,7 +191,9 @@ qualifier.
 - **Spec contents are not part of the cache key.** An entry is named by identity
   plus options, so editing a spec in place, changing its URL or its build, reuses
   the existing package. Bump the spec revision, `@r0` to `@r1`, when behavior
-  changes. That is what revisions are for.
+  changes. That is what revisions are for. The same goes for a spec's
+  [`ENV`](./environment/package-env.md): its dependents build with it, but
+  editing it rebuilds nothing.
 - **User-managed packages are as reproducible as the host.**
   [Those specs](./specs/user-managed.md) run `apt` or `brew` against a machine
   envy does not own. envy guarantees the ordering and the idempotence check, not
@@ -202,9 +204,12 @@ qualifier.
   [`--ignore-depot`](../reference/cli/index.md#global-flags) and compare, and use
   [`merge-depot --strict`](../reference/cli/merge-depot.md) in publishing so a
   changed hash fails the pipeline instead of quietly winning.
-- **`envy run` and shell hooks inherit your environment.** Package resolution is
-  hermetic, but a build script that reads `CC` or `PATH` for something envy did
-  not provide is not.
+- **Builds inherit your environment.** Package resolution is hermetic, but a
+  build script that reads `CC` or `PATH` for something envy did not provide is
+  not. envy does remove a shell's [activation](./environment/package-env.md#activation-never-reaches-a-build)
+  before it runs a verb (envy 0.6.0+), so building from an activated shell is the
+  same as building from a plain one. `envy run` and the shell hook pass your own
+  variables through.
 
 ## A checklist for teams
 

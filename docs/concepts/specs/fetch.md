@@ -44,7 +44,7 @@ FETCH = {
 | `source` | Required. The URL. |
 | `sha256` | Expected hash. Verified on download, and again before reusing a cached file. |
 | `ref` | Required for git sources. A full commit sha, or a branch or tag name. See [git sources](#git-sources). |
-| `submodules` | Git sources only. `true` for every submodule, or a list of path selectors. See [submodules](#submodules). Requires envy 0.5.0. |
+| `submodules` | Git sources only. `true` for every submodule, a list of path selectors, or a function that decides per submodule (envy 0.5.1+). See [submodules](#submodules). Requires envy 0.5.0. |
 | `dest` | Override the filename. Must be a plain filename with no path separators and no `..`. |
 | `post_data` | Body for a POST request. HTTP and HTTPS only. |
 
@@ -278,6 +278,48 @@ these points:
 
 A submodule with no URL in `.gitmodules` is an error. So is a submodule whose URL
 is a local path when its parent came from a server.
+
+#### Choosing submodules with a function
+
+From envy 0.5.1, `submodules` in a `FETCH` table or an `envy.fetch` table can be a
+function. envy calls it once for each submodule it finds, and fetches the
+submodule only if it returns `true`:
+
+```lua
+local wanted = { ["third_party/protobuf"] = true, ["third_party/abseil-cpp"] = true }
+
+FETCH = {
+  source = "https://github.com/grpc/grpc.git",
+  -- envy git-resolve https://github.com/grpc/grpc v1.85.1
+  ref = "558b7e3b09e42e2160018732acbbf56c9094c84d",
+  submodules = function(sm) return wanted[sm.path] == true end,
+}
+```
+
+| Field | Value |
+| --- | --- |
+| `sm.name` | The submodule's name in `.gitmodules`. |
+| `sm.path` | Its path from the top of the parent repository, `/`-separated. |
+| `sm.url` | Its URL, resolved against the parent's. |
+| `sm.sha` | The commit the parent records. |
+
+- `false` skips the submodule and everything nested in it. `true` fetches it,
+  and the function is then asked about each of its own submodules.
+- A submodule marked `update = none` is never asked about.
+- Any return value other than a boolean is an error that names the submodule.
+- The function runs with `FETCH`'s context, so `envy.package` can read a
+  dependency declared with `needed_by = "fetch"`.
+- Calls run one at a time, while the fetches themselves stay parallel.
+- A relative URL that cannot be resolved is handed to the function as written.
+  Returning `false` skips it. Returning `true` fails the fetch.
+
+The function form is for spec `FETCH` and `envy.fetch` only. A manifest entry,
+`DEPENDENCIES` entry, or `BUNDLES` entry keys its cache on its `submodules`
+value, so a function there is an error:
+
+```text
+submodules = function works only in FETCH and envy.fetch; a spec or bundle source keys its cache on its selectors
+```
 
 Up to eight repositories download at once. Each one retries on its own after a
 transport failure, so one dropped connection does not restart the tree. The

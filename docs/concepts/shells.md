@@ -292,7 +292,7 @@ when requested.
 | `quiet` | `false` | Do not log the command or its output. |
 | `interactive` | `false` | Give the child the terminal and stream its output, for `sudo` prompts and license agreements. |
 | `cwd` | the verb's directory | Run somewhere else. |
-| `env` | inherited | Extra environment variables. |
+| `env` | inherited | Extra environment variables, over the phase's environment. See [Package Environment](./environment/package-env.md#in-builds). |
 | `shell` | `DEFAULT_SHELL` | Override the interpreter for this call. |
 
 `check = false` with `capture = true` is the standard way to write a

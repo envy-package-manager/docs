@@ -176,6 +176,33 @@ where it used to write `{version="4.4.0"}`, so every package carrying options
 names a new cache entry. The old entries stay on disk until you delete the
 cache. A saved full-canonical-key query needs the new spelling too.
 
+**Packages with a `DISPLAY` reinstalled after upgrading to envy 0.6.0**
+
+Expected, once. envy 0.6.0 adds the `DISPLAY` text to the cache directory name,
+`envy.github~hidapi@r1`, so those packages name new directories. The old
+ones stay on disk until you delete them. A depot still serves them, since depot
+lookups ignore the label.
+
+**`os.execute is unavailable; use envy.run`**
+
+From envy 0.6.0, `os.execute` and `io.popen` are refused in manifests, specs, and
+`envy lua`. Both would start a process with your live shell environment, which
+can be an activated one. Use `envy.run`, with `capture = true` where you read
+the output:
+
+```lua
+local r = envy.run("git rev-parse HEAD", { capture = true })
+local sha = r.stdout:gsub("%s+$", "")
+```
+
+See [Package Environment](/concepts/environment/package-env#activation-never-reaches-a-build).
+
+**`ENV.<NAME>: names starting with ENVY_ are reserved for envy`**
+
+A spec's [`ENV`](/concepts/environment/package-env) cannot set `ENVY_*`
+variables. Rename the variable. An `ENV` that is neither a table nor a function
+fails with `ENV must be a table or a function`.
+
 **My `BUILD` output is missing from the package**
 
 `BUILD` runs in `install_dir` in the common case, but when a spec mixes
@@ -244,6 +271,30 @@ manifest to the current directory. See
 `envy run` did not find that program. It prepends the project's bin directory to
 `PATH` and execs, so this means the name is not deployed and not on the ambient
 `PATH` either.
+
+**A package's variables are missing in my shell**
+
+[Activation](/concepts/environment/package-env#activation) applies `ENV` only
+from installed packages, and says so:
+
+```text
+warning: activate: 1 package not installed; run 'envy install'
+```
+
+With the shell hook, run `envy install`, and the next prompt refreshes. Without
+it, re-run `eval "$(envy activate zsh)"`. Product scripts and a plain `envy run`
+never apply `ENV`. Use `envy run --activate` for one command.
+
+**`envy: cannot restore the environment (...is gone); restart your shell`**
+
+The hook deactivates with the envy binary that activated, and that binary is no
+longer in the cache. The hook drops its activation state, but variables the
+project changed keep their project values. Start a new shell.
+
+**`activation state schema '...' was written by a different envy; restart your shell`**
+
+The activation state in your environment came from an envy with a different
+state format. Start a new shell.
 
 **A wrapper script points at the wrong thing**
 

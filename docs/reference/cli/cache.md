@@ -130,10 +130,13 @@ Other:
 
 Package rows are `identity/platform-arch-blake3-hash`, one per option variant.
 That is why two pythons can appear under one identity, and why bumping an option
-leaves the old tree behind until you delete it. Envy deployment rows are the
+leaves the old tree behind until you delete it. From envy 0.6.0, a spec with a
+[`DISPLAY`](../spec-globals.md#display) labels its rows,
+`acme.github~libusb-hidapi@r0/...`, so the instances of one spec can be told
+apart. Envy deployment rows are the
 versions your projects have pinned over time. `Other` is everything else the
-cache holds, such as downloaded specs, shell hooks, and lock files, listed so
-the total reconciles.
+cache holds, such as downloaded specs, shell hooks, activation markers, and lock
+files, listed so the total reconciles.
 
 ## Examples
 
