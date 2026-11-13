@@ -43,9 +43,9 @@ PACKAGES = {
 ```
 
 `envy.abspath` resolves against the directory of the file that calls it, so the
-entry works from any working directory and from a superproject that imports this
-manifest. No `sha256` is needed, because the file is already versioned by the
-commit you are on.
+entry works from any working directory and from a superproject that loads this
+manifest as a [subproject](./monorepos.md). No `sha256` is needed, because the
+file is already versioned by the commit you are on.
 
 ## From a URL
 

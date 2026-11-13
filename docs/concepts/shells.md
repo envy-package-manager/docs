@@ -191,8 +191,8 @@ for src in pathlib.Path("templates").glob("*.in"):
   [queries](../reference/cli/index.md#package-queries) against `PACKAGES`, the
   same matching the CLI uses. An entry that matches nothing is an error that
   names it, and so is one matching two different packages. Two `PACKAGES` entries
-  that collapse onto one package, as `envy.import` composition produces, count
-  once.
+  that collapse onto one package, as `envy.subproject` composition produces,
+  count once.
 - **`DEPENDS` requires `SHELL` to be a function.** A value form is read before
   any package exists, so it could never name one, and envy says
   `DEFAULT_SHELL DEPENDS requires SHELL to be a function`. A wrapper carrying
@@ -200,18 +200,18 @@ for src in pathlib.Path("templates").glob("*.in"):
   Earlier versions read the wrapper's own keys as a custom shell and dropped
   `DEPENDS`, so a misspelled `SHELL` silently changed what every verb ran under.
 - **Root manifest only.** `DEFAULT_SHELL` is read from the root manifest's
-  globals, so an imported manifest that declares one and does not have it
-  adopted is an error rather than a value nothing will read:
+  globals, so a subproject that sets one is an error unless the root assigns
+  the same value:
 
   ```text
-  error: envy.import: /src/libs/common/envy.lua sets DEFAULT_SHELL, which is
-         read only from the root manifest; assign it there (e.g. DEFAULT_SHELL =
-         envy.import(...).DEFAULT_SHELL)
+  error: envy.subproject: /src/libs/common/envy.lua sets DEFAULT_SHELL, which
+         is read only from the root manifest; assign it there (e.g.
+         DEFAULT_SHELL = envy.subproject(...).DEFAULT_SHELL)
   ```
 
-  `VENDOR_ROOT` works the same way. `PACKAGE_DEPOTS` is also root-only, but from
-  envy 0.4.12 an imported one is ignored instead of failing. See
-  [`envy.import`](../reference/lua-api.md#envyimportpath).
+  `VENDOR_ROOT` works the same way. `PACKAGE_DEPOTS` is also root-only, but a
+  subproject's is ignored instead of failing. See
+  [`envy.subproject`](../reference/lua-api.md#envysubprojectdir).
 - **`envy.product` and `envy.package` both work inside `SHELL`.** envy
   synthesizes a consumer for the manifest-wide shell, holding an edge to each
   `DEPENDS` entry. It shows up in traces as `envy.DEFAULT_SHELL@v1`. A bare

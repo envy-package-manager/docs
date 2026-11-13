@@ -37,7 +37,8 @@ Initialized envy project.
   ],
   "diagnostics.globals": [
     "envy", "IDENTITY", "PACKAGES", "DEPENDENCIES", "PRODUCTS",
-    "FETCH", "STAGE", "BUILD", "INSTALL", "SETUP", "ENVY_IMPORTER"
+    "FETCH", "STAGE", "BUILD", "INSTALL", "SETUP",
+    "ENVY_BUNDLE"
   ],
   "completion.enable": true
 }
@@ -127,7 +128,6 @@ the same result.
 | `FETCH`, `STAGE`, `BUILD`, `INSTALL`, `SETUP` | specs, the [phase verbs](/concepts/specs/lifecycle) |
 | `OPTIONS`, `USER_MANAGED`, `EXPORTABLE`, `VENDOR`, `DISPLAY`, `ENV` | specs |
 | `PACKAGES`, `DEFAULT_SHELL`, `PACKAGE_DEPOTS`, `VENDOR_ROOT` | manifests |
-| `ENVY_IMPORTER` | an imported manifest, set by [`envy.import`](/reference/lua-api#envyimportpath) |
 | `ENVY_BUNDLE` | a module loaded out of a bundle, from envy 0.4.7. See [`ENVY_BUNDLE`](/reference/lua-api#envy_bundle). |
 | `ENVY_SHELL` | both, the shell constants |
 
@@ -138,7 +138,7 @@ bundle repo:
 ```json
 "diagnostics.globals": [
   "envy", "IDENTITY", "PACKAGES", "BUNDLES", "DEPENDENCIES", "PRODUCTS",
-  "FETCH", "STAGE", "BUILD", "INSTALL", "SETUP", "ENVY_IMPORTER",
+  "FETCH", "STAGE", "BUILD", "INSTALL", "SETUP",
   "ENVY_BUNDLE"
 ]
 ```

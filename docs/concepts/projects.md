@@ -67,12 +67,12 @@ Header rules:
 | `DEFAULT_SHELL` | constant, table, or function | Which shell runs string verbs project-wide ([Shells & Scripts](./shells.md)). Read from the root manifest only. |
 | `VENDOR_ROOT` | string | Project-relative directory that `vendor = true` entries are copied into. See [Vendoring](./vendoring.md). Read from the root manifest only. Needs envy 0.4.0. |
 
-Four helpers are available in manifest code:
+These helpers are available in manifest code:
 
 | Helper | What it does |
 | --- | --- |
-| `envy.abspath("p")` | Resolves `p` against the directory of the file that calls it, not the current directory. A subproject manifest uses it to name its own spec files, so the paths still work when a superproject includes the file. |
-| `envy.import("libs/common")` | Runs another manifest in a sandbox and returns its globals. Its entries keep resolving paths and bundle aliases against it. Needs envy 0.3.0. |
+| `envy.abspath("p")` | Resolves `p` against the directory of the file that calls it, not the current directory. |
+| `envy.subproject("libs/common")` | Runs the `envy.lua` in that directory in a sandbox and returns its globals. Its entries keep resolving paths and bundle aliases against it. Needs envy 0.7.0. |
 | `envy.loadenv("a.b")` | Loads `<caller's dir>/a/b.lua` in a sandbox and hands back what it returned. For shared helper files. |
 | `envy.loadenv_bundle("alias", "a.b")` | The same, for a file inside a [bundle](./dependencies/bundles.md) the manifest declares. Fetches the bundle on the spot. Needs envy 0.4.6. |
 | `envy.extend(t, ...)` | Appends the array items of each argument onto `t`. Use it to add entries to an inherited `PACKAGES` list. |
@@ -298,15 +298,15 @@ act on.
 
 ## Superprojects and subprojects
 
-A superproject is one root manifest that imports its components' package lists
-instead of letting each component form its own project.
+A superproject is one root manifest that loads its subprojects' package lists
+instead of letting each subproject form its own project.
 
 ```lua title="libs/firmware-common/envy.lua"
 -- @envy schema "1"
--- @envy version "0.3.0"
+-- @envy version "0.7.0"
 -- @envy bin "bin"
 -- @envy deploy "true"
--- @envy root "false"          -- a component, not a project boundary
+-- @envy root "false"          -- a subproject, not a project boundary
 
 BUNDLES = { envy = { identity = "envy.package-specs@r3",
                      source = "https://github.com/envy-package-manager/package-specs.git",
@@ -321,28 +321,30 @@ PACKAGES = {
 
 ```lua title="envy.lua (the superproject root)"
 -- @envy schema "1"
--- @envy version "0.3.0"
+-- @envy version "0.7.0"
 -- @envy bin "bin"
 -- @envy deploy "true"
 -- @envy root "true"
 
-local fwc = envy.import("libs/firmware-common")
+local fwc = envy.subproject("libs/firmware-common")
 
--- Same toolchain as the component, plus one thing only the top level needs.
+-- Same toolchain as the subproject, plus one thing only the top level needs.
 PACKAGES = envy.extend(fwc.PACKAGES, {
   { spec = "acme.releasetool@r0", source = "envy/acme.releasetool.lua" },
 })
 ```
 
-The component's `envy.lua` works both as a manifest on its own and as a file the
-root imports. Its `source` paths and its `bundle` aliases resolve against
+The subproject's `envy.lua` works both as a manifest on its own and as a file the
+root loads. Its `source` paths and its `bundle` aliases resolve against
 `libs/firmware-common` in either case, so the root does not re-export `BUNDLES`.
-From inside `libs/firmware-common`, `envy sync` syncs the whole superproject, and
-`envy sync --subproject` syncs only that component into only its bin directory.
+`envy.PROJECT_ROOT` is `libs/firmware-common` in both cases too.
+`envy.IS_SUBPROJECT` tells them apart. From inside `libs/firmware-common`,
+`envy sync` syncs the whole superproject, and `envy sync --subproject` syncs only
+that subproject into only its bin directory.
 
-The imported header is inert. The root header alone decides the envy version, the
-cache tree, and the bin directory a run uses. See
-[The bootstrap boundary](../guides/monorepos.md#the-bootstrap-boundary).
+The subproject's header is inert. The root header alone decides the envy
+version, the cache tree, and the bin directory a run uses. See [The bootstrap
+boundary](../guides/monorepos.md#the-bootstrap-boundary).
 
 ## One manifest, three platforms
 

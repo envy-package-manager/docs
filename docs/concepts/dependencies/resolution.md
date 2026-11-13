@@ -139,8 +139,7 @@ dependencies.
   ```
 
   The files named are the ones that wrote the entries, so a conflict between two
-  imported components names both components rather than the root that composed
-  them.
+  subprojects names both subprojects rather than the root that composed them.
 - **A spec must declare the identity it was fetched as.** A bundle promising
   `acme.cmake@r0` and a file declaring something else is an error.
 - **Platform filters intersect.** An entry whose manifest `platforms` and spec

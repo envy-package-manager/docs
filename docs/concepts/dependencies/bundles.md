@@ -43,11 +43,11 @@ moves together.
 | `sha256` | Integrity pin for an archive source. |
 
 An alias is scoped to the manifest that wrote it. An entry pulled in with
-[`envy.import`](/reference/lua-api#envyimportpath) resolves `bundle = "envy"`
-against the imported manifest's `BUNDLES` first, then the importing one's. A
-superproject does not re-export a component's `BUNDLES`, and two components can
-use the same alias for different bundles. An alias that matches neither table
-reports both:
+[`envy.subproject`](/reference/lua-api#envysubprojectdir) resolves
+`bundle = "envy"` against the subproject's `BUNDLES` first, then the
+superproject's. A superproject does not re-export a subproject's `BUNDLES`, and
+two subprojects can use the same alias for different bundles. An alias that
+matches neither table reports both:
 
 ```text
 Bundle alias 'envy' not found in the BUNDLES table of this manifest or of the
@@ -345,8 +345,8 @@ Four rules govern `envy.loadenv_spec`:
 - **Bundle aliases are file-scoped.** A spec's `DEPENDENCIES` resolves
   `bundle = "acme"` against that spec's own `BUNDLES` table rather than the
   manifest's. A spec that pulls from a bundle declares that bundle itself. The
-  same rule covers imported manifests, where an entry resolves against the
-  `BUNDLES` of the manifest that declared it.
+  same rule covers subprojects, where an entry resolves against the `BUNDLES` of
+  the manifest that declared it.
 
 ### Reaching a bundle's API from a manifest
 
@@ -423,11 +423,9 @@ Spelling the leaf out matters here. Every entry the builder writes shares the
 identity `acme.github@r0`, so `vendor = true` would derive names that escalate
 to an options hash.
 
-When the consuming manifest is an [imported component](/guides/monorepos), the
-builder sees the component's globals. That needs envy 0.4.8. Before it, a
-builder loaded by an imported manifest saw the root manifest's globals instead.
-Unless the root had already assigned `VENDOR_ROOT`, the builder read `nil` and
-every entry fell back to `vendor/`.
+When the consuming manifest is a [subproject](/guides/monorepos), the builder
+sees the subproject's globals, its `VENDOR_ROOT` and `envy.PROJECT_ROOT`
+included.
 
 A bundle with a [custom fetch](./fetch-dependencies.md) is refused here by name.
 Its fetch function needs a phase to run in, and its `source.dependencies` cannot

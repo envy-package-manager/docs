@@ -78,8 +78,9 @@ Activation skips packages that are not installed yet, with a warning to run
 A project pinned to an envy older than 0.6.0 has no `activate` command. There
 the hook falls back to what it did before: the bin directory on `PATH` and
 `ENVY_PROJECT_ROOT`, with the messages `tools added to PATH` and `PATH
-restored`. A bin directory without an `envy` launcher in it gets the same
-fallback.
+restored`. From envy 0.6.1 the hook reads the pin from the manifest header and
+uses the fallback without running the launcher. A bin directory without an
+`envy` launcher, or a launcher that fails, gets the same fallback.
 
 ### Nested shells
 

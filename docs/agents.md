@@ -10,14 +10,14 @@ slug: /agents
 
 envy = per-project package manager. Lua manifest `envy.lua` at project root pins everything incl. envy itself. No install step, server, registry, lockfile. Committed bootstrap `<bin>/envy` + `envy.bat` downloads pinned envy on first run.
 
-**Current release 0.6.0.** `(0.x.y+)` = minimum version, check the project's `@envy version`. Unmarked = 0.3.0+. Newest: spec `ENV` + `envy activate`/`deactivate` + `os.execute`/`io.popen` = error + `envy.PROJECT_ROOT` + DISPLAY in cache dir (0.6.0), `submodules = function(sm)` (0.5.1), git `submodules` + strict `ref` (0.5.0).
+**Current release 0.7.0.** `(0.x.y+)` = minimum version, check the project's `@envy version`. Unmarked = 0.3.0+. Newest: `envy.subproject(dir)` + `envy.IS_SUBPROJECT` + per-subproject `envy.PROJECT_ROOT` (0.7.0), hook skips `activate` for pins < 0.6.0 (0.6.1), spec `ENV` + `envy activate`/`deactivate` + `os.execute`/`io.popen` = error + `envy.PROJECT_ROOT` + DISPLAY in cache dir (0.6.0).
 
 Release assets under `https://github.com/envy-package-manager/envy/releases/download/v<ver>/`: `envy-{linux,darwin}-{x86_64,arm64}.tar.gz`, `envy-windows-{x86_64,arm64}.zip`, `SHA256SUMS`. Archived binary already 0755.
 
 ## manifest + spec
 
 ```lua
--- @envy version "0.6.0"
+-- @envy version "0.7.0"
 -- @envy sha256sums "9f2c...e10b"
 -- @envy bin "bin"
 -- @envy deploy "true"
@@ -94,7 +94,7 @@ end
 ```
 
 - OPTIONS keys exactly `required`, `type` (`string|int|float|boolean|table|list|semver`), `range` (`">=1 <=64"`, semver: npm grammar `^ ~ || !=`, no hyphen ranges, must parse whole, error shows column (0.4.13+)), `choices` (array), `validate` (fn: `nil`/`true` ok, `false` fail, string = message shown). Or `OPTIONS = function` validator. **No `default`**: omitted option = `nil` in every verb.
-- `envy.PLATFORM` `darwin|linux|windows`, `envy.ARCH` `arm64|x86_64`, `envy.PLATFORM_ARCH` `darwin-arm64` etc, `envy.EXE_EXT` `.exe`|`""`, `envy.PROJECT_ROOT` (0.6.0+) root manifest dir, same in every Lua state, = SETUP cwd, `nil` under `envy lua`, never bake into a payload.
+- `envy.PLATFORM` `darwin|linux|windows`, `envy.ARCH` `arm64|x86_64`, `envy.PLATFORM_ARCH` `darwin-arm64` etc, `envy.EXE_EXT` `.exe`|`""`, `envy.PROJECT_ROOT` (0.6.0+) root manifest dir in specs/phases/SETUP (= SETUP cwd), subproject's own dir in its manifest (0.7.0+, see [superprojects](#superprojects)), `nil` under `envy lua`, never bake into a payload or options. `envy.IS_SUBPROJECT` (0.7.0+) manifest only: `true` in subproject, `false` in root, `nil` in specs.
 
 First binary (only step `init` cannot bootstrap):
 
@@ -110,7 +110,7 @@ Existing project: NO setup step. `./bin/<tool>` or `./bin/envy run <cmd>` bootst
 
 ## model
 
-- manifest globals: `PACKAGES` (required), `BUNDLES`, `PACKAGE_DEPOTS`, `DEFAULT_SHELL`, `VENDOR_ROOT`. Real Lua: conditionals, `envy.import`, `envy.extend` legal.
+- manifest globals: `PACKAGES` (required), `BUNDLES`, `PACKAGE_DEPOTS`, `DEFAULT_SHELL`, `VENDOR_ROOT`. Real Lua: conditionals, `envy.subproject`, `envy.extend` legal.
 - directives: `version` pins envy. `sha256sums` pins release checksums, needs `version`. `bin` REQUIRED, relative to manifest, no drive / leading sep / `~` / `$` / `%` (`.`/`..` legal, `deploy` judges escape). `mirror` = release mirror. `deploy "true|false"` **default FALSE**: without it `sync` deploys nothing + warns. `root "true|false"` superproject boundary, default true. `cache-local` = cache tree in project, tuned by `cache-mode`, `state-dir` (0.2.0+). `cache-posix`/`cache-win` = errors. `schema`.
 - spec = one package recipe. `IDENTITY = "ns.name@rev"` required, `@rev` versions the SPEC not the payload, `local.*` = project-local. Package = `(identity, options, platform)`. Canonical key `ns.name@rev{["k"]=v,...}`, keys quoted + sorted. Option tables: all string keys or contiguous `1..n`, no functions, any depth.
 - verbs `FETCH → STAGE → BUILD → INSTALL`, plus `SETUP` (named CHECK/INSTALL pairs). See [verb forms](#verb-forms).
@@ -145,7 +145,7 @@ Existing project: NO setup step. `./bin/<tool>` or `./bin/envy run <cmd>` bootst
 - state in exported `ENVY_ACTIVATE_*` (`VARS`, `ORIG__<NAME>`, `ROOT`, `EXE`, `GEN`, `GENFILE`, `SCHEMA`, hook's `KEY`): nested shells inherit, no re-apply. `deactivate` reads only state, restores byte-exact + wholesale (in-project edits to touched vars lost).
 - hermetic: verbs + `os.getenv` see PRE-activation env → activated-shell `install` = plain-shell build. `os.execute`/`io.popen` = error `os.execute is unavailable; use envy.run`, everywhere: `envy.run(cmd, { capture = true })`.
 - ENV edit = spec content, rebuilds nothing: bump `@rN`.
-- hook: enter → `<bin>/envy activate <sh>` (pinned envy, may download first time). Leave last → `$ENVY_ACTIVATE_EXE deactivate <sh>`. cd within project: no envy. `install`/`sync` touch `<cache>/activate/<digest>` → next prompt refreshes (builtin read). Pinned envy < 0.6.0 or no `bin/envy` → PATH + `ENVY_PROJECT_ROOT` only. Stderr: `envy: entering proj — 4 variables set` | `refreshed` | `leaving proj — environment restored`.
+- hook: enter → `<bin>/envy activate <sh>` (pinned envy, may download first time). Leave last → `$ENVY_ACTIVATE_EXE deactivate <sh>`. cd within project: no envy. `install`/`sync` touch `<cache>/activate/<digest>` → next prompt refreshes (builtin read). Pinned envy < 0.6.0 (read from header, launcher not run, 0.6.1+), no `bin/envy`, or launcher fails → PATH + `ENVY_PROJECT_ROOT` only. Stderr: `envy: entering proj — 4 variables set` | `refreshed` | `leaving proj — environment restored`.
 
 ## windows
 
@@ -210,7 +210,7 @@ Same manifest, specs, cache layout. Not a port.
 - manifest asks (`vendor` on a PACKAGES entry, bundle shape 0.4.6+), spec narrows (`VENDOR = { selectors }`, absent/empty = all, bad glob fails at spec_fetch). A spec never requests it. DEPENDENCIES / `source.dependencies` entry with `vendor` = unknown-key error.
 - forms: `true` (derived leaf under `VENDOR_ROOT`) | `false`/absent | `"dir"` (project-relative, no VENDOR_ROOT needed) | `{ path, auto_sync }` | `{}` = true. `VENDOR_ROOT` needed ONLY for `true`.
 - derived names escalate per colliding group: `name` → `ns.name` → `ns.name@rev` → `ns.name@rev-<options hash>`. Explicit path never escalates.
-- path: relative, no leading sep / drive / `.` / `..` / `~` / `$` / `%`. Anchored on ROOT manifest dir, NOT the file that wrote it (unlike `source` under import): a component's `vendor` path differs standalone vs imported. Gate on `ENVY_IMPORTER` or vendor from root.
+- path: relative, no leading sep / drive / `.` / `..` / `~` / `$` / `%`. Anchored on ROOT manifest dir, NOT the file that wrote it (unlike `source` in a subproject): a subproject's `vendor` path differs standalone vs loaded. Gate on `envy.IS_SUBPROJECT` or vendor from root.
 - whole plan checked before any write: duplicate or nested destinations = error naming both. Platform-excluded entries dropped first. Destination resolved through symlinks, outside project = refused.
 - per-package phase of `install`/`sync`, so `install` writes the work tree when the manifest vendors.
 - drift: no project-side state. BLAKE3 tree digest of destination vs pristine digest in cache entry. ANY mismatch (edit, stray/deleted file, empty dir, symlink target, exec bit, package moved) → wipe + recopy. mtime ignored. Committed vendored tree adopted as-is on a fresh machine.
@@ -236,7 +236,7 @@ Same manifest, specs, cache layout. Not a port.
 - one identity, one option set, per dependency list: same identity + different `options` = error. NOT top-level PACKAGES: N option sets there = N packages (DISPLAY's use case).
 - cycle = error naming path (`Dependency cycle detected: a -> b -> c -> a`).
 - **fetch dependencies**: installed before the dependent's spec is fetched (Artifactory / auth CLI). `source = { dependencies = {{spec, source}}, fetch = function(tmp_dir, opts) ... end }`. fetch fn commits `spec.lua` (+ helper files) via `envy.commit_fetch`. `envy.product`/`envy.package` work inside. Spec-declared fetch runs as the CHILD: entry's own options + own `source.dependencies`, one spec cache entry per option set. `source` table without `fetch`/`dependencies` = error.
-- bundles: one container, many specs. `BUNDLES = { alias = { identity, source, ref, submodules? } }`, entry `bundle = "alias"` instead of `source`. Alias resolves against the DECLARING file's `BUNDLES` (a spec's own, an imported manifest's own then root's). Lua under `lib/`: see [lua modules](#lua-modules).
+- bundles: one container, many specs. `BUNDLES = { alias = { identity, source, ref, submodules? } }`, entry `bundle = "alias"` instead of `source`. Alias resolves against the DECLARING file's `BUNDLES` (a spec's own, a subproject's own then root's). Lua under `lib/`: see [lua modules](#lua-modules).
 - same identity declared with different sources = error naming both files.
 - depot (OPTIONAL): `PACKAGE_DEPOTS = { "s3://bucket/packages.txt" }`, index of prebuilt `.tar.zst`. Hit skips fetch + build. Bypass `--ignore-depot` / `ENVY_IGNORE_DEPOT=1`. Publish: `envy export` → `envy merge-depot` → upload. Depot's own DEPENDS closure exempt from the index.
 - queries: fuzzy `name` | `ns.name` | `name@rev` | canonical key, dotted rev ok (`gcc@13.2.0`). CLI takes FIRST match in manifest order. `DEFAULT_SHELL` / `PACKAGE_DEPOTS` DEPENDS strict: 0 or 2 distinct matches = error.
@@ -253,12 +253,12 @@ Same manifest, specs, cache layout. Not a port.
 
 - `envy.*` loaders: fresh sandbox, ALWAYS re-execute. `require` caches.
 - **returns (0.4.6+)**: module's returned table, else globals it assigned (if it returned nothing), else error naming module. `local M = {} ... return M` works.
-- **reads (0.4.8+)**: sandbox falls through to the LOADING file's globals: root manifest, imported fragment (its `VENDOR_ROOT`, `ENVY_IMPORTER`), spec, outer module. Writes stay in the sandbox.
+- **reads (0.4.8+)**: sandbox falls through to the LOADING file's globals: root manifest, subproject (its `VENDOR_ROOT`, `envy`), spec, outer module. Writes stay in the sandbox.
 - `mod` for `loadenv_spec`/`loadenv_bundle`: dot syntax, no separators, no `..`, no leading/trailing `.`, re-checked under load root. `loadenv` allows a separator, cannot escape caller's dir (0.4.6+).
 - `loadenv_bundle`: fetches the bundle DURING manifest global scope, so entries go straight into PACKAGES. `BUNDLES` must be assigned ABOVE the call. Fragment: own `BUNDLES` then root's. `local.` dir bundle read in place, else cached once. Row: bar → `installed (Xs)` (0.4.11+), hit silent. Refused: outside manifest scope, unknown alias (names alias + file), custom-fetch bundle. Trace `lua_ctx_loadenv_bundle`.
 - returned entries parse like literal ones: `bundle` = CONSUMER's alias (any, even another bundle), `vendor` ok.
 - **`ENVY_BUNDLE`** (0.4.7+): `{ identity, alias, root }` in a module that `loadenv_bundle`/`loadenv_spec` loaded out of a bundle. `alias` = caller's name for it, `nil` under `loadenv_spec`. Whole global `nil` elsewhere: manifest, spec, `envy.loadenv` target (incl. a sibling a bundled module loads, never inherited), `require`d module. Not a module global: not handed back, not leaked into `options`.
-- bare globals envy installs: `ENVY_SHELL`, `ENVY_IMPORTER`, `ENVY_BUNDLE`.
+- bare globals envy installs: `ENVY_SHELL`, `ENVY_BUNDLE`.
 
 Builder pattern, a bundle shipping the helper that writes its consumers' entries:
 
@@ -282,13 +282,16 @@ Spell the leaf: N entries of one identity with `vendor = true` escalate to optio
 
 ## superprojects
 
-- component manifest: `@envy root "false"`. Superproject: `local sub = envy.import("libs/common")` + `PACKAGES = envy.extend(sub.PACKAGES, {...})`. Commands walk up to root, `--subproject` stops at nearest.
-- `envy.import(path)`: MANIFEST SCOPE ONLY (not specs, not `envy lua`). Relative to caller, directory → `envy.lua`. Sandbox, returns its globals. Nesting ok, cycle = error naming chain.
-- imported entry stays tied to its file: relative `source` → imported dir, `bundle` → its `BUNDLES` then root's (no re-export). Provenance (conflict messages) and custom-fetch cache key = imported file. Project root, SETUP cwd = root.
-- only `PACKAGES`/`BUNDLES` tagged, splice others by hand. Root-only `DEFAULT_SHELL`/`VENDOR_ROOT` set in an import: root must assign SAME value, else error. `VENDOR_ROOT = sub.VENDOR_ROOT`.
-- imported `PACKAGE_DEPOTS` (0.4.12+): ignored until root assigns it. No fetch, no DEPENDS build, no error, no `ENVY_IMPORTER` gate needed. Merge: `envy.extend({...}, a.PACKAGE_DEPOTS, b.PACKAGE_DEPOTS)`, nil arg = error. Using a depot = trusting its artifacts.
-- `ENVY_IMPORTER` = importer's absolute path in the imported file (and in modules it loads, 0.4.8+), `nil` standalone. `if not ENVY_IMPORTER then` = standalone gate.
-- imported header INERT (`bin`, `deploy`, `cache-*`, `state-dir`, `mirror`, `sha256sums`, `root`). Only `@envy version` checked, and only if root pins: newer than root = error, older = warn.
+- subproject manifest: `@envy root "false"`. Superproject: `local sub = envy.subproject("libs/common")` + `PACKAGES = envy.extend(sub.PACKAGES, {...})`. Commands walk up to root, `--subproject` stops at nearest (it becomes the run's root).
+- `envy.subproject(dir)` (0.7.0+): MANIFEST SCOPE ONLY (not specs, not `envy lua`). `dir` relative to caller, holds `envy.lua`. File path = error. Sandbox, returns its globals. Nesting + diamond ok, cycle = error naming chain.
+- `sub.PROJECT_ROOT` = subproject dir, not in `pairs(sub)`. Subproject assigning global `PROJECT_ROOT` = error. Hosted-but-undeclared spec: `source = sub.PROJECT_ROOT .. "/envy/x.lua"`.
+- subproject entry stays tied to its file: relative `source` → subproject dir, `bundle` → its `BUNDLES` then root's (no re-export). Provenance (conflict messages) and custom-fetch cache key = subproject file.
+- inside subproject manifest: `envy.PROJECT_ROOT` = its dir, `envy.IS_SUBPROJECT` = `true`. Lua it defines keeps both (fn the root calls, modules, `source.fetch`, depot FETCH). Own `envy` table, writes stay inside. Specs, phases, SETUP, SETUP cwd = run root.
+- helper fn returning an entry: entry belongs to the CALLER (relative paths, aliases resolve there) → build `source` from `envy.PROJECT_ROOT`.
+- only `PACKAGES`/`BUNDLES` tagged, splice others by hand. Root-only `DEFAULT_SHELL`/`VENDOR_ROOT` set in a subproject: root must assign SAME value, else error. `VENDOR_ROOT = sub.VENDOR_ROOT`.
+- subproject `PACKAGE_DEPOTS`: ignored until root assigns it. No fetch, no DEPENDS build, no error. Merge: `envy.extend({...}, a.PACKAGE_DEPOTS, b.PACKAGE_DEPOTS)`, nil arg = error. Using a depot = trusting its artifacts.
+- `if not envy.IS_SUBPROJECT then` = standalone gate (taken under `--subproject` too).
+- subproject header INERT (`bin`, `deploy`, `cache-*`, `state-dir`, `mirror`, `sha256sums`, `root`). Only `@envy version` checked, and only if root pins: newer than root = error, older = warn. Trace `subproject_loaded{path, parent}`.
 
 ## CLI
 
@@ -317,4 +320,4 @@ Global flags BEFORE subcommand: `--verbose -q --trace[=sinks] --cache-root --pro
 
 ## lua API
 
-`envy.run(script|{lines}, {quiet, check, capture, interactive, env, cwd, shell})`, `envy.fetch(src, {dest})`, `envy.commit_fetch`, `envy.verify_hash`, `envy.extract`, `envy.extract_all(src, dst, {strip, only, archives})`, `envy.copy/move/remove/exists/is_file/is_dir`, `envy.path.*`, `envy.abspath`, `envy.template(str, vars)`, `envy.product(name)`, `envy.package(identity)`, `envy.options(schema)`, `envy.import`, `envy.extend`, loaders (see [lua modules](#lua-modules)), constants (see top). Log: `envy.debug/info/warn/error` + `print` → stderr, `envy.stdout` → stdout (a contract, keep it clean).
+`envy.run(script|{lines}, {quiet, check, capture, interactive, env, cwd, shell})`, `envy.fetch(src, {dest})`, `envy.commit_fetch`, `envy.verify_hash`, `envy.extract`, `envy.extract_all(src, dst, {strip, only, archives})`, `envy.copy/move/remove/exists/is_file/is_dir`, `envy.path.*`, `envy.abspath`, `envy.template(str, vars)`, `envy.product(name)`, `envy.package(identity)`, `envy.options(schema)`, `envy.subproject`, `envy.extend`, loaders (see [lua modules](#lua-modules)), constants (see top). Log: `envy.debug/info/warn/error` + `print` → stderr, `envy.stdout` → stdout (a contract, keep it clean).

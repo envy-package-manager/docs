@@ -44,14 +44,13 @@ normal run, so nothing extra has to be typed to keep a vendored tree current.
 [repairing one package](#restoring-a-copy-on-demand) or asking what has drifted.
 
 `VENDOR_ROOT` is read from the root manifest only, like `PACKAGE_DEPOTS` and
-`DEFAULT_SHELL`. An [imported](./projects.md#superprojects-and-subprojects)
-manifest that sets it has to be spliced into the root by hand, or the import is
-an error.
+`DEFAULT_SHELL`. A [subproject](./projects.md#superprojects-and-subprojects)
+that sets it is an error unless the root assigns the same value.
 
 Destinations follow the same rule. Unlike an entry's `source`, which anchors on
 the file that wrote it, a `vendor` path is always relative to the root manifest's
 directory. See
-[Vendoring is per repo](../guides/monorepos.md#vendoring-is-per-repo-not-per-component).
+[Vendoring is per repo](../guides/monorepos.md#vendoring-is-per-repo-not-per-subproject).
 
 ## Where a package lands
 
