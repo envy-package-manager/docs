@@ -59,8 +59,8 @@ Rules:
 | `DEFAULT_SHELL` | constant, table, or function | Shell for string verbs. See [Shells & Scripts](/concepts/shells). Root manifest only. |
 | `VENDOR_ROOT` | string | Project-relative directory that `vendor = true` entries land under. See [Vendoring](/concepts/vendoring). Root manifest only. Requires envy 0.4.0. |
 
-Manifests are Lua, so `envy.import`, `envy.extend`, and `envy.abspath` are all
-available. See [Lua API](./lua-api.md).
+Manifests are Lua, so `envy.subproject`, `envy.extend`, and `envy.abspath` are
+all available. See [Lua API](./lua-api.md).
 
 ## Package entry fields
 

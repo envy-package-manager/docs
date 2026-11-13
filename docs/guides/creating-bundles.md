@@ -187,8 +187,8 @@ naming.
 
 `VENDOR_ROOT` is the consumer's too. A module reads the globals of the file that
 loaded it. The builder puts each tree under whatever root the consumer chose, or
-under `vendor/` when there is none. From envy 0.4.8 this also holds when the
-loading file is an imported component manifest.
+under `vendor/` when there is none. This also holds when the loading file is a
+[subproject's](/guides/monorepos) manifest.
 
 A consumer is then one line per dependency:
 

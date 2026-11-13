@@ -133,7 +133,7 @@ envy vendor --all --manifest libs/firmware/envy.lua
 
 Vendor destinations are anchored on the root manifest, so which manifest the
 command loads decides what the paths mean. See
-[Vendoring is per repo](/guides/monorepos#vendoring-is-per-repo-not-per-component).
+[Vendoring is per repo](/guides/monorepos#vendoring-is-per-repo-not-per-subproject).
 
 ## See also
 

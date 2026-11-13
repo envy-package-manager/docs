@@ -53,8 +53,9 @@ rather than guessing:
 `envy.fetch` needs no phase, but it does need `{ dest = <dir> }`, since there is
 no `tmp_dir` to default to.
 
-`envy.import` is not installed at all. It composes manifests, and `envy lua`
-runs a script rather than loading a manifest.
+`envy.subproject` is not installed at all. It composes manifests, and `envy lua`
+runs a script rather than loading a manifest. `envy.PROJECT_ROOT` and
+`envy.IS_SUBPROJECT` are `nil` for the same reason.
 
 A Lua error exits non-zero with the message and traceback, formatted the way a
 failing spec's error is.

@@ -135,8 +135,8 @@ manifest's [`DEFAULT_SHELL`](./shells.md#bootstrapping-a-custom-shell) can
 exist, so its string verbs and any `envy.run` inside `FETCH` get the platform
 built-in.
 
-envy reads `PACKAGE_DEPOTS` from the root manifest only. From envy 0.4.12 it
-ignores an imported manifest's depots unless the root assigns them. See
+envy reads `PACKAGE_DEPOTS` from the root manifest only. It ignores a
+subproject's depots unless the root assigns them. See
 [The root manifest picks the depots](../guides/monorepos.md#the-root-manifest-picks-the-depots).
 
 ## Opting out

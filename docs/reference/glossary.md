@@ -34,8 +34,8 @@ title: Glossary
 - **Setup pair**: a named CHECK/INSTALL couple that performs host-state work,
   selected per manifest entry.
 - **Spec**: the Lua file describing how to obtain one kind of package.
-- **Superproject and subproject**: manifests composing across nested
-  directories.
+- **Superproject and subproject**: a root manifest that loads nested manifests
+  with `envy.subproject`, and the manifests it loads.
 - **User-managed package**: a package whose state lives on the host rather than
   in the cache, such as Homebrew or apt.
 - **Vendoring**: copying a package's installed files out of the cache and into
