@@ -87,8 +87,8 @@ To run one command in the activated environment without changing your shell, use
 Activation follows these rules:
 
 - **Installed packages only.** Activation never fetches, installs, or waits on
-  another envy process. A package that is not installed is skipped with a
-  warning, `activate: 1 package not installed; run 'envy install'`.
+  another envy process. A package that is not installed is skipped without a
+  message. Its `ENV` applies at the first prompt after it installs.
 - **Dependencies count.** A dependency's `ENV` applies even when the manifest
   does not list it in `PACKAGES`.
 - **Earlier wins.** When two packages set the same variable, the one listed

@@ -12,7 +12,10 @@ writing a spec, and to test `only` patterns before committing them.
 
 Formats come from libarchive, so the list is long: `tar`, `tar.gz`, `tar.xz`,
 `tar.bz2`, `tar.zst`, `zip`, `7z`, `rar`, `iso`, and bare compressed streams.
-envy detects the format from content rather than the filename.
+envy detects the format from content rather than the filename. The exception is
+a bare `.gz`, `.bz2`, `.xz`, `.zst`, or `.lzma` that is not a `.tar.*`. envy
+decompresses it to one file named without the suffix, whatever it holds. See
+[Archive formats](/concepts/specs/stage#archive-formats).
 
 ## Usage
 
@@ -50,6 +53,18 @@ Selector rules:
   literals. An unterminated `[` is an error.
 - Matching is case-sensitive on every platform, including Windows.
 - A selected hard link needs its target selected too.
+
+## Progress
+
+The progress row counts files. When the archive states its contents without
+being decompressed, the row counts against those totals, as in
+`3/12 files 1.00KB/4.00KB`. A plain `tar`, a `zip`, and a `.tar.zst` written by
+[`envy export`](./export.md) state their contents. A compressed tarball does
+not, so its row shows `3 files` and the bar follows how much of the archive envy
+has read. Since envy 0.7.1.
+
+The same row appears under a package's identity when `STAGE` unpacks a download
+or a depot archive is imported.
 
 ## Examples
 

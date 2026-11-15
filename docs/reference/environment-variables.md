@@ -55,7 +55,7 @@ Do not set these yourself.
 | `ENVY_ACTIVATE_ROOT` | The activated project's directory. |
 | `ENVY_ACTIVATE_KEY` | The hook's spelling of that directory. Set only by the hook. |
 | `ENVY_ACTIVATE_EXE` | The envy binary that activated. The hook deactivates with it. |
-| `ENVY_ACTIVATE_GENFILE`, `ENVY_ACTIVATE_GEN` | The file `envy install` and `envy sync` touch when they finish, and its contents at activation. A mismatch at the next prompt makes the hook refresh. |
+| `ENVY_ACTIVATE_GENFILE`, `ENVY_ACTIVATE_GEN` | The file envy touches when `envy install` or `envy sync` finishes or any command installs a package, and its contents at activation. A mismatch at the next prompt makes the hook refresh. |
 | `ENVY_ACTIVATE_SCHEMA` | The state format. An envy that cannot read it says to restart your shell. |
 
 envy removes every `ENVY_ACTIVATE_*` variable, and puts back every variable they

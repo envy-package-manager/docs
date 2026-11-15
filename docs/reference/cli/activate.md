@@ -33,7 +33,7 @@ Load the output with your shell:
 | Output | Shell code on stdout. Status lines and warnings on stderr. |
 | On a terminal | Prints how to load the script instead of the script: `activate prints shell code; load it with: eval "$(envy activate zsh)"`. |
 | Prior activation | Undone first, whichever project set it. Running it again in the same project refreshes. |
-| Installs | None. It reads the cache, and never fetches, installs, or waits on a lock. A package that is not installed is skipped with `warning: activate: 1 package not installed; run 'envy install'`. |
+| Installs | None. It reads the cache, and never fetches, installs, or waits on a lock. A package that is not installed is skipped without a message. |
 | Lua output | A spec's `envy.stdout` or `io.write` goes to stderr, so it cannot corrupt the script. |
 | Re-exec | Runs as the version the manifest pins. |
 | Windows | `powershell` only. |
@@ -81,8 +81,9 @@ envy install
 eval "$(envy activate zsh)"
 ```
 
-With the shell hook this happens on its own. `envy install` and `envy sync` mark
-the project, and every activated shell in it refreshes at its next prompt.
+With the shell hook this happens on its own. `envy install`, `envy sync`, and
+any command that installs a package mark the project, and every activated shell
+in it refreshes at its next prompt.
 
 ### To see what activation changes
 

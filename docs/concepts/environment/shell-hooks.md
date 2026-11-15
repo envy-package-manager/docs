@@ -64,16 +64,17 @@ Both are [CLI commands](../../reference/cli/activate.md) you can also run by
 hand. The launcher re-execs into the envy the project pins, so each project is
 activated by its own version.
 
-`envy install` and `envy sync` mark the project when they finish. At the next
-prompt, every shell activated in that project refreshes and picks up what was
-installed:
+`envy install` and `envy sync` mark the project when they finish. From envy
+0.7.3, so does any command that installs a package, such as a wrapper installing
+its tool on first use. A cache hit marks nothing. At the next prompt, every
+shell activated in that project refreshes and picks up what was installed:
 
 ```text
 envy: refreshed proj — 4 variables set
 ```
 
-Activation skips packages that are not installed yet, with a warning to run
-`envy install`. It never installs anything itself.
+Activation skips packages that are not installed yet, without a message. It
+never installs anything itself.
 
 A project pinned to an envy older than 0.6.0 has no `activate` command. There
 the hook falls back to what it did before: the bin directory on `PATH` and

@@ -47,6 +47,11 @@ expects in a directory. From envy 0.6.0, a spec with a
 ignore the label, so a depot published before 0.6.0 still serves those
 packages.
 
+From envy 0.7.1, each archive ends in a 32-byte trailer that states its file
+count and size. zstd skips it, so `zstd -d`, `tar`, and other decoders read the
+archive as before. envy reads it to count against known totals when the archive
+is extracted or imported.
+
 ## Examples
 
 ### To publish a platform's artifacts from CI

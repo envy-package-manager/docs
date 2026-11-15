@@ -353,7 +353,7 @@ it is per-platform except where you say so:
 
 | Concern | Where it belongs |
 | --- | --- |
-| A package only some platforms need | `platforms = { "windows" }` on the entry, or `PLATFORMS` in the spec |
+| A package only some platforms need | `platforms = { "windows" }` on the entry |
 | Packages kept inside the project rather than the user-wide cache | `@envy cache-local` |
 | A different interpreter for string verbs | [`DEFAULT_SHELL`](./shells.md), usually a function that branches on `envy.PLATFORM` |
 | A per-platform download URL or hash | inside the spec's `FETCH`, keyed on `envy.PLATFORM_ARCH` |

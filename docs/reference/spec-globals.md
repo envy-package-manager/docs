@@ -20,7 +20,7 @@ Terse companion to [Anatomy of a Spec](/concepts/specs).
 | `OPTIONS` | schema table or function | options are accepted unvalidated |
 | `PRODUCTS` | table or function | the package exports nothing |
 | `DEPENDENCIES` | array of entry tables | none |
-| `PLATFORMS` | array of strings, `darwin`, `linux`, `windows`, optionally `-arm64` or `-x86_64` | every platform |
+| `PLATFORMS` | array of strings, `darwin`, `linux`, `windows`, optionally `-arm64` or `-x86_64`. Narrows product wrappers, not where the package installs | every platform |
 | `DISPLAY` | string or function of the options | the package's rows say nothing beyond their identity. Requires envy 0.4.2 |
 | `ENV` | table or function | the package sets no variables. Requires envy 0.6.0 |
 | `USER_MANAGED` | boolean or function | `false`, meaning cache-managed |
@@ -127,8 +127,8 @@ end
 ```
 
 `envy.EXE_EXT` is `".exe"` on Windows and `""` elsewhere, so one `PRODUCTS` line
-covers all three. A product that only exists on some platforms takes its own
-`platforms` field instead. String verbs run under PowerShell on Windows, so a
+covers all three. A product that only exists on some platforms comes from a
+`PRODUCTS` function that checks `envy.PLATFORM`. String verbs run under PowerShell on Windows, so a
 spec with a `BUILD` string needs
 [a portability plan](/concepts/specs/build#on-windows).
 
@@ -140,7 +140,7 @@ A string value is shorthand for `{ value = "...", script = true }`.
 | --- | --- | --- |
 | `value` | required | Path relative to the package directory, or an arbitrary string. |
 | `script` | `true` | Whether to deploy a wrapper script into the project's bin directory. |
-| `platforms` | all | Restrict this product to some platforms. |
+| `platforms` | all | Which wrapper flavors to deploy. Intersected with the spec's `PLATFORMS` and the entry's `platforms`. Does not hide the product from `envy product`. |
 
 ## `DEPENDENCIES` entry fields
 
@@ -312,7 +312,6 @@ PRODUCTS = { rg = "rg" }
 ```lua title="user-managed"
 IDENTITY = "acme.build-essential@r1"
 USER_MANAGED = true
-PLATFORMS = { "linux" }
 
 SETUP = {
   build_essential = {

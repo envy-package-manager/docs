@@ -33,12 +33,16 @@ matches.
 
 ## The four places filters apply
 
-| # | Where | Meaning |
+| # | Where | Decides |
 | --- | --- | --- |
-| 1 | Manifest entry `platforms = { ... }` | This project only needs it here. |
-| 2 | Spec `PLATFORMS = { ... }` | This package only exists here. |
-| 3 | [SETUP](./setup.md) pair `PLATFORMS = { ... }` | This host tweak only applies here. |
-| 4 | [Product](./products.md) `platforms = { ... }` | This tool only ships here. |
+| 1 | Manifest entry `platforms = { ... }` | Whether this machine installs the package. |
+| 2 | Spec `PLATFORMS = { ... }` | Which wrapper flavors the package's products get. |
+| 3 | [SETUP](./setup.md) pair `PLATFORMS = { ... }` | Whether this machine runs the pair. |
+| 4 | [Product](./products.md) `platforms = { ... }` | Which wrapper flavors one product gets. |
+
+Only (1) and (3) look at the machine envy runs on. A spec's `PLATFORMS` does not
+stop the package from installing, and it does not stop a selected SETUP pair
+from running. To keep a package off a machine, filter the manifest entry.
 
 ```lua title="envy.lua: (1) the project only wants apt on Linux"
 PACKAGES = {
@@ -49,7 +53,7 @@ PACKAGES = {
 }
 ```
 
-```lua title="acme.jlink.lua: (2), (3) and (4)"
+```lua title="acme.jlink.lua: (2) and (3)"
 PLATFORMS = { "darwin", "linux", "windows" }     -- (2) all three, explicitly
 
 SETUP = {
@@ -62,26 +66,39 @@ SETUP = {
 PRODUCTS = function(opts)
   local products = { JLinkExe = exe("JLink") }
   if envy.PLATFORM == "linux" then
-    products.jlink_udev_rules = { value = "99-jlink.rules", script = false }  -- (4)
+    products.jlink_udev_rules = { value = "99-jlink.rules", script = false }  -- Linux hosts only
   end
   return products
 end
 ```
 
-### How (1) and (2) combine
+### How (1), (2) and (4) combine
 
-envy intersects the entry's list with the spec's list. If both are non-empty and
-share nothing, the package never instantiates: no error, no scripts, no work.
+envy intersects the entry's list, the spec's list, and the product's list. The
+result decides which wrappers [`sync`](../../reference/cli/sync.md) and
+[`deploy`](../../reference/cli/deploy.md) write for that product: the POSIX
+script if it names `darwin` or `linux`, the `.bat` if it names `windows`. If the
+lists share nothing, the product gets no wrapper, with no error.
 
-| Entry `platforms` | Spec `PLATFORMS` | Result |
+An OS entry covers its architectures, so lists of different granularity meet at
+the narrower entry. Since envy 0.7.1.
+
+| Entry `platforms` | Spec `PLATFORMS` | Intersection |
 | --- | --- | --- |
-| absent | absent | everywhere |
-| `{ "linux" }` | absent | Linux only |
-| absent | `{ "darwin" }` | macOS only |
-| `{ "linux", "darwin" }` | `{ "darwin" }` | macOS only |
-| `{ "linux" }` | `{ "darwin" }` | nowhere |
+| absent | absent | every platform |
+| `{ "linux" }` | absent | `linux` |
+| absent | `{ "windows" }` | `windows` |
+| `{ "linux", "darwin" }` | `{ "darwin" }` | `darwin` |
+| `{ "darwin", "linux" }` | `{ "darwin-arm64", "linux-x86_64" }` | `darwin-arm64`, `linux-x86_64` |
+| `{ "linux" }` | `{ "darwin" }` | none, so no wrappers |
 
-Naming an excluded package explicitly is different. `envy install acme.apt@r0`
+Wrappers come in two flavors, so the result only chooses between POSIX and
+Windows. A spec limited to `linux` still gets its POSIX wrapper on a Mac.
+`envy product` ignores (2) and (4), and resolves the product on any machine that
+installs the package. To offer a product on some machines only, compute
+`PRODUCTS` from `envy.PLATFORM`, as the jlink example does.
+
+Naming a package that its entry excludes is different. `envy install acme.apt@r0`
 on macOS is an error, because you asked for something specific that cannot
 happen.
 A filter that does less is fine. A query that silently does nothing is not.

@@ -85,8 +85,9 @@ project, it activates it: the bin directory goes first on `PATH`,
 `ENVY_PROJECT_ROOT` is set, every installed package's
 [`ENV`](/concepts/environment/package-env) is applied, and the prompt gains a 🦝
 marker. Leaving restores every variable the project changed. Switching between
-projects does both in one step. After `envy install` or `envy sync`, the next
-prompt refreshes the activation with what was installed.
+projects does both in one step. After envy installs something, including a
+wrapper installing its tool on first use, the next prompt refreshes the
+activation with what was installed.
 
 ![A terminal session. python3 -V prints the system Python, then a different
 version inside each of two project directories, then the system one again after

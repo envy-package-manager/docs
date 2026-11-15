@@ -275,14 +275,10 @@ manifest to the current directory. See
 **A package's variables are missing in my shell**
 
 [Activation](/concepts/environment/package-env#activation) applies `ENV` only
-from installed packages, and says so:
+from installed packages, and skips the rest without a message.
 
-```text
-warning: activate: 1 package not installed; run 'envy install'
-```
-
-With the shell hook, run `envy install`, and the next prompt refreshes. Without
-it, re-run `eval "$(envy activate zsh)"`. Product scripts and a plain `envy run`
+With the shell hook, run `envy install`, or run one of the package's tools, and
+the next prompt refreshes. Without it, re-run `eval "$(envy activate zsh)"`. Product scripts and a plain `envy run`
 never apply `ENV`. Use `envy run --activate` for one command.
 
 **`envy: cannot restore the environment (...is gone); restart your shell`**

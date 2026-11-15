@@ -34,7 +34,7 @@ PRODUCTS = { rg = "rg" }
 | [`OPTIONS`](./options.md) | table \| function | Declare and validate the options this spec accepts. |
 | [`PRODUCTS`](./products.md) | table \| function | Name what the package offers consumers. |
 | [`DEPENDENCIES`](../dependencies/declaring.md) | array | Other packages this one needs, and how early. |
-| [`PLATFORMS`](./platforms.md) | array of string | Where this package exists at all. |
+| [`PLATFORMS`](./platforms.md) | array of string | Which platforms its product wrappers are written for. The manifest entry's `platforms` decides where it installs. |
 | [`DISPLAY`](../../reference/spec-globals.md#display) | string \| function | What this package's progress rows say they are working on, which is how several instances of one spec tell themselves apart. Requires envy 0.4.2. |
 | [`ENV`](../environment/package-env.md) | table \| function | Variables this package sets in activated shells and in the builds of packages that depend on it. Requires envy 0.6.0. |
 | [`USER_MANAGED`](./user-managed.md) | boolean \| function | Orchestrate host state instead of owning files. |
@@ -151,7 +151,6 @@ Everything else is default behavior.
 ```lua title="brew.lua"
 -- @envy schema "1"
 IDENTITY = "acme.brew@r0"
-PLATFORMS = { "darwin" }
 USER_MANAGED = true
 
 SETUP = {
@@ -167,7 +166,8 @@ SETUP = {
 }
 ```
 
-No fetch, no build, nothing cached. The package is host state. See
+No fetch, no build, nothing cached. The package is host state. Its manifest
+entry carries `platforms = { "darwin" }` so it only runs on macOS. See
 [User-Managed Packages](./user-managed.md).
 
 ## Where specs live
