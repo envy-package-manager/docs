@@ -53,8 +53,8 @@ several projects can pin several versions. Fetched specs and bundles. Installed
 package trees. The shell hook files
 [`envy shell`](../reference/cli/shell.md) points your profile at. Lock files,
 which exist only while work is in flight. And, from envy 0.6.0, one tiny file
-per project under `activate/`, which `envy install` and `envy sync` rewrite so
-activated shells know to [refresh](./environment/shell-hooks.md#how-it-activates).
+per project under `activate/`, which envy rewrites after it installs something
+so activated shells know to [refresh](./environment/shell-hooks.md#how-it-activates).
 
 Two of those are worth a note:
 

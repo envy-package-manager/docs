@@ -45,7 +45,6 @@ The string shorthand means `{ value = <string>, script = true }`.
 PRODUCTS = {
   doctest_cpp_dir = { value = ".", script = false },
   doctest_cpp_h = { value = "doctest.h", script = false },
-  libjlink = { value = "libjlinkarm.so", script = false, platforms = { "linux" } },
 }
 ```
 
@@ -53,7 +52,7 @@ PRODUCTS = {
 | --- | --- |
 | `value` | Required string. A path relative to the package directory, or a raw value for [user-managed](./user-managed.md) packages. |
 | `script` | Deploy a wrapper script for it. Defaults to `true`. |
-| `platforms` | Restrict the product, for example `{ "linux" }`. |
+| `platforms` | Which wrapper flavors to deploy, for example `{ "windows" }` for a `.bat` only. See [Platforms](./platforms.md#how-1-2-and-4-combine). |
 
 Directory products and file products are both common. A build system usually
 wants the include directory, while a dependency edge wants the file.
@@ -143,7 +142,9 @@ wrapper works on a machine that has never synced. The four-line script calls
 - Two packages providing the same product name is an error. There are no
   priority rules and no tie-breaks. Options exist so that a spec can decline to
   claim a generic name, as in the `provide_python3` example above.
-- A product whose `platforms` exclude the current machine is not present.
+- A product's `platforms` only chooses its wrapper flavors. `envy product`
+  resolves it on any machine that installs the package. To offer a product on
+  some machines only, compute `PRODUCTS` from `envy.PLATFORM`.
 - User-managed products are raw values rather than paths, because there is no
   cache directory to resolve against.
 

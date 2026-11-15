@@ -299,7 +299,9 @@ An exclusion that matches nothing is not an error. A bare `"!"` is.
 envy handles `tar` with gzip, bzip2, xz, zstd, or lzma, plus `zip`, `7z`,
 `rar`, `iso`, and bare compressed streams such as a lone `.gz`. You rarely need
 to care which, which matters most on Windows, where upstream ships a `.zip` and
-the same two lines of Lua unpack it.
+the same two lines of Lua unpack it. A bare stream always comes out as one file
+named without its suffix, even when it holds a tarball. See
+[Archive formats](/concepts/specs/stage#archive-formats).
 
 ## Fetching
 

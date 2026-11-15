@@ -142,9 +142,9 @@ dependencies.
   subprojects names both subprojects rather than the root that composed them.
 - **A spec must declare the identity it was fetched as.** A bundle promising
   `acme.cmake@r0` and a file declaring something else is an error.
-- **Platform filters intersect.** An entry whose manifest `platforms` and spec
-  `PLATFORMS` share nothing simply never instantiates, with no error. See
-  [Platforms](../specs/platforms.md).
+- **Only the entry's platform filter applies.** An entry whose `platforms`
+  exclude this machine never instantiates, with no error. A spec's `PLATFORMS`
+  only narrows its product wrappers. See [Platforms](../specs/platforms.md).
 
 ## Determinism
 

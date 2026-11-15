@@ -29,7 +29,6 @@ the verb. The two models cannot be mixed in one spec.
 ```lua title="acme.brew.lua"
 -- @envy schema "1"
 IDENTITY = "acme.brew@r0"
-PLATFORMS = { "darwin" }
 USER_MANAGED = true
 
 SETUP = {
@@ -70,7 +69,6 @@ Host mutation on Windows goes through a package manager the same way, and the
 ```lua title="acme.winget-cmake.lua"
 -- @envy schema "1"
 IDENTITY = "acme.winget-cmake@r0"
-PLATFORMS = { "windows" }
 USER_MANAGED = true
 
 SETUP = {
@@ -104,7 +102,8 @@ service, or a system SDK.
   can then rely on Homebrew existing before its own install runs.
 - **Idempotence.** `CHECK` runs, envy takes a cross-process lock, `CHECK` runs
   again, then `INSTALL`. Two concurrent syncs do not both install.
-- **Platform filtering.** On the spec, the entry, or the pair.
+- **Platform filtering.** On the entry or the pair. A spec's `PLATFORMS` does
+  not stop a selected pair from running.
 - **Parallelism.** Unrelated pairs run concurrently with everything else.
 - **Products.** Values are used verbatim rather than resolved against a cache
   path.

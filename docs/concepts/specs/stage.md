@@ -57,6 +57,9 @@ Glob rules:
 - An inclusion that matches nothing is an error, and so is a malformed pattern.
   An exclusion that matches nothing is not, because it names something the
   archive did not ship.
+- With several fetched files, `only` covers all of them. Each inclusion has to
+  match in one of them, not in every one. A file envy copies whole is matched
+  by its filename, and is left out unless something selects it.
 - A leading `!` excludes rather than includes, and an exclusion beats an
   inclusion, so `{ "**", "!**/*.pdb" }` means everything but the symbols. Since
   envy 0.4.0.
@@ -139,6 +142,12 @@ Everything libarchive reads: `tar`, `tar.gz`, `tar.xz`, `tar.bz2`, `tar.zst`,
 `zip`, `7z`, `rar`, `iso`, and bare compressed streams. envy detects the format
 from content rather than the filename. A `.tgz` that is really a zip still works.
 Permissions, timestamps, and symlinks are preserved.
+
+A bare compressed stream is a `.gz`, `.bz2`, `.xz`, `.zst`, or `.lzma` whose
+name does not end in `.tar` before the suffix. envy decompresses it to one file
+named without the suffix, whatever that file holds. `tool.gz` becomes `tool`,
+even when `tool` is a tarball. To unpack a tarball shipped that way, extract the
+result a second time. Since envy 0.7.1.
 
 Whether envy unpacks a fetched file at all depends on its extension, such as
 `.tar.gz`, `.zip`, or `.7z`. envy copies any other file into the package whole.

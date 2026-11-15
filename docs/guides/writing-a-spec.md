@@ -208,12 +208,12 @@ end
 ```
 
 The dependency edge makes `envy.product` legal, and guarantees cmake is
-installed before `BUILD` runs. On a machine with neither tool, that is one
-`install`:
+installed before `BUILD` runs. On a machine with neither tool, the first
+`brotli --version` installs all three:
 
-![A terminal session. brotli is not installed. envy install downloads cmake and
-ninja, streams the brotli build log, and brotli --version then
-works.](/screencasts/from-source.svg)
+![A terminal session. brotli is not installed. Inside the project, brotli
+--version downloads cmake and ninja, streams the brotli build log, and prints
+the version.](/screencasts/from-source.svg)
 
 ## 7. Mark it exportable
 
