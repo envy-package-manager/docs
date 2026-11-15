@@ -63,6 +63,8 @@ SETTINGS: dict[str, str] = {
 # A no-op sequence the shell echoes nowhere: written to a private fd, never the
 # pty, so prompt detection adds nothing to the recording.
 READY = b"\x01"
+# Written once, after the shell has run every configuration line.
+CONFIGURED = b"\x02"
 
 
 @dataclass
@@ -213,12 +215,19 @@ class Session:
                 raise SystemExit(f"drive.py: no shell hook at {hook} (run envy once, or !hook 0)")
             lines.append(f"source {shlex.quote(str(hook))}")
 
+        # Sourcing the hook inside a project runs `envy activate`, which can be
+        # silent for longer than _settle's quiet window before it prints. A
+        # marker on fd 9 after the last line says the shell got through all of
+        # them, so a Ctrl-L sent next never lands mid-activation and gets echoed.
+        lines.append("print -n $'\\x02' >&9")  # CONFIGURED
+
         self._drain(0.3, mirror=False)
         for line in lines:
             os.write(self.master, line.encode() + b"\n")
+        self._wait_marker(CONFIGURED)
 
-        # These are all instant, and _demo_ready is only registered partway
-        # through, so settle on quiet rather than counting prompts.
+        # _demo_ready is only registered partway through, so settle on quiet
+        # rather than counting prompts.
         self._settle(mirror=False)
 
         # Ctrl-L is zsh's clear-screen widget: it wipes the screen and redraws
@@ -272,6 +281,20 @@ class Session:
             os.read(self.ready_r, 4096)
             ready = True
         return ready
+
+    def _wait_marker(self, marker: bytes, timeout: float = 120.0) -> None:
+        """Discard shell output, off camera, until `marker` arrives on fd 9."""
+        end = time.monotonic() + timeout
+        while time.monotonic() < end:
+            rlist, _, _ = select.select([self.master, self.ready_r], [], [], 0.05)
+            if self.master in rlist:
+                try:
+                    os.read(self.master, 65536)
+                except OSError:
+                    pass
+            if self.ready_r in rlist and marker in os.read(self.ready_r, 4096):
+                return
+        raise SystemExit("drive.py: timed out configuring the shell")
 
     def _drain(self, seconds: float, mirror: bool = True) -> None:
         end = time.monotonic() + seconds
