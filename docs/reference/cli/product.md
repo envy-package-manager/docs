@@ -11,11 +11,13 @@ consume it, and CI scripts use it instead of hardcoding cache paths.
 
 Naming one product installs its provider on demand and prints the resolved value
 to stdout. Naming none lists every product in the manifest with its provider.
+`--run` runs the product instead of printing it.
 
 ## Usage
 
 ```
 envy product [<product>] [--manifest=<path>] [--json]
+envy product --run <product> [-- <args>...]
 ```
 
 ## Arguments and flags
@@ -25,14 +27,19 @@ envy product [<product>] [--manifest=<path>] [--json]
 | `product` | Product name, spelled as the spec's `PRODUCTS` table spells it. Omit to list all. |
 | `--manifest <path>` | Use this manifest instead of [discovery](/concepts/projects#manifest-discovery). |
 | `--json` | Print every product as a JSON object, name to resolved value, on stdout. |
+| `--run` | Run the product in the project's activation, passing everything after `--` as arguments. Requires a product name. Excludes `--json`. Requires envy 0.8.0. |
 
-The three forms differ in stream and in effect:
+The forms differ in stream and in effect:
 
 | Form | Goes to | Installs |
 | --- | --- | --- |
 | `envy product cmake` | stdout, one line, safe to capture | yes, the provider and its dependencies |
 | `envy product` | stderr, an aligned table | no |
 | `envy product --json` | stdout | no, paths are computed rather than created |
+| `envy product --run cmake -- --version` | the tool's own streams | yes, then runs the tool |
+
+A cache hit prints nothing to stderr, so `$(envy product cmake)` stays quiet in
+a log. An install still reports its row.
 
 `--json` resolves the graph without running it, so it answers "where will
 everything be" immediately. The paths it prints do not exist until something
@@ -41,6 +48,37 @@ consumer needs the files on disk.
 
 An unknown product name is an error: `'x' has no provider in resolved dependency
 graph`.
+
+A [command product](/concepts/specs/products#commands) prints as a command line,
+quoted for the platform's shell. `--json` lists it as an array of arguments, or
+`null` on a platform its `platforms` leave out:
+
+```shell-session
+$ envy product yarn
+/Users/you/Library/Caches/envy/packages/acme.node@r0/darwin-arm64-blake3-.../pkg/bin/node /Users/you/Library/Caches/envy/packages/acme.yarn@r0/darwin-arm64-blake3-.../pkg/lib/yarn.cjs
+```
+
+## Running a product
+
+`envy product --run <name> -- <args>` is what every deployed
+[product script](/concepts/environment/product-scripts) calls. It installs the
+provider and its dependencies, then runs the tool with the arguments after `--`:
+
+- **In the project's activation.** The tool gets the bin directory on `PATH`,
+  `ENVY_PROJECT_ROOT`, and every installed package's
+  [`ENV`](/concepts/environment/package-env). A caller already in this project's
+  activation keeps its environment, plus any of the tool's own `ENV` it lacks.
+  Any other caller gets a fresh activation for the tool.
+- **With stdout to itself.** envy's messages, and anything a spec prints while
+  installing, go to stderr.
+- **With its own exit code.** On macOS and Linux envy replaces itself with the
+  tool. On Windows it waits and returns the tool's code. A `.bat` or `.cmd`
+  program runs through `cmd.exe`.
+- **On host packages only**, as `install` resolves them.
+
+A command product runs its argv with your arguments appended. A program given as
+a relative path, such as a user-managed value, is resolved from the project
+root. A bare name is searched on `PATH`, skipping the product's own wrapper.
 
 ## Examples
 
@@ -109,8 +147,8 @@ for CMake, Bazel, and Meson glue. See
 ### To check what a wrapper will run
 
 ```bash
-cat bin/cmake                       # exec "$("$SCRIPT_DIR/envy" product "cmake")" "$@"
-envy product cmake            # the same path the wrapper resolves
+tail -1 bin/cmake    # exec "$ENVY_SCRIPT_DIR/envy" product --run "cmake" -- "$@"
+envy product cmake   # the path that runs
 ```
 
 ## See also

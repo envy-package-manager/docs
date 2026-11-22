@@ -82,7 +82,12 @@ envy run --activate cargo build --release
 
 Use it in CI and scripts for tools that read variables, such as a toolchain that
 needs `CARGO_HOME` or `JAVA_HOME`. The flag goes right after `run`, since
-everything after the command belongs to the command.
+everything after the command belongs to the command. A shell that already holds
+this project's activation passes through unchanged.
+
+From envy 0.8.0, a [product script](./product-scripts.md) runs its tool in the
+activation on its own, so `./bin/cargo build` needs no flag. `--activate` is for
+commands that are not products, such as a script that calls several tools.
 
 ## Anchoring
 

@@ -57,15 +57,15 @@ script, and never hardcode `/`.
 
 Default staging extracts fetched archives straight into `pkg/`. A spec that only
 downloads and unpacks pays for no intermediate copy. envy uses `work/stage/`
-instead when `STAGE`, `BUILD`, or `INSTALL` is a function. That is the case where
-a spec inspects the tree before deciding what the package should be.
+instead when `STAGE` is a function or the spec has any `BUILD` or `INSTALL`,
+string or function. Those verbs run in `work/stage/`, so the tree has to be
+there.
 
 ```lua
--- Extracts into pkg/ directly: nothing here is a function.
+-- Extracts into pkg/ directly: nothing works on the tree.
 STAGE = { strip = 1 }
-INSTALL = "make install"
 
--- Extracts into work/stage/, because INSTALL is a function that copies out of it.
+-- Extracts into work/stage/, because INSTALL copies out of it.
 STAGE = { strip = 1 }
 INSTALL = function(install_dir, stage_dir) envy.copy(stage_dir .. "bin/tool", install_dir) end
 ```
@@ -114,6 +114,13 @@ repeatedly, and why deleting the [cache](../cache.md) is always safe.
 
 A partially installed package is never left where a consumer can resolve into
 it. envy writes the marker last, after `INSTALL` reports success.
+
+Some leftovers resist removal, such as a file another process holds open or a
+read-only file. envy warns and names the path:
+`cache: could not remove <path>: <reason>`. A `pkg/` or `work/` left by an
+earlier attempt that still will not clear fails the next attempt with
+`cache: cannot clear <dir> left by an earlier attempt`, because its files would
+otherwise end up in the package.
 
 ## See also
 

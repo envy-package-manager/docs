@@ -119,7 +119,7 @@ fails instead of silently doing less.
 | [`envy install`](./install.md) | Install packages only. |
 | [`envy deploy`](./deploy.md) | Deploy product scripts only. |
 | [`envy vendor`](./vendor.md) | Restore [vendored](/concepts/vendoring) copies in the project tree. |
-| [`envy product`](./product.md) | Resolve a product to its path or value, or list all. |
+| [`envy product`](./product.md) | Resolve a product to its path or value, list all, or run one with `--run`. |
 | [`envy package`](./package.md) | Install one package and print its directory. |
 | [`envy run`](./run.md) | Run your own script with `envy` resolvable and the project root known. |
 

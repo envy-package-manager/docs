@@ -69,10 +69,10 @@ directory's own tree.
 
 `@envy root "false"` opts out of the check entirely. It *declares* that the walk
 continues past this manifest, so its bin directory resolving the enclosing
-project is the design. Nothing deployed into a non-root bin directory names its
-own tree, which is what lets a superproject checkout restamp a nested
-submodule's committed bin directory in place, byte for byte identically to a
-standalone clone.
+project is the design. Nothing deployed into a bin directory names its own
+tree. A superproject checkout can therefore restamp a nested submodule's
+committed bin directory in place, byte for byte identical to a standalone
+clone.
 
 ## Examples
 

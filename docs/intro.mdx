@@ -182,7 +182,7 @@ and run scripts. envy exposes all of it, no manifest or project required:
 | [`envy git-resolve`](/reference/cli/git-resolve) | Turn a remote branch or tag into a full commit sha without cloning |
 | [`envy lua`](/reference/cli/lua) | Run a Lua script with envy's whole API available |
 
-All compiled in rather than shelled out to: the AWS SDK for `s3://` with your
+All compiled in rather than shelled out to: an S3 client for `s3://` with your
 ambient credentials, libgit2 for git, libarchive for formats. No CLI tools
 required on the host. Specs reach the same machinery through
 [`envy.fetch` and friends](/reference/lua-api).

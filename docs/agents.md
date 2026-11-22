@@ -10,14 +10,14 @@ slug: /agents
 
 envy = per-project package manager. Lua manifest `envy.lua` at project root pins everything incl. envy itself. No install step, server, registry, lockfile. Committed bootstrap `<bin>/envy` + `envy.bat` downloads pinned envy on first run.
 
-**Current release 0.7.0.** `(0.x.y+)` = minimum version, check the project's `@envy version`. Unmarked = 0.3.0+. Newest: `envy.subproject(dir)` + `envy.IS_SUBPROJECT` + per-subproject `envy.PROJECT_ROOT` (0.7.0), hook skips `activate` for pins < 0.6.0 (0.6.1), spec `ENV` + `envy activate`/`deactivate` + `os.execute`/`io.popen` = error + `envy.PROJECT_ROOT` + DISPLAY in cache dir (0.6.0).
+**Current release 0.8.0.** `(0.x.y+)` = minimum version, check the project's `@envy version`. Unmarked = 0.3.0+. Newest (0.8.0): wrappers run tools in project activation, command products, `ENV(pkg_dir, pkg_state_dir, opts)`, `envy.json`/`toml`/`write`/`mkdir`, unknown ALL-CAPS spec global = error, `activate cmd`.
 
 Release assets under `https://github.com/envy-package-manager/envy/releases/download/v<ver>/`: `envy-{linux,darwin}-{x86_64,arm64}.tar.gz`, `envy-windows-{x86_64,arm64}.zip`, `SHA256SUMS`. Archived binary already 0755.
 
 ## manifest + spec
 
 ```lua
--- @envy version "0.7.0"
+-- @envy version "0.8.0"
 -- @envy sha256sums "9f2c...e10b"
 -- @envy bin "bin"
 -- @envy deploy "true"
@@ -69,9 +69,9 @@ OPTIONS = {
 -- 0.4.2+. extra label on progress rows (+ cache dir 0.6.0+), for one spec instantiated many times
 DISPLAY = function(opts) return opts.repo end
 
--- 0.6.0+. see env. pkg_path = payload, root = consumer's mutable state
-ENV = function(pkg_path, root, opts)
-  return { MYTOOL_HOME = pkg_path, MYTOOL_CACHE = envy.path.join(root, ".mytool") }
+-- 0.6.0+, these args 0.8.0+. see env. pkg_dir = payload, pkg_state_dir = consumer's mutable state
+ENV = function(pkg_dir, pkg_state_dir, opts)
+  return { MYTOOL_HOME = pkg_dir, MYTOOL_CACHE = pkg_state_dir }
 end
 
 FETCH = function(tmp_dir, opts)
@@ -115,10 +115,11 @@ Existing project: NO setup step. `./bin/<tool>` or `./bin/envy run <cmd>` bootst
 - spec = one package recipe. `IDENTITY = "ns.name@rev"` required, `@rev` versions the SPEC not the payload, `local.*` = project-local. Package = `(identity, options, platform)`. Canonical key `ns.name@rev{["k"]=v,...}`, keys quoted + sorted. Option tables: all string keys or contiguous `1..n`, no functions, any depth.
 - verbs `FETCH → STAGE → BUILD → INSTALL`, plus `SETUP` (named CHECK/INSTALL pairs). See [verb forms](#verb-forms).
 - products: `PRODUCTS = { cmake = "bin/cmake" }`. Consumers name the product, not the identity: `envy product cmake`, `envy.product("cmake")`, `./bin/cmake`. Non-executable (header, data file): `PRODUCTS = { doctest_h = { value = "doctest.h", script = false } }` = no wrapper, path via `envy product doctest_h`.
+- command products (0.8.0+): `yarn = { command = { "{{node}}", "{{yarn.cjs}}" } }`, excludes `value`. `{{name}}` = product of this pkg or its dep closure, checked at resolve. Path product may sit mid-element (`--x={{node}}`), command product fills whole element (spliced). Rendered at each use, not in payload. `envy.product` refuses it → `envy.product_command`. `envy product yarn` = shell-quoted line, `--json` = argv array.
 - platforms: HOST gates = entry `platforms` + SETUP pair `PLATFORMS` only. Spec `PLATFORMS` + product `platforms` pick wrapper FLAVORS (POSIX if any darwin/linux, `.bat` if windows), never stop install or a selected SETUP pair, ignored by `envy product`. Entry ∩ spec ∩ product, OS covers its arches (0.7.1+): `{"darwin","linux"}` ∩ `{"darwin-arm64","linux-x86_64"}` = both. Disjoint = no wrapper, no error. Host-only product → `PRODUCTS` function on `envy.PLATFORM`.
 - reproducibility: no lockfile. Pins = `@envy version` + `sha256sums`, per-source `sha256`, git `ref` full sha (`envy git-resolve <url> <ref>`, also pins submodules). Unhashed fetch re-downloads every run.
 - **re-exec**: every manifest-aware command compares own version to `@envy version` FIRST, mismatch → replaces itself with that release. Invoked binary ≠ acting binary, `envy --version` ≠ project version: read the header. Lookup: project cache tree → user-wide tree (see cache) → download from mirror to temp, checked against `sha256sums` if pinned, child installs itself into cache. ONE hop (`ENVY_REEXEC=1`), argv minus envy-choosing options (`init --envy-version`). Skipped: no pin, match, self `0.0.0` (dev build), `ENVY_NO_REEXEC`. Hard error: resolved cache mode (`cache-local`/`cache-mode`/ `state-dir`/`envy cache --local` marker) + pin `< 0.2.0`. Never re-exec: `use`, `cache`, `version` (read header as text). `--trace=file:` spans the handoff (0.4.4+).
-- **bin dir**: `envy`, `envy.bat`, one wrapper per product (+ `.bat` twin under `--platform all`). Fresh clone: `./bin/cmake` → `bin/envy` → pinned envy → install. Wrappers resolve at call time (`exec "$("$ENVY_SCRIPT_DIR/envy" product cmake)" "$@"`), never stale. Each prepends own bin dir to PATH (siblings callable), exports `ENVY_PROJECT_ROOT` (root manifest only, `root "false"` keeps caller's). Schema `4` (`envy-managed schema "4"`, POSIX `set -Eeuo pipefail`). Bootstrap restamped on content change.
+- **bin dir**: `envy`, `envy.bat`, one wrapper per product (+ `.bat` twin under `--platform all`). Fresh clone: `./bin/cmake` → `bin/envy` → pinned envy → install. Wrapper (0.8.0+, schema `6`) = `exec "$ENVY_SCRIPT_DIR/envy" product --run "cmake" -- "$@"`: installs provider closure, runs tool in PROJECT ACTIVATION (bin dir on PATH, `ENVY_PROJECT_ROOT`, installed pkgs' ENV) whoever calls (CI, IDE, other project). Caller already in this activation keeps its env + missing closure ENV. Never stale, names no project path. stdout = tool's, cache hit silent. Schema bump → next deploy rewrites all. Bootstrap restamped on content change.
 - **ownership**: envy touches only bin files containing `envy-managed` (substring). Unmarked = skipped (`--strict`: error), so your own `bin/gn` owns that name for good (supported way to wrap/pre-step). `envy`/`envy.bat` always restamped, never pruned. Filtered `sync` prunes marked wrappers outside the filtered subgraph.
 - deploy walk-back: ROOT manifest whose `@envy bin` walks up to a DIFFERENT `envy.lua` = error (`..` in bin, `.git` between, `--manifest` outside bin tree). Nothing found / not named `envy.lua` = warn. `root "false"` skips it (superproject restamps submodule bin byte-identically). Stamping from an unpinned version (dev build, `ENVY_NO_REEXEC`) warns.
 - **manifest discovery**: walk up from anchor. `--manifest <path>` (no walk) > `--project <dir>` > CWD. `--subproject` = nearest to CWD even under `--project`, first `envy.lua`, ignores `@envy root`. `envy run` also anchors on `-- <script>` or a first arg naming an existing file, `--project` wins. Bootstrap + wrappers inject `--project <own dir>` before argv (typed one still wins), so `../B/bin/uv run x.py` acts on B.
@@ -126,7 +127,8 @@ Existing project: NO setup step. `./bin/<tool>` or `./bin/envy run <cmd>` bootst
 ## cache
 
 - content-addressed, safe to delete. Default user-wide shared, or a project-local tree. Root: `--cache-root`/`$ENVY_CACHE_ROOT` (absolute) > `.envy-cache-local`/`.envy-cache-shared` marker (`envy cache --local/--shared`) > `@envy cache-mode` > `@envy cache-local` present > default (`~/Library/Caches/envy`, `$XDG_CACHE_HOME/envy`, `%LOCALAPPDATA%\envy`).
-- layout `envy/<ver>/{envy,envy.lua}`, `envy/latest`, `packages/`, `specs/`, `shell/`, `locks/`, `activate/` (0.6.0+, per-project marker). Entry `identity/<platform>-<arch>-blake3-<hash>`. First-run stderr notice for LOCAL tree only. Never prompts.
+- layout `envy/<ver>/{envy,envy.lua}`, `envy/latest`, `packages/`, `specs/`, `shell/`, `locks/`, `activate/` (0.6.0+, per-project marker). Entry `identity/<platform>-<arch>-blake3-<hash>`. First-run stderr notice for LOCAL tree only. Never prompts. Project side: `.envy/state/` (ENV `pkg_state_dir`, gitignored).
+- spec/bundle key = source (URL + sha256, git URL + ref, local path). In-project paths project-relative (0.8.0+) → clones/worktrees share spec entries.
 - DISPLAY label (0.6.0+): `packages/envy.github~hidapi@r1/`, slug `[A-Za-z0-9._-]` ≤32 bytes. Not in hash/depot key, IS in path: DISPLAY edit or upgrade to 0.6.0 → reinstall into new dir. Archive names carry it, depot lookup ignores it.
 - local tree reads user-wide, never writes it: launchers/re-exec try `<project cache>/envy/<ver>/envy` then `<user-wide>/envy/<ver>/envy`, the second ONLY without `@envy sha256sums`. Never the reverse. Non-regular / empty / non-exec candidate skipped. Borrowed binary self-deploys into project tree. `envy cache --local/--shared` deploys into the mode being established. `envy cache --root` / `--user-wide-root` print the two roots.
 - shell hooks: user-wide only (`--cache-root`/`$ENVY_CACHE_ROOT` else default). Local-cache project writes NO hooks, `envy shell` says so. Refresh by content (`_ENVY_HOOK_STAMP=<ver>:<digest>`), never overwrites a hook a NEWER envy wrote. Refresh prints once: `Shell hooks updated (bash, zsh, fish) — restart your shell`.
@@ -138,12 +140,12 @@ Existing project: NO setup step. `./bin/<tool>` or `./bin/envy run <cmd>` bootst
 
 ## env
 
-0.6.0+. Spec `ENV`: table (checked at spec load) or `function(pkg_path, root, opts)` → table|nil. `pkg_path` nil if USER_MANAGED.
+0.6.0+. Spec `ENV`: table (checked at spec load) or `function(pkg_dir, pkg_state_dir, opts)` → table|nil (0.8.0+, was `(pkg_path, root, opts)`). `pkg_dir` nil if USER_MANAGED. `pkg_state_dir` = `<root>/.envy/state/<ns.name>/`, no rev (bump keeps caches), not created by envy.
 
 - values: `"s"` set, `false` unset, `{ prepend, append, sep }` wrap current (string|list, `sep` default `:`/`;`), `nil` untouched, `true` = error. Names `[A-Za-z_][A-Za-z0-9_]*`, `ENVY_*` reserved.
-- applied in (1) activated shell, `root` = project root: hook, `eval "$(envy activate zsh)"`, `envy run --activate`. (2) DEPENDENTS' string verbs, `envy.run`, SETUP pairs, `root` = dependent's tmp dir: deps the current phase waits on (`needed_by` ≤ phase) + their closure, nearer wins. NOT own verbs, product scripts, plain `envy run`, Lua `os.getenv`.
-- activation: undo prior (any project), then bin dir outermost on PATH + `ENVY_PROJECT_ROOT` + every INSTALLED pkg's ENV (deps too). Earlier in PACKAGES wins, pkg beats its deps. No fetch/install/lock wait: uninstalled pkg / uncached spec skipped SILENTLY (0.7.3+, was a `not installed` warning), exit 0. Real failures (unprovided product, Lua error, failing ENV) still warn.
-- state in exported `ENVY_ACTIVATE_*` (`VARS`, `ORIG__<NAME>`, `ROOT`, `EXE`, `GEN`, `GENFILE`, `SCHEMA`, hook's `KEY`): nested shells inherit, no re-apply. `deactivate` reads only state, restores byte-exact + wholesale (in-project edits to touched vars lost).
+- applied in (1) activated shell, `<root>` = project root: hook, `eval "$(envy activate zsh)"`, `envy run --activate`. (2) product scripts / `envy product --run` (0.8.0+), `<root>` = project root. ENV throwing in the tool's own closure = fatal, elsewhere warns. (3) DEPENDENTS' string verbs, `envy.run`, SETUP pairs, `<root>` = dependent's tmp dir (SETUP: scratch dir): deps the current phase waits on (`needed_by` ≤ phase) + their closure, nearer wins. NOT own verbs, plain `envy run`, Lua `os.getenv`.
+- activation: undo prior (any project), then bin dir outermost on PATH + `ENVY_PROJECT_ROOT` + every INSTALLED pkg's ENV (deps too). Earlier in PACKAGES wins, pkg beats its deps. No fetch/install/lock wait: uninstalled pkg / uncached spec skipped SILENTLY (0.7.3+), exit 0. Real failures (unprovided product, Lua error, failing ENV) still warn.
+- state in exported `ENVY_ACTIVATE_*` (`VARS`, `ORIG__<NAME>`, `ROOT`, `EXE`, `GEN`, `GENFILE`, `PKGS` (0.8.0+, which pkgs' ENV applied), `SCHEMA`, hook's `KEY`): nested shells inherit, no re-apply. `deactivate` reads only state, restores byte-exact + wholesale (in-project edits to touched vars lost).
 - hermetic: verbs + `os.getenv` see PRE-activation env → activated-shell `install` = plain-shell build. `os.execute`/`io.popen` = error `os.execute is unavailable; use envy.run`, everywhere: `envy.run(cmd, { capture = true })`.
 - ENV edit = spec content, rebuilds nothing: bump `@rN`.
 - hook: enter → `<bin>/envy activate <sh>` (pinned envy, may download first time). Leave last → `$ENVY_ACTIVATE_EXE deactivate <sh>`. cd within project: no envy. `install`/`sync` (always) + any cmd whose package did work (wrapper lazy install, SETUP, vendor; 0.7.3+; cache hit = no) touch `<cache>/activate/<digest>` → next prompt refreshes (builtin read). Pinned envy < 0.6.0 (read from header, launcher not run, 0.6.1+), no `bin/envy`, or launcher fails → PATH + `ENVY_PROJECT_ROOT` only. Stderr: `envy: entering proj — 4 variables set` | `refreshed` | `leaving proj — environment restored`.
@@ -152,13 +154,14 @@ Existing project: NO setup step. `./bin/<tool>` or `./bin/envy run <cmd>` bootst
 
 Same manifest, specs, cache layout. Not a port.
 
-- `bin\envy.bat` parses the header itself, walks up, honors `ENVY_CACHE_ROOT`/`ENVY_MIRROR`. Wrappers `bin\<tool>.bat` (`setlocal`, forward `%ERRORLEVEL%`).
+- `bin\envy.bat` parses the header itself, walks up, honors `ENVY_CACHE_ROOT`/`ENVY_MIRROR`. Wrappers `bin\<tool>.bat` = `"%~dp0envy.bat" product --run "<tool>" -- %*` (0.8.0+): exit code kept, Ctrl-C to tool, no "Terminate batch job?". `.bat`/`.cmd` programs run via `cmd.exe`.
 - `--platform posix|windows|all` on `init`/`sync`/`deploy`, default host. Bootstrap AND wrappers per flavor: plain `sync` on macOS does NOT restamp `envy.bat`. Cross-platform repo: `--platform all`. Host-only deploy never prunes the other flavor.
 - newlines per TARGET: CRLF every `.bat`, LF else, POSIX 0755. LF `.bat` silently stops parsing `@envy` directives. `core.autocrlf` → every deploy says "updated": `.gitattributes` `bin/** -text` (`*.bat eol=crlf` also ok).
 - string verbs: PowerShell (no profile, policy bypassed) from a temp script. POSIX gets `bash -e`. Windows fail-fast injected only when `check=true` (default), so `check=false` keeps going on Windows where POSIX stops.
 - paths native (`envy.path.join`, `envy.abspath`, `envy product` → backslashes). Build filesystem paths with `envy.path.join`. Declarative package-relative strings always `/`: `PRODUCTS` values, `STAGE.only`, `VENDOR`, `vendor`.
-- `envy run <name>` finds `bin\<name>.bat` (spawn + wait, forwards exit). PATH sep `;`. Long paths, AV file locks handled.
-- hook PowerShell only: `. "${env:USERPROFILE}/AppData/Local/envy/shell/hook.ps1"` in `$PROFILE`. cmd.exe: no hook, use `.bat` / `envy run`. `activate`/`deactivate` = `powershell` only (`| Out-String | Invoke-Expression`). ENV names case-insensitive.
+- `envy run <name>` finds `bin\<name>.bat` (spawn + wait, forwards exit). PATH sep `;`. Long paths handled.
+- AV (0.7.4+): STAGE/INSTALL wait for fetched files to be released, row `awaiting release 3s from MsMpEng.exe (pid 4321)`. Fails past `ENVY_FETCH_RELEASE_BUDGET_MS` (120000) naming holder. Own unclosed `io.open` = immediate error.
+- hook PowerShell only: `. "${env:USERPROFILE}/AppData/Local/envy/shell/hook.ps1"` in `$PROFILE`. cmd.exe: no hook, use `.bat` / `envy run`, or `bin\envy activate cmd` (0.8.0+, edits session in place, no refresh). `activate`/`deactivate` = `powershell` (`| Out-String | Invoke-Expression`) or `cmd`. ENV names case-insensitive.
 - PowerShell `>` = UTF-16: redirect `export`/`hash`/`product --json` via `| Out-File -Encoding ascii|utf8`.
 - host mutation: `winget`/`choco` in a USER_MANAGED SETUP pair. Elevation needs `interactive = true`.
 
@@ -169,11 +172,13 @@ Same manifest, specs, cache layout. Not a port.
 | `FETCH(tmp_dir, opts)` | one URL, unverified | `{source, sha256?, ref?, submodules?, dest?, post_data?}` or array, other key = error (0.5.0+) | imperative, or return any declarative form | error unless `USER_MANAGED` |
 | `STAGE(fetch_dir, stage_dir, tmp_dir, opts)` | shell | `{strip=N, only={globs}, archives={globs}}` | programmatic | extract all fetched archives |
 | `BUILD(install_dir, stage_dir, fetch_dir, tmp_dir, opts)` | shell, cwd = stage | no | may return string → shell | no-op |
-| `INSTALL(install_dir, stage_dir, fetch_dir, tmp_dir, opts)` | shell | no | may return string → shell | promote stage to install dir |
+| `INSTALL(install_dir, stage_dir, fetch_dir, tmp_dir, opts)` | shell, `pkg/` left empty → stage promoted (0.8.0+) | no | may return string → shell | promote stage to install dir |
 | `SETUP.<name>.CHECK(pkg_dir, opts)` | shell, exit 0 = satisfied | no | bool, or string → shell | pair needs CHECK + INSTALL |
 | `SETUP.<name>.INSTALL(pkg_dir, opts)` | shell | no | may return string → shell | n/a |
 
-- other spec globals: `DEPENDENCIES`, `PLATFORMS` (`darwin|linux|windows[-arch]`, wrapper flavors only, see [model](#model)), `USER_MANAGED` (host-mutating: SETUP pairs only, no FETCH/STAGE/BUILD/INSTALL), `EXPORTABLE` (false → depot exports fetched bytes, not install output), `VENDOR` (selectors: what of `pkg/` a vendoring manifest copies), `DISPLAY` (0.4.2+), `ENV` (0.6.0+, see [env](#env)).
+- other spec globals: `DEPENDENCIES`, `PLATFORMS` (`darwin|linux|windows[-arch]`, wrapper flavors only, see [model](#model)), `USER_MANAGED` (host-mutating: SETUP pairs only, no FETCH/STAGE/BUILD/INSTALL), `EXPORTABLE` (false → depot exports fetched bytes, not install output), `VENDOR` (selectors: what of `pkg/` a vendoring manifest copies), `DISPLAY` (0.4.2+), `ENV` (0.6.0+, see [env](#env)), `BUNDLES`.
+- any OTHER ALL-CAPS spec global = error (0.8.0+): `spec 'x@r0' defines unknown globals 'EVN', 'HASHES'; make helpers local`. `local HASHES` ok.
+- extraction lands in `pkg/` ONLY with no BUILD, no INSTALL, STAGE not a function. Else `work/stage/` (string BUILD/INSTALL too, 0.8.0+).
 - SETUP = host work that is NOT part of the package hash. Runs only if selected (`setup = {"pair"}` on the entry). Pair row = `[identity]` + DISPLAY, gone on success (0.4.10+). Fail: `SETUP.<name>.INSTALL shell script failed for <id>`. Bootstrap package (`source.dependencies`, `PACKAGE_DEPOTS`/`DEFAULT_SHELL` DEPENDS, transitive): selection from manifest PACKAGES only, spec selection = error `'<id>' cannot take a SETUP selection from spec ...` (0.4.13+).
 - **PRODUCTS runs BEFORE OPTIONS**, gets the entry's options raw: unvalidated, no defaults, `{}` if none. Every key may be nil. `opts.target:lower()` → `attempt to index a nil value (field 'target')`, and `required` does NOT save you (OPTIONS has not run). Guard every read. `DISPLAY` runs AFTER OPTIONS, gets the checked table.
 - fetched file = archive by EXTENSION (`.tar.*`, `.zip`, `.7z`, bare `.gz`...), else copied whole, so `.whl`/`.jar`/`.nupkg` stay zipped. `archives` (0.4.9+, table STAGE + `envy.extract_all`): filename globs unpack anyway, `!` keeps whole, unmatched include = error.
@@ -198,11 +203,11 @@ Same manifest, specs, cache layout. Not a port.
 ## output
 
 - **exit 0 = success, every command.** `envy run` forwards its child's code. Only reliable signal.
-- human output → stderr. stdout = machine-readable only, empty unless the command answers: `product` (path, `--json`), `package` (dir), `hash` (`<sha256>  <name>`), `export`/`merge-depot` (index lines), `git-resolve` (sha), `import` (dir), `cache` (usage), `activate`/`deactivate` (shell code).
+- human output → stderr. stdout = machine-readable only, empty unless the command answers: `product` (path, `--json`; under `--run` stdout = tool's), `package` (dir), `hash` (`<sha256>  <name>`), `export`/`merge-depot` (index lines), `git-resolve` (sha), `import` (dir), `cache` (usage), `activate`/`deactivate` (shell code).
 - row = `[identity]` + spec `DISPLAY` + status, columns padded.
 - `DISPLAY` (0.4.2+): string or `function(options)` → string|nil, after OPTIONS. Adds to identity, reaches the outcome line. Labels cache dir (0.6.0+, see [cache](#cache)). One printable line: any byte `< 0x20` or `0x7f` = error. No spec sets one = no column.
 - **no work = no row (0.4.2+).** Rows only for timed outcomes (`installed`, bundles too 0.4.11+, `imported from depot`), a SETUP pair that ran, a vendor copy that wrote. `cache hit`, `setup complete`, `local bundle` silent. Warm `install` writes NOTHING to the terminal (0.4.3+). `deploy:` summary only when a wrapper changed. **Silence ≠ failure: check exit code.**
-- off a TTY every package reports, cache hits too: piped run lists MORE than terminal. `--verbose` narrates all.
+- off a TTY every package reports, cache hits too: piped run lists MORE than terminal. `product`/`package`/wrappers: cache hit silent even piped (0.8.0+). `--verbose` narrates all.
 - short/empty CI log: stderr not captured (`2>&1`), global `-q`, Windows `>` UTF-16, `platforms` filter. Not the silence rule.
 - vendored package's row = `vendored N files to <dir>`, replaces `cache hit` and `installed (2.5s)` alike (0.4.5+). `pkg_outcome` trace keeps the payload verdict. Under `envy vendor` the command reports, not the row.
 - vendor destinations shown project-relative with `/`. Absolute only in filesystem-failure errors and "resolves outside the project".
@@ -259,7 +264,7 @@ Same manifest, specs, cache layout. Not a port.
 - **returns (0.4.6+)**: module's returned table, else globals it assigned (if it returned nothing), else error naming module. `local M = {} ... return M` works.
 - **reads (0.4.8+)**: sandbox falls through to the LOADING file's globals: root manifest, subproject (its `VENDOR_ROOT`, `envy`), spec, outer module. Writes stay in the sandbox.
 - `mod` for `loadenv_spec`/`loadenv_bundle`: dot syntax, no separators, no `..`, no leading/trailing `.`, re-checked under load root. `loadenv` allows a separator, cannot escape caller's dir (0.4.6+).
-- `loadenv_bundle`: fetches the bundle DURING manifest global scope, so entries go straight into PACKAGES. `BUNDLES` must be assigned ABOVE the call. Fragment: own `BUNDLES` then root's. `local.` dir bundle read in place, else cached once. Row: bar → `installed (Xs)` (0.4.11+), hit silent. Refused: outside manifest scope, unknown alias (names alias + file), custom-fetch bundle. Trace `lua_ctx_loadenv_bundle`.
+- `loadenv_bundle`: fetches the bundle DURING manifest global scope, so entries go straight into PACKAGES. `BUNDLES` must be assigned ABOVE the call. Fragment: own `BUNDLES` then root's. Local dir bundle read in place (any namespace 0.8.0+, was `local.` only), archive/remote cached once. Row: bar → `installed (Xs)` (0.4.11+), hit silent. Refused: outside manifest scope, unknown alias (names alias + file), custom-fetch bundle. Trace `lua_ctx_loadenv_bundle`.
 - returned entries parse like literal ones: `bundle` = CONSUMER's alias (any, even another bundle), `vendor` ok.
 - **`ENVY_BUNDLE`** (0.4.7+): `{ identity, alias, root }` in a module that `loadenv_bundle`/`loadenv_spec` loaded out of a bundle. `alias` = caller's name for it, `nil` under `loadenv_spec`. Whole global `nil` elsewhere: manifest, spec, `envy.loadenv` target (incl. a sibling a bundled module loads, never inherited), `require`d module. Not a module global: not handed back, not leaked into `options`.
 - bare globals envy installs: `ENVY_SHELL`, `ENVY_BUNDLE`.
@@ -306,22 +311,28 @@ Global flags BEFORE subcommand: `--verbose -q --trace[=sinks] --cache-root --pro
 - `deploy [q] [--strict] [--platform ...]`: scripts only, no installs, prunes marked wrappers outside graph.
 - `vendor <q>... | --all [--force] [--dry-run] [--threads N] [--manifest=...]` (0.4.0+): vendor step alone. Re-execs. No `--subproject`/`--ignore-depot`. Selection REQUIRED + exclusive (bare = error, q + `--all` = error). Plan checked over whole manifest, then filtered, vendored deps of a target NOT included. Runs targets to completion (fetch/build), `--dry-run` too. Named package without `vendor` = error (`'x' is not vendored`), `--all` skips them, manifest vendoring nothing = error. `--force` = treat all as `auto_sync = true` (up-to-date still no-op). `--dry-run` = no destination writes (cache still written), `would (re-)vendor`. `--threads 0` = default, negative = error. Report per target, stderr: `vendored N files to <dir>` | `re-vendored N files to <dir>: contents were dirty` | `up to date: <dir>` | `kept <dir>: contents differ from the package`.
 - `init <project-dir> <bin-dir> [--envy-version X.Y.Z] [--mirror URL] [--pin-sums] [--deploy=bool] [--root=bool] [--platform ...]`: manifest + bootstrap + `.luarc.json`, appends `.envy/`, `.envy-cache-*` to `.gitignore` if `.git` exists (skips equivalents). `--envy-version` re-execs into that release (pin, stamp, types all from it), downloads from `--mirror`. Dev build / `ENVY_NO_REEXEC` warns, stamps itself. Relative `<bin-dir>` resolves against `<project-dir>`, NOT cwd. Escaping bin dir under root manifest warns. No relative path possible (two Windows drives) = error.
-- `product [name] [--json]`: path. Name installs its provider. No name lists. `--json` = all products, NO install.
+- `product [name] [--json]`: path. Name installs its provider. No name lists. `--json` = all products, NO install. `product --run <name> [-- args]` (0.8.0+): what wrappers exec, see [model](#model). Relative program (user-managed value) → project root, bare name → PATH minus own wrapper.
 - `package <identity>`: install, print pkg dir.
-- `run [--activate] <cmd...>`: exec with bin dir on PATH + `ENVY_PROJECT_ROOT`. `--activate` (0.6.0+, right after `run`) = activated env.
-- `activate <bash|zsh|fish|powershell>` / `deactivate <sh>` (0.6.0+): shell code on stdout (TTY → hint). See [env](#env).
+- `run [--activate] <cmd...>`: exec with bin dir on PATH + `ENVY_PROJECT_ROOT`. `--activate` (0.6.0+, right after `run`) = activated env, env already in this project's current activation passes through (0.8.0+).
+- `activate <bash|zsh|fish|powershell|cmd>` / `deactivate <sh>` (0.6.0+, `cmd` 0.8.0+ Windows only): shell code on stdout (TTY → hint). See [env](#env).
 - `shell <bash|zsh|fish|powershell>`: hook source line.
 - `use <version>`: retarget the pin.
 - `git-resolve <url> <ref>`: full sha.
 - `hash <paths>`: sha256 lines (depot). `hash --tree <dirs>`: BLAKE3 tree digest per dir, `--only`, `--threads` (0 = perf cores), `--json` (`duration_ms` = hash time), `--stats` (stderr, in object under `--json`, `-q` suppresses). `--tree` excludes `--prefix`. Tree flags without `--tree` = error. Args must be dirs.
 - `export`, `import`, `merge-depot`: depot publish/consume.
-- no manifest needed: `fetch <src> <dst>` (git flags: see [git](#git)), `extract <archive> [dst] [--only PATH|GLOB|!GLOB]...`, `hash`, `git-resolve`, `lua <script>`. Built in: AWS SDK (`s3://`, ambient creds, no AWS CLI), libgit2 (no `git`), libarchive (tar/gz/xz/bz2/zst/zip/7z/rar/iso).
+- no manifest needed: `fetch <src> <dst>` (git flags: see [git](#git)), `extract <archive> [dst] [--only PATH|GLOB|!GLOB]...`, `hash`, `git-resolve`, `lua <script>`. Built in: S3 client (`s3://`, ambient creds, no AWS CLI), libgit2 (no `git`), libarchive (tar/gz/xz/bz2/zst/zip/7z/rar/iso).
 - `cache [--root | --user-wide-root | --local | --shared]`: location + usage, one flag max. `version`. `mirror-envy` (`s3://` creds checked before download).
-- fetch retry: `connect`, `transfer`, `timeout`, 5xx, 429 retry. Git per repository (0.5.0+). Other 4xx, bad URL, local error = fatal. Budget (0.4.6+): `ENVY_FETCH_BUDGET_MS` default 90000 from FIRST failure, never-handshake capped 5s. `ENVY_FETCH_ATTEMPTS` = ceiling, default 10. Backoff 1x/2x/4x `ENVY_FETCH_RETRY_BASE_MS` (1000) ±50%, max 30s. `Retry-After` = jittered floor, longer than remaining budget → give up. `s3://` excluded (SDK retries). Row `retry 2 in 6s (http_status) tool.tar.gz`. Non-status error names what arrived (`... after 0 of 54881 bytes (HTTP 200, text/html)`) = HTML interstitial, not network.
+- fetch retry: `connect`, `transfer`, `timeout`, 5xx, 429 retry. Git per repository (0.5.0+). Other 4xx, bad URL, local error = fatal. Budget (0.4.6+): `ENVY_FETCH_BUDGET_MS` default 90000 from FIRST failure, never-handshake capped 5s. `ENVY_FETCH_ATTEMPTS` = ceiling, default 10. Backoff 1x/2x/4x `ENVY_FETCH_RETRY_BASE_MS` (1000) ±50%, max 30s. `Retry-After` = jittered floor, longer than remaining budget → give up. `s3://` retries 500/503 itself (`AWS_MAX_ATTEMPTS`, 6), budget covers 429/502/504 (0.8.0+). Row `retry 2 in 6s (http_status) tool.tar.gz`. Non-status error names what arrived (`... after 0 of 54881 bytes (HTTP 200, text/html)`) = HTML interstitial, not network.
 - editor: `init` writes `.luarc.json` (3 platform cache paths, LuaCATS types on `workspace.library`). `sync`/`deploy` rewrite stale `envy/<semver>` entries, keep the rest. Delete to opt out. `BUNDLES` not in `diagnostics.globals`, `ENVY_BUNDLE` is (0.4.7+).
 - `--trace[=sinks]`: one structured event per decision. Schemas in the Logging & Tracing reference, not here. `pkg_outcome` = PAYLOAD verdict (`cache_hit`, `installed`, `imported`, ...) whatever the row said.
-- env read: `ENVY_CACHE_ROOT`, `ENVY_MIRROR`, `ENVY_IGNORE_DEPOT`, `ENVY_NO_REEXEC`, `ENVY_FETCH_BUDGET_MS`, `ENVY_FETCH_ATTEMPTS`, `ENVY_FETCH_RETRY_BASE_MS`, `ENVY_GIT_TIMEOUT_MS`. Hook `ENVY_SHELL_HOOK_DISABLE`, `ENVY_SHELL_NO_ENTER_EXIT_ANNOUNCE` (also `activate`/`deactivate`), `ENVY_SHELL_NO_ICON`. Written: `ENVY_PROJECT_ROOT`, `PATH` (by `envy run`, `activate`, every wrapper), ENV + `ENVY_ACTIVATE_*` (by `activate`).
+- env read: `ENVY_CACHE_ROOT`, `ENVY_MIRROR`, `ENVY_IGNORE_DEPOT`, `ENVY_NO_REEXEC`, `ENVY_FETCH_BUDGET_MS`, `ENVY_FETCH_ATTEMPTS`, `ENVY_FETCH_RETRY_BASE_MS`, `ENVY_GIT_TIMEOUT_MS`, `ENVY_FETCH_RELEASE_BUDGET_MS` (Windows, 0.7.4+). Hook `ENVY_SHELL_HOOK_DISABLE`, `ENVY_SHELL_NO_ENTER_EXIT_ANNOUNCE` (also `activate`/`deactivate`), `ENVY_SHELL_NO_ICON`. Written: `ENVY_PROJECT_ROOT`, `PATH` (by `envy run`, `activate`, every wrapper), ENV + `ENVY_ACTIVATE_*` (by `activate`, `run --activate`, every wrapper 0.8.0+).
+- S3 creds: env → profile (incl `credential_process`) → web identity → SSO → unsigned. NO EC2 IMDS / ECS. Region `AWS_DEFAULT_REGION` > `AWS_REGION` > profile > `us-east-1`. `AWS_ENDPOINT_URL_S3`/`AWS_ENDPOINT_URL`, `HTTPS_PROXY` honored. Expired SSO → hint `Run 'aws sso login'`.
 
 ## lua API
 
 `envy.run(script|{lines}, {quiet, check, capture, interactive, env, cwd, shell})`, `envy.fetch(src, {dest})`, `envy.commit_fetch`, `envy.verify_hash`, `envy.extract`, `envy.extract_all(src, dst, {strip, only, archives})`, `envy.copy/move/remove/exists/is_file/is_dir`, `envy.path.*`, `envy.abspath`, `envy.template(str, vars)`, `envy.product(name)`, `envy.package(identity)`, `envy.options(schema)`, `envy.subproject`, `envy.extend`, loaders (see [lua modules](#lua-modules)), constants (see top). Log: `envy.debug/info/warn/error` + `print` → stderr, `envy.stdout` → stdout (a contract, keep it clean).
+
+- file-op relative paths = phase's `envy.run` cwd: FETCH `tmp_dir`, STAGE/BUILD/INSTALL `stage_dir`.
+- 0.8.0+: `envy.write(path, content, {executable})` atomic, untranslated, makes parents. `envy.mkdir(path)` + parents.
+- 0.8.0+: `envy.json.*` / `envy.toml.*`: `decode/read/encode/write/array`. null → nil, ints stay ints, TOML datetimes → RFC 3339 strings. Encode deterministic (sorted keys). Empty untagged table = object, `array()` for `[]`. `json.encode(v, {indent = 2})`.
+- 0.8.0+: `envy.product_command(name, shell?)` → command line quoted for phase's shell, path product = 1 element. Access rules as `envy.product`. Custom `DEFAULT_SHELL` needs `shell`. `envy.run(envy.product_command("yarn") .. " install")`.

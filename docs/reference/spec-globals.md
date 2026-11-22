@@ -15,7 +15,7 @@ Terse companion to [Anatomy of a Spec](/concepts/specs).
 | `FETCH` | string, table, array of tables, or function | error, unless `USER_MANAGED` |
 | `STAGE` | table or function | every fetched archive is extracted |
 | `BUILD` | string or function | nothing runs |
-| `INSTALL` | string or function | the staged tree becomes the package |
+| `INSTALL` | string or function | the staged tree becomes the package. So does a string `INSTALL` that leaves the package directory empty |
 | `SETUP` | table of named pairs | no host-side work |
 | `OPTIONS` | schema table or function | options are accepted unvalidated |
 | `PRODUCTS` | table or function | the package exports nothing |
@@ -30,6 +30,13 @@ Terse companion to [Anatomy of a Spec](/concepts/specs).
 `DEFAULT_SHELL` is a manifest global, not a spec global. A spec picks a shell per
 call with `envy.run(..., { shell = ... })`.
 
+From envy 0.8.0, any other all-caps global a spec defines is an error, so a typo
+such as `EVN` fails instead of doing nothing. Keep upper-case helpers `local`:
+
+```text
+error: spec 'acme.tool@r0' defines unknown globals 'EVN', 'HASHES'; make helpers local
+```
+
 ## Verb signatures
 
 ```text
@@ -42,7 +49,7 @@ SETUP.<name>.INSTALL(pkg_dir, options)
 PRODUCTS(options)
 OPTIONS(options)
 DISPLAY(options)
-ENV(pkg_path, root, options)             -- pkg_path is nil for user-managed
+ENV(pkg_dir, pkg_state_dir, options)     -- pkg_dir is nil for user-managed
 USER_MANAGED()
 ```
 
@@ -138,7 +145,8 @@ A string value is shorthand for `{ value = "...", script = true }`.
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `value` | required | Path relative to the package directory, or an arbitrary string. |
+| `value` | required, unless `command` | Path relative to the package directory, or an arbitrary string. |
+| `command` | none | An argv run in place of a path. Each `{{name}}` is a product of this package or its dependency closure, filled in at each use. Excludes `value`. See [Commands](/concepts/specs/products#commands). Requires envy 0.8.0. |
 | `script` | `true` | Whether to deploy a wrapper script into the project's bin directory. |
 | `platforms` | all | Which wrapper flavors to deploy. Intersected with the spec's `PLATFORMS` and the entry's `platforms`. Does not hide the product from `envy product`. |
 
@@ -258,11 +266,12 @@ Variables this package sets for its consumers. Requires envy 0.6.0. See
 [Package Environment](/concepts/environment/package-env) for the full rules.
 
 ```lua
-ENV = function(pkg_path, root, options)
+ENV = function(pkg_dir, pkg_state_dir, options)
   return {
-    RUSTUP_HOME = envy.path.join(pkg_path, "rustup"),
-    CARGO_HOME  = envy.path.join(root, ".cargo"),
-    PATH        = { prepend = envy.path.join(pkg_path, "bin") },
+    RUSTUP_HOME = envy.path.join(pkg_dir, "rustup"),
+    CARGO_HOME  = pkg_state_dir,
+    PATH        = { prepend = { envy.path.join(pkg_dir, "bin"),
+                                envy.path.join(pkg_state_dir, "bin") } },
   }
 end
 ```
@@ -274,10 +283,14 @@ end
 | `{ prepend, append, sep }` | Add strings or lists of strings around the current value. `sep` defaults to the platform path separator. |
 | `nil` | Leave it alone. |
 
-| Consumer | `root` | Applied by |
+`pkg_state_dir` is `<root>/.envy/state/<namespace.name>/`, with no revision in
+the name. envy does not create it. Requires envy 0.8.0.
+
+| Consumer | `<root>` | Applied by |
 | --- | --- | --- |
 | An activated shell | the project root | the shell hook, `envy activate`, `envy run --activate` |
-| A dependent package's verbs | the dependent's temporary directory | string verbs, `envy.run`, SETUP pairs |
+| A product script's tool | the project root | `envy product --run`. Requires envy 0.8.0 |
+| A dependent package's verbs | the dependent's temporary directory, or a scratch directory for a SETUP pair | string verbs, `envy.run`, SETUP pairs |
 
 Names must match `[A-Za-z_][A-Za-z0-9_]*`. `ENVY_` names are reserved. A table
 is checked when the spec loads. A package's `ENV` never applies to its own verbs.
@@ -289,7 +302,8 @@ namespace.name@revision
 ```
 
 `namespace` and `name` are dot-separated identifiers, and `revision` is a spec
-revision such as `r1` or `v1`, not the packaged tool's version. The tool version
+revision such as `r1` or `v1`, not the packaged tool's version. A name that ends
+in `.` is an error. The tool version
 belongs in `options`. A spec's `IDENTITY` has to match how the manifest names it,
 and in a bundle it has to match its `SPECS` key.
 

@@ -99,6 +99,11 @@ else, including a `source` table with its own `dependencies` and `fetch`. And
 several specs pulled from one bundle share a single fetch, because they share the
 bundle package.
 
+A bundle at a local directory is the exception. envy reads it where it stands
+and never caches it, so edits land on the next run. From envy 0.8.0 this holds
+for any identity, not only `local.` ones. A local archive is cached once, like a
+download.
+
 Declaring the same bundle identity twice with different sources or refs is an
 error rather than a silent winner.
 

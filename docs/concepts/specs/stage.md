@@ -129,8 +129,8 @@ tree:
 
 | Spec | Extraction goes to |
 | --- | --- |
-| No function verbs, so `STAGE` is a table or string and `BUILD`/`INSTALL` are strings or absent | `pkg/`, the final package, with no copy |
-| `STAGE`, `BUILD`, or `INSTALL` is a function | `work/stage/`, scratch, discarded afterwards |
+| No `BUILD`, no `INSTALL`, and `STAGE` is absent, a table, or a string | `pkg/`, the final package, with no copy |
+| `STAGE` is a function, or the spec has any `BUILD` or `INSTALL` | `work/stage/`, where `BUILD` and `INSTALL` run |
 
 A download-and-unpack spec therefore never pays for a second copy of the tree. A
 spec that assembles its package by hand gets a scratch area to work in. See

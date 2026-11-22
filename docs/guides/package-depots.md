@@ -296,7 +296,7 @@ The index and the archives are fetched the same way, so they need the same
 access:
 
 - **Public read.** Simplest. Nothing to configure on the consumer side.
-- **`s3://` with credentials.** envy has the AWS SDK compiled in and uses ambient
+- **`s3://` with credentials.** envy has an S3 client compiled in and uses ambient
   credentials, so a normal profile or CI role works with no AWS CLI installed.
 - **Behind a token or a registry API.** Use the `{ DEPENDS, FETCH }` form of
   `PACKAGE_DEPOTS`, which lets a depot entry install a CLI and fetch the index

@@ -36,13 +36,15 @@ PRODUCTS = { rg = "rg" }
 | [`DEPENDENCIES`](../dependencies/declaring.md) | array | Other packages this one needs, and how early. |
 | [`PLATFORMS`](./platforms.md) | array of string | Which platforms its product wrappers are written for. The manifest entry's `platforms` decides where it installs. |
 | [`DISPLAY`](../../reference/spec-globals.md#display) | string \| function | What this package's progress rows say they are working on, which is how several instances of one spec tell themselves apart. Requires envy 0.4.2. |
-| [`ENV`](../environment/package-env.md) | table \| function | Variables this package sets in activated shells and in the builds of packages that depend on it. Requires envy 0.6.0. |
+| [`ENV`](../environment/package-env.md) | table \| function | Variables this package sets in activated shells, in the tools its product scripts run, and in the builds of packages that depend on it. Requires envy 0.6.0. |
 | [`USER_MANAGED`](./user-managed.md) | boolean \| function | Orchestrate host state instead of owning files. |
 | `EXPORTABLE` | boolean | Whether the installed tree may be published to a [depot](../depots.md). See [INSTALL](./install.md#exportable). |
 | `BUNDLES` | table | Alias to bundle declaration, for specs whose dependencies live in a bundle. |
 
 A top-level `CHECK` is an error. `CHECK` is half of a `SETUP` pair, and the
-error message says so.
+error message says so. From envy 0.8.0, any all-caps global envy does not read
+is an error too, so a typo like `EVN` cannot silently drop a feature. Keep
+upper-case helpers `local`.
 
 ## Every verb takes several shapes
 

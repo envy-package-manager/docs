@@ -276,15 +276,14 @@ whichever project the caller happened to be standing in:
 
 ```bash
 cd ~/unrelated
-~/src/firmware/bin/uv run ./script.py   # uv, PATH, and ENVY_PROJECT_ROOT from ~/src/firmware
+~/src/firmware/bin/uv run ./script.py   # uv, in ~/src/firmware's activation
 ```
 
-Wrapper scripts also prepend their own bin directory to `PATH`, so a tool that
-shells out to a sibling product finds it, and export `ENVY_PROJECT_ROOT`. That
-last one is stamped as a path relative to the bin directory, so a moved or
-re-cloned tree still resolves, and only for a root manifest. Under
-`@envy root "false"` the project depends on where the tree is nested, no
-deploy-time constant is right in every checkout, and the caller's value stands.
+A wrapper runs its tool in its own project's activation: that project's bin
+directory on `PATH`, its `ENVY_PROJECT_ROOT`, and its packages'
+[`ENV`](./environment/package-env.md#product-scripts). A tool that shells out to
+a sibling product finds it. Nothing in a wrapper names the project's location,
+so a moved or re-cloned tree still works.
 
 Because those scripts resolve their project by walking up from the bin
 directory, [`envy deploy`](../reference/cli/deploy.md) checks that the walk
