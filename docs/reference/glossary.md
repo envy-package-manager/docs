@@ -7,12 +7,14 @@ title: Glossary
 
 - **Activation**: applying a project to a shell: its bin directory on `PATH`,
   `ENVY_PROJECT_ROOT`, and every installed package's `ENV`. Done by the shell
-  hook or `envy activate`, undone by `envy deactivate`.
+  hook or `envy activate`, undone by `envy deactivate`. Product scripts apply it
+  to the tool they run.
 - **Bundle**: a versioned container distributing many specs behind one pin.
 - **Cache**: the per-user, content-addressed store shared by all projects.
 - **Depot**: an optional remote store of prebuilt package artifacts.
 - **ENV**: a spec global naming the environment variables a package sets for
-  activated shells and for the builds of packages that depend on it.
+  activated shells, product scripts, and the builds of packages that depend on
+  it.
 - **Fetch dependency**: a package installed before another package's *spec* can
   be fetched, declared in `source.dependencies`.
 - **Identity**: a spec's namespaced, versioned name, `ns.name@rev`. The revision
@@ -25,10 +27,10 @@ title: Glossary
 - **Platform**: an OS name, `darwin`, `linux`, or `windows`, optionally with an
   architecture, `arm64` or `x86_64`. Part of every package's cache key, and the
   thing platform filters match against.
-- **Product**: a named capability a package exposes, either an executable path
-  or a plain value.
-- **Product script**: a deployed wrapper in the project bin dir that resolves
-  and runs an executable product.
+- **Product**: a named capability a package exposes: an executable path, a
+  plain value, or a command line built from other products.
+- **Product script**: a deployed wrapper in the project bin dir that installs
+  and runs an executable product in the project's activation.
 - **Root manifest**: the manifest that governs. Manifests with
   `@envy root "false"` defer upward.
 - **Setup pair**: a named CHECK/INSTALL couple that performs host-state work,

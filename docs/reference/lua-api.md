@@ -18,12 +18,13 @@ Your editor has all of this as hover documentation. See
 | `abspath`, `loadenv` | yes | yes | resolves against the calling file |
 | `subproject` | manifest top level only | no | not installed in specs or `envy lua`. Requires envy 0.7.0. |
 | `loadenv_bundle` | manifest top level only | no | materializes the bundle first. Requires envy 0.4.6. |
-| `copy`, `move`, `remove`, `exists`, `is_file`, `is_dir` | yes | yes | relative paths anchor to `stage_dir` in phases |
+| `copy`, `move`, `remove`, `write`, `mkdir`, `exists`, `is_file`, `is_dir` | yes | yes | relative paths anchor to the phase's working directory. `write` and `mkdir` require envy 0.8.0. |
+| `json.*`, `toml.*` | yes | yes | relative paths as above. Requires envy 0.8.0. |
 | `run`, `extract`, `extract_all` | yes | yes | |
 | `fetch` | no | `FETCH` only | |
 | `commit_fetch` | no | `FETCH` only | needs the cache lock |
 | `verify_hash` | yes | yes | |
-| `package`, `product`, `loadenv_spec` | no | yes | subject to `needed_by` |
+| `package`, `product`, `product_command`, `loadenv_spec` | no | yes | subject to `needed_by`. `product_command` requires envy 0.8.0. |
 | `options` | in an `OPTIONS` function | no | |
 
 Calling a phase-only function too early is an error, not undefined behavior:
@@ -180,13 +181,31 @@ result would not depend on the anchor.
 envy.copy(src, dst)    -- files or directories, recursive
 envy.move(src, dst)
 envy.remove(path)      -- recursive
+envy.write(path, content, { executable = true })  -- opts optional
+envy.mkdir(path)       -- with parents
 envy.exists(path)      --> boolean
 envy.is_file(path)     --> boolean
 envy.is_dir(path)      --> boolean
 ```
 
-In a phase function, relative paths resolve against `stage_dir`. Prefer the
-absolute directories the phase hands you.
+In a phase function, relative paths resolve against the phase's working
+directory, the one `envy.run` starts in: `tmp_dir` in `FETCH`, `stage_dir` in
+`STAGE`, `BUILD`, and `INSTALL`. Prefer the absolute directories the phase hands
+you.
+
+From envy 0.8.0, `envy.write` writes a file in one call. It creates missing
+parent directories, writes the bytes as given with no newline translation, and
+replaces the file atomically. `executable = true` sets the exec bits, and does
+nothing on Windows. `envy.mkdir` creates a directory and its parents. An
+existing directory is not an error.
+
+```lua
+INSTALL = function(install_dir)
+  envy.write(envy.path.join(install_dir, "bin", "tool"),
+             '#!/bin/sh\nexec "$(dirname "$0")/../lib/tool" "$@"\n',
+             { executable = true })
+end
+```
 
 ```lua
 INSTALL = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
@@ -194,6 +213,55 @@ INSTALL = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
   if envy.exists(envy.path.join(stage_dir, "share")) then
     envy.copy(envy.path.join(stage_dir, "share"), envy.path.join(install_dir, "share"))
   end
+end
+```
+
+## Structured data
+
+From envy 0.8.0, `envy.json` and `envy.toml` read and write JSON and TOML, so a
+spec does not have to parse upstream metadata by hand.
+
+```lua
+envy.json.decode(text)              --> value
+envy.json.read(path)                --> value
+envy.json.encode(value, { indent = 2 })  --> string, opts optional
+envy.json.write(path, value, { indent = 2 })
+envy.json.array(t)                  --> t, tagged as an array
+
+envy.toml.decode(text)              --> table
+envy.toml.read(path)                --> table
+envy.toml.encode(t)                 --> string
+envy.toml.write(path, t)
+envy.toml.array(t)                  --> t, tagged as an array
+```
+
+Decoding gives plain Lua values. Objects become tables, arrays become sequences,
+and integers stay integers. JSON `null` becomes `nil`. TOML dates and times
+become RFC 3339 strings such as `"1979-05-27T07:32:00Z"`. Errors name the
+function and the line:
+
+```text
+envy.toml.decode: (line 1) missing value
+```
+
+Encoding is deterministic. Keys are sorted and floats are written in their
+shortest exact form, so the same table always produces the same bytes. A table
+is an array if it came from a decoded array, if `array()` tagged it, or if its
+keys are `1..n` and nothing else. An empty table with no tag is an object, so write
+`envy.json.array()` for an empty array. Sparse arrays, mixed keys, cycles, and
+functions are errors. `indent` takes 0 to 10 spaces, and 0 or absent writes
+compact JSON. TOML writes a table's own keys first, then its `[tables]` and
+`[[arrays of tables]]`.
+
+`read` and `write` take paths like `envy.copy` does. `write` creates parent
+directories and replaces the file atomically. JSON files get a trailing newline.
+
+```lua
+INSTALL = function(install_dir)
+  envy.json.write(envy.path.join(install_dir, "settings.json"),
+                  { ["editor.tabSize"] = 2, ["files.exclude"] = {} }, { indent = 2 })
+  envy.toml.write(envy.path.join(install_dir, ".cargo", "config.toml"),
+                  { build = { jobs = 8, rustflags = envy.toml.array() } })
 end
 ```
 
@@ -392,6 +460,39 @@ source = {
 
 See [Fetch Dependencies](/concepts/dependencies/fetch-dependencies) for the
 strong-reference rule that comes with it.
+
+A [command product](/concepts/specs/products#commands) has no single path, so
+`envy.product` refuses it:
+
+```text
+envy.product: product 'yarn' is a command, not a path; use envy.product_command
+```
+
+### `envy.product_command(name, shell?)`
+
+Returns the command line that runs a product, quoted for a shell. Requires envy
+0.8.0. Append arguments and pass the result to `envy.run`:
+
+```lua
+DEPENDENCIES = { { product = "yarn" } }
+
+BUILD = function()
+  envy.run(envy.product_command("yarn") .. " install --frozen-lockfile")
+end
+```
+
+A command product gives its whole argv. A path product gives a one-element
+command, so a consumer works the same whatever shape the provider chose. Access
+follows the same rules as `envy.product`: a declared dependency, and its
+`needed_by` reached. A bare program name resolves on the phase's `PATH`.
+
+The quoting matches the phase's shell by default: single quotes for bash and sh,
+`& '...'` for PowerShell, and double quotes for cmd. Pass an
+[`ENVY_SHELL`](#constants) constant to quote for another one. A custom
+[`DEFAULT_SHELL`](/concepts/shells) has no quoting rules envy knows, so it needs
+the argument. An argument a shell cannot carry intact is an error rather than a
+mangled command. For example, PowerShell 5.1 cannot pass an empty argument or a
+`"`.
 
 ### `envy.package(identity)`
 
@@ -671,9 +772,10 @@ one pointing at a different bundle, and it can carry
 [`vendor`](/concepts/vendoring).
 
 The bundle is materialized during the manifest's own global scope, which is
-earlier than envy fetches bundles for anything else. A bundle whose identity
-starts with `local.` and whose source is a directory is read where it stands, so
-edits to it land without a copy. Every other shape goes into the cache, where the
+earlier than envy fetches bundles for anything else. A bundle whose source is a
+local directory is read where it stands, so edits to it land without a copy.
+From envy 0.8.0 that holds for any identity, not only `local.` ones. Every other
+shape goes into the cache, where the
 bundle's own package finds it complete a moment later, so nothing is fetched
 twice. The fetch shows a progress bar, then an outcome row like any package:
 

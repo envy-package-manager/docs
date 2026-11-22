@@ -118,9 +118,9 @@ if envy.PLATFORM == "darwin" then
 end
 ```
 
-A function `BUILD` also changes where staging writes. Extraction goes to
-`work/stage/` rather than straight into `pkg/`, because a build needs a scratch
-tree. See [The Package Lifecycle](./lifecycle.md#where-extraction-lands).
+Any `BUILD`, string or function, also changes where staging writes. Extraction
+goes to `work/stage/` rather than straight into `pkg/`, because the build runs
+there. See [The Package Lifecycle](./lifecycle.md#where-extraction-lands).
 
 ### On Windows
 

@@ -57,20 +57,19 @@ removed after upload. Use a local destination to keep the staged bytes.
 
 ## S3 credentials
 
-An `s3://` destination needs credentials that can write to the prefix. envy uses
-the AWS SDK's own resolution, so a profile, an SSO session, or
+An `s3://` destination needs credentials that can write to the prefix. envy
+resolves them the way the AWS CLI does, so a profile, an SSO session, or
 `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` all work, and no AWS CLI is
-involved.
+involved. See [S3 variables](../environment-variables.md#s3).
 
 envy resolves them before downloading anything:
 
 ```text
 error: mirror-envy: no usable AWS credentials
-  SSOCredentialsProvider: Cached Token expired at 2026-08-14T18:22:03Z
-  Hint: run 'aws sso login' (honoring AWS_PROFILE), or set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
+  Hint: the cached AWS SSO token for profile 'default' expired at 2026-08-14T18:22:03Z. Run 'aws sso login' and retry.
 ```
 
-The indented lines are the SDK's account of why each provider it tried failed.
+An expired SSO session is the usual cause, and `aws sso login` is the fix.
 Checking up front means an expired session costs a second rather than six
 archive downloads and one opaque S3 error per object. See
 [S3 troubleshooting](../troubleshooting.md#s3).

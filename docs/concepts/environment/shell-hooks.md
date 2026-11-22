@@ -28,6 +28,10 @@ Paste the line into your profile and restart. envy maintains the hook file in
 the user-wide cache, one per supported shell: bash, zsh, fish, and PowerShell.
 See [`envy shell`](../../reference/cli/shell.md).
 
+cmd has no hook. From envy 0.8.0,
+[`bin\envy activate cmd`](../../reference/cli/activate.md#to-activate-a-cmd-session)
+activates a cmd session by hand.
+
 ## The contract
 
 Inside a project:
@@ -218,8 +222,9 @@ cache>/shell/` and run an envy command in a project that is not on a local tree.
 ## When not to use hooks
 
 - **In CI.** A job should call `./bin/<tool>` or `envy run` explicitly, so the
-  build does not depend on a login shell having been configured. Use
-  `envy run --activate` where a tool needs its package's `ENV`.
+  build does not depend on a login shell having been configured. A product
+  script applies its package's `ENV` on its own. Use `envy run --activate` for
+  anything else that needs it.
 - **In scripts.** Same reason. A script that relies on an interactive shell's
   `PATH` works on your machine and nowhere else.
 - **In editors and task runners.** Many spawn a non-login shell.

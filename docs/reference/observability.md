@@ -226,7 +226,9 @@ version.
 | `download_failed` | `url`, `error` |
 | `download_retry` | `url`, `attempt` (1-based, the attempt that failed), `delay_ms`, `reason`, `error`. `reason` is the transport classification: `connect`, `transfer`, `timeout`, or `http_status`. |
 | `download_skipped` | `url`, `reason` |
+| `fetch_release_wait` | `path`, `duration_ms`, `holders`, `released`. Windows only. One wait for another process to let go of a downloaded file. `holders` lists them as `name.exe (pid N), ...` and may be empty. `released` is false when the wait failed. Requires envy 0.7.4. |
 | `git_resolve` | `url`, `ref`, `sha`, `method`, either `sha` or `ls-remote` |
+| `libgit2_init` | `duration_ms`. Git setup, at most once per run, on the first git work. A run with no git work has none. Requires envy 0.8.0. |
 | `git_fetch` | `url`, `path`, `sha`, `strategy`, `depth`. One per repository a git fetch checks out, so a source with [submodules](/concepts/specs/fetch#submodules) emits one for the parent and one for each submodule. `path` runs from the top of the parent, `""` for the parent itself. `strategy` is `tip` (a branch or tag points at the commit), `oid` (fetched by commit id), `full` (the server refused both), or `local`. `depth` is `1` for shallow, `0` for full history. Since envy 0.5.0. |
 | `extract_start` | `archive`, `destination`, `strip_components` |
 | `extract_complete` | `archive`, `files_extracted`, `duration_ms` |

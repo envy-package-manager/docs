@@ -153,7 +153,7 @@ shared.
 
 Prefer the `https://` form of a bucket, for example
 `https://acme-envy-mirror.s3.us-east-1.amazonaws.com`. envy itself speaks
-`s3://` natively, but the bootstrap script is plain shell with no AWS SDK, so an
+`s3://` natively, but the bootstrap script is plain shell with no S3 client, so an
 `s3://` mirror makes it require the AWS CLI on every machine that bootstraps.
 
 ## The same pins on every platform

@@ -159,6 +159,16 @@ Every cache-managed spec needs a `FETCH`. A spec that only mutates the host is
 
 User-managed specs define only `SETUP` pairs. The cache holds nothing for them.
 
+**`spec 'x@r1' defines unknown globals 'EVN', 'HASHES'; make helpers local`**
+
+From envy 0.8.0, a spec may only define the all-caps globals envy reads. A
+misspelled one such as `EVN` would otherwise do nothing. Fix the spelling, or
+declare a helper table `local`:
+
+```lua
+local HASHES = { ... }
+```
+
 **A phase cannot see a dependency**
 
 `envy.product` and `envy.package` respect `needed_by`. A dependency declared
@@ -205,10 +215,12 @@ fails with `ENV must be a table or a function`.
 
 **My `BUILD` output is missing from the package**
 
-`BUILD` runs in `install_dir` in the common case, but when a spec mixes
-declarative and function verbs it is easy to write to `stage_dir` and never copy
-it. Check the [lifecycle](/concepts/specs/lifecycle) for which directory each verb
-owns, and look at the cache entry directly:
+`BUILD` runs in `work/stage/`. With no `INSTALL`, envy turns that tree into the
+package. A function `INSTALL` replaces that step, so it has to copy what `BUILD`
+made into `install_dir`. A string `INSTALL` that writes nothing to the package
+directory leaves the staged tree as the package. Check the
+[lifecycle](/concepts/specs/lifecycle) for which directory each verb owns, and
+look at the cache entry directly:
 
 ```bash
 ls "$(envy package mytool)"
@@ -252,7 +264,7 @@ echo "$ENVY_PROJECT_ROOT"
 ```
 
 Discovery walks up from an anchor and stops at the first manifest that is a
-root. A component manifest with `@envy root "false"` defers upward. Ask envy
+root. A subproject manifest with `@envy root "false"` defers upward. Ask envy
 which project it picked and what anchored the choice:
 
 ```bash
@@ -278,8 +290,9 @@ manifest to the current directory. See
 from installed packages, and skips the rest without a message.
 
 With the shell hook, run `envy install`, or run one of the package's tools, and
-the next prompt refreshes. Without it, re-run `eval "$(envy activate zsh)"`. Product scripts and a plain `envy run`
-never apply `ENV`. Use `envy run --activate` for one command.
+the next prompt refreshes. Without it, re-run `eval "$(envy activate zsh)"`.
+From envy 0.8.0, product scripts apply `ENV` to their tool. A plain `envy run`
+never does. Use `envy run --activate` for one command.
 
 **`envy: cannot restore the environment (...is gone); restart your shell`**
 
@@ -309,7 +322,7 @@ no work is silent](./observability.md#a-run-with-no-work-is-silent).
 
 **A CI log and my terminal disagree about which packages ran**
 
-Both are correct. A terminal omits the rows for packages that did no work; a
+Both are correct. A terminal omits the rows for packages that did no work. A
 redirected stream keeps all of them, so the log lists every package. The run
 itself is the same.
 
@@ -409,7 +422,7 @@ Three checks, in order. `$PROFILE` exists and contains the dot-source line that
 `envy shell powershell` prints. Your execution policy allows running your own
 profile, `RemoteSigned` being enough. And you are in PowerShell rather than
 `cmd.exe`, which has no hook at all. In `cmd`, call `bin\envy.bat` and
-`bin\<tool>.bat` directly.
+`bin\<tool>.bat` directly, or run `bin\envy activate cmd` (envy 0.8.0+).
 
 **A spec's script works in my terminal and fails in envy**
 
@@ -422,6 +435,28 @@ The other common cause is fail-fast. envy injects it into generated PowerShell a
 cmd scripts when `check` is true, so a line whose exit code you were ignoring now
 stops the script. See
 [How each built-in is invoked](/concepts/shells#how-each-built-in-is-invoked).
+
+**A package row says `awaiting release`**
+
+```text
+[envy.cmake@r0] awaiting release 3s from MsMpEng.exe (pid 4321)
+```
+
+From envy 0.7.4, envy waits for every downloaded file to be free before it
+unpacks or installs it. Another process is holding one open, usually Defender
+scanning it. The row names the process once envy can find it. Most holds end
+within seconds.
+
+After two minutes the install fails, naming the holder:
+
+```text
+C:\...\fetch\cmake-4.4.0-windows-x86_64.zip still held by MsMpEng.exe (pid 4321) after 120.0s (ENVY_FETCH_RELEASE_BUDGET_MS)
+```
+
+Close the program that holds the file and run again, or raise
+`ENVY_FETCH_RELEASE_BUDGET_MS`. A file a spec opened with `io.open` and never
+closed fails at once: `... is held open by this envy process (an unclosed
+io.open?)`.
 
 **A file will not delete, or an install fails partway with a sharing violation**
 
@@ -546,21 +581,20 @@ and exports what it just imported.
 
 ## S3
 
-envy has the AWS SDK compiled in, so `s3://` sources, mirrors, and depots use
+envy has an S3 client built in, so `s3://` sources, mirrors, and depots use
 your ambient credentials and region config. There is no AWS CLI in the loop. See
-[`AWS_*`](./environment-variables.md).
+[S3 variables](./environment-variables.md#s3).
 
 **`no usable AWS credentials`**
 
 ```text
 error: mirror-envy: no usable AWS credentials
-  SSOCredentialsProvider: Cached Token expired at 2026-08-14T18:22:03Z
-  Hint: run 'aws sso login' (honoring AWS_PROFILE), or set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
+  Hint: the cached AWS SSO token for profile 'default' expired at 2026-08-14T18:22:03Z. Run 'aws sso login' and retry.
 ```
 
-The indented lines are the AWS SDK's own account of why each provider it tried
-failed, tagged with the provider's name. An expired SSO session is the usual
-one, and `aws sso login` is the fix.
+An expired SSO session is the usual cause, and `aws sso login` is the fix. With
+nothing configured at all, the hint says to log in or set
+`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
 
 `envy mirror-envy` resolves credentials up front when the destination is
 `s3://`, before it downloads anything, so this fails in a second rather than
@@ -574,14 +608,26 @@ endpoint is an S3-compatible one that does not implement the operation.
 
 **`PermanentRedirect`, or `AuthorizationHeaderMalformed`, or HTTP 301**
 
-The bucket is in a different region. The SDK falls back to `us-east-1` when no
+The bucket is in a different region. envy falls back to `us-east-1` when no
 region is configured, so a bucket elsewhere fails as a redirect rather than as
-"region not set". Set `AWS_REGION` or a profile region.
+"region not set". When S3 names the bucket's region, the hint says which:
 
-**HTTP 403 on an upload**
+```text
+  Hint: the bucket is in eu-west-1. Set AWS_DEFAULT_REGION=eu-west-1 and retry.
+```
 
-The credentials resolved, but they lack `s3:PutObject` on that prefix. Check the
-bucket policy, or the role the profile assumes.
+Set `AWS_DEFAULT_REGION` or a profile region.
+
+**HTTP 403**
+
+On an upload, the credentials resolved but they lack `s3:PutObject` on that
+prefix. Check the bucket policy, or the role the profile assumes. On a download
+with no usable credentials, envy sent the request unsigned, and the hint names
+why the credentials failed, such as an expired SSO token.
+
+**`the object changed during the download; retry`**
+
+Someone replaced the object while envy was reading it. Run the command again.
 
 **`NoSuchBucket`**
 

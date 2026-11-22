@@ -15,12 +15,13 @@ last project.
 ## Usage
 
 ```
-envy deactivate <bash|zsh|fish|powershell>
+envy deactivate <bash|zsh|fish|powershell|cmd>
 ```
 
 Load the output the same way as `activate`: `eval "$(envy deactivate zsh)"`,
-`envy deactivate fish | source`, or
-`envy deactivate powershell | Out-String | Invoke-Expression`.
+`envy deactivate fish | source`,
+`envy deactivate powershell | Out-String | Invoke-Expression`, or
+`bin\envy deactivate cmd` in a cmd session.
 
 ## Behavior
 
@@ -29,7 +30,7 @@ Load the output the same way as `activate`: `eval "$(envy deactivate zsh)"`,
 | Reads | Only the `ENVY_ACTIVATE_*` variables in its environment. No manifest, no Lua, no network. |
 | Output | Shell code on stdout. Nothing when no activation is present. On a terminal it prints how to load the script instead. |
 | Status line | `envy: leaving proj — environment restored` on stderr. `ENVY_SHELL_NO_ENTER_EXIT_ANNOUNCE=1` silences it. |
-| Windows | `powershell` only. |
+| Windows | `powershell`, or `cmd` from envy 0.8.0. |
 
 The restore is wholesale. A variable activation touched returns to its value from
 before activation, even if you changed it inside the project.

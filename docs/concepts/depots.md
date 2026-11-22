@@ -31,7 +31,7 @@ That is the whole consumer side. The next install checks the index before
 building anything, and a hit is downloaded, verified against its recorded
 sha256, and unpacked.
 
-`https://` works the same way. envy has the AWS SDK compiled in, so an `s3://`
+`https://` works the same way. envy has an S3 client compiled in, so an `s3://`
 index uses your ambient credentials with no AWS CLI installed anywhere.
 
 ## What a depot actually is

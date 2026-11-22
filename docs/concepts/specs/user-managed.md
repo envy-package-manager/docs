@@ -130,6 +130,11 @@ end
 script to deploy. `envy product libusb` answers `libusb`, which is what a build
 system passing `-l` flags needs.
 
+A product that names a program can keep its wrapper. From envy 0.8.0,
+`PRODUCTS = { brew = "brew" }` deploys `bin/brew`, and the wrapper searches
+`PATH` for `brew`, skipping itself. A relative path such as `tools/run.sh` is
+resolved from the project root.
+
 ## A package-manager spec
 
 Driving apt or brew for a list of packages follows one shape. `CHECK` asks the

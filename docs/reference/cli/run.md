@@ -46,7 +46,7 @@ envy run [--activate] -- <script-path> [args...]
 | `ENVY_PROJECT_ROOT` | The governing manifest's directory. |
 | Other variables | Passed through unchanged, unless `--activate` is given. Packages' `ENV` applies only under `--activate`. |
 | Discovery | Anchored at the first argument's directory if that argument is an existing file, otherwise at the current directory. `--` forces the anchor to the path that follows it. A global `--project <dir>` outranks both. |
-| `--activate` | Run in the project's activated environment, the one [`envy activate`](./activate.md) would load: every installed package's [`ENV`](/concepts/environment/package-env) as well as `PATH` and `ENVY_PROJECT_ROOT`. Any activation already in your environment is undone first. Requires envy 0.6.0. |
+| `--activate` | Run in the project's activated environment, the one [`envy activate`](./activate.md) would load: every installed package's [`ENV`](/concepts/environment/package-env) as well as `PATH` and `ENVY_PROJECT_ROOT`. An environment that already holds this project's current activation passes through unchanged. Any other activation is undone first. Requires envy 0.6.0. |
 | Other flags | None. `envy run --verbose make` passes `--verbose` to `make`, and so does anything after the command, so `--activate` goes right after `run`. [Global flags](./index.md#global-flags) go before `run`. |
 | Tracing | `run` emits no `manifest_resolved` event: it replaces its own process with the child before the trace drains. What it resolved is visible in the child's `PATH`. |
 | Installs | Nothing directly. Whatever the child asks envy for is installed then. |

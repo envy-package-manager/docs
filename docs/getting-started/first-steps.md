@@ -104,7 +104,9 @@ renaming a *product* does.
 ## Three ways to run project tools
 
 1. **The wrappers.** `cmake`. Committed, zero setup, works in any shell and
-   in CI. See [Product Scripts](/concepts/environment/product-scripts).
+   in CI. Each runs its tool with the packages'
+   [`ENV`](/concepts/environment/package-env) applied. See
+   [Product Scripts](/concepts/environment/product-scripts).
 2. **[`envy run`](../reference/cli/run.md).** `envy run make -j` puts the bin
    directory on `PATH` for one command and sets `ENVY_PROJECT_ROOT`. Good for
    scripts, git hooks, and CI. `envy run --activate` also applies the packages'

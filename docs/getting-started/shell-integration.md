@@ -54,7 +54,8 @@ Three Windows notes:
   enough, since the hook is a local file. This is separate from spec scripts,
   which envy runs with `-ExecutionPolicy Bypass` on a temp file.
 - `cmd.exe` has no hook. Use the committed `bin\envy.bat` and `bin\<tool>.bat`
-  wrappers there, or `envy run`.
+  wrappers there, or `envy run`. From envy 0.8.0, `bin\envy activate cmd`
+  activates the session by hand.
 
 envy maintains the hook file itself, in the user-wide cache. Any earlier envy
 command has already created it. If it is missing, `envy shell` says so and tells

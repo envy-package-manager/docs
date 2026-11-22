@@ -147,9 +147,11 @@ jobs:
 Three details worth copying. The matrix carries the envy command per runner,
 because Windows needs `bin\envy.bat`. `envy run` hands the build script the
 project's bin directory and `ENVY_PROJECT_ROOT`, so the script needs to know
-nothing about CI. If a tool needs its package's [`ENV`](/concepts/environment/package-env),
-such as cargo's `CARGO_HOME`, use `envy run --activate` instead. And one `all-checks-pass` gate depending on every matrix leg
-keeps branch protection stable while jobs come and go.
+nothing about CI. A tool the script calls through its wrapper, such as
+`./bin/cargo`, already gets its package's [`ENV`](/concepts/environment/package-env).
+For a tool called any other way, use `envy run --activate`. And one
+`all-checks-pass` gate depending on every matrix leg keeps branch protection
+stable while jobs come and go.
 
 ## Keeping the runner clean
 

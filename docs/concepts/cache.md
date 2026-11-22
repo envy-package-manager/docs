@@ -116,6 +116,12 @@ lock, or the depot key. It is part of the path, though, so editing a `DISPLAY`
 installs into a new directory and leaves the old one behind. Upgrading to 0.6.0
 does the same once for every spec that has a `DISPLAY`.
 
+Spec and bundle entries under `specs/` are keyed on where they came from: a URL
+and its `sha256`, a git URL and its `ref`, or a local path. From envy 0.8.0, a
+path inside the project is keyed relative to the project root, and a local spec
+pinned with `sha256` is keyed on the hash alone. Two clones or worktrees of one
+project therefore share their spec entries.
+
 Left out of the hash on purpose: [setup-pair selections](./specs/setup.md) and
 depot configuration. The same artifact serves a machine that selected `udev_rules` and
 one that did not.
@@ -325,7 +331,9 @@ The cache works the same way, with three details that only exist there:
 - **Antivirus.** Defender and the Search indexer hold handles on freshly written
   files, which makes a delete fail for a moment. envy retries deletions with
   backoff rather than failing the run. A directory that will not go away after
-  the retries is usually an open handle in another process.
+  the retries is usually an open handle in another process. From envy 0.7.4,
+  envy also waits for each downloaded file to be released before it unpacks it.
+  See [awaiting release](../reference/troubleshooting.md#windows).
 - **Paths in output.** Everything envy prints or hands to a Lua phase uses the
   platform separator, so cache paths look like
   `C:\Users\you\AppData\Local\envy\packages\envy.cmake@r0\windows-x86_64-blake3-...\pkg`.

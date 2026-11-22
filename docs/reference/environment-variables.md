@@ -20,6 +20,7 @@ of these.
 | `ENVY_FETCH_ATTEMPTS` | Ceiling on attempts for one download, counting the first try. Default 10 from envy 0.4.6, 3 before that. Clamped to 1 through 100. The budget is normally what stops a retry loop. |
 | `ENVY_FETCH_RETRY_BASE_MS` | Base backoff between those attempts, in milliseconds. Default 1000, clamped to 0 through 60000. `0` disables the wait. |
 | `ENVY_GIT_TIMEOUT_MS` | How long a git transfer may go without data before it fails as a timeout, in milliseconds. Default 60000, 1 through 3600000. Connecting is capped at 30000 whatever the value. Requires envy 0.5.0. |
+| `ENVY_FETCH_RELEASE_BUDGET_MS` | Windows only. How long envy waits for another process, such as antivirus, to let go of a downloaded file before it fails. Default 120000. `0` fails at once. Requires envy 0.7.4. See [Windows](/reference/troubleshooting#windows). |
 
 All three fetch knobs are read once per process. They exist for CI and for tests
 that cannot afford real backoff.
@@ -28,14 +29,14 @@ that cannot afford real backoff.
 
 | Variable | Set by | Value |
 | --- | --- | --- |
-| `ENVY_PROJECT_ROOT` | [`envy run`](./cli/run.md), [`envy activate`](./cli/activate.md) (and so the [shell hook](/concepts/environment/shell-hooks)), and each deployed [product script](/concepts/environment/product-scripts) | The governing manifest's directory. A product script stamps it as a hop relative to its own bin directory, and only for a root manifest. |
+| `ENVY_PROJECT_ROOT` | [`envy run`](./cli/run.md), [`envy activate`](./cli/activate.md) (and so the [shell hook](/concepts/environment/shell-hooks)), and each deployed [product script](/concepts/environment/product-scripts) | The governing manifest's directory. |
 | `PATH` | `envy run`, `envy activate`, and each deployed product script | The project's bin directory, prepended. |
-| A package's [`ENV`](/concepts/environment/package-env) | `envy activate` and `envy run --activate` | Whatever installed packages declare. Requires envy 0.6.0. |
+| A package's [`ENV`](/concepts/environment/package-env) | `envy activate`, `envy run --activate`, and each deployed product script | Whatever installed packages declare. Requires envy 0.6.0, and 0.8.0 for product scripts. |
 
 `envy run` sets them for the child process only. Activation sets them in your
 interactive shell, and deactivation restores what was there before. A product
-script sets `PATH` and `ENVY_PROJECT_ROOT` for the tool it execs, so a tool that
-shells out to a sibling product finds it.
+script runs its tool in the project's activation, so the tool gets all three. A
+tool that shells out to a sibling product finds it.
 
 A phase's `envy.run` and string verbs start from the environment as it was
 before any activation, add the `ENV` of the packages the phase depends on, then
@@ -56,6 +57,7 @@ Do not set these yourself.
 | `ENVY_ACTIVATE_KEY` | The hook's spelling of that directory. Set only by the hook. |
 | `ENVY_ACTIVATE_EXE` | The envy binary that activated. The hook deactivates with it. |
 | `ENVY_ACTIVATE_GENFILE`, `ENVY_ACTIVATE_GEN` | The file envy touches when `envy install` or `envy sync` finishes or any command installs a package, and its contents at activation. A mismatch at the next prompt makes the hook refresh. |
+| `ENVY_ACTIVATE_PKGS` | Which packages' `ENV` the activation applied. A product script reads it to add only what its tool is missing. Requires envy 0.8.0. |
 | `ENVY_ACTIVATE_SCHEMA` | The state format. An envy that cannot read it says to restart your shell. |
 
 envy removes every `ENVY_ACTIVATE_*` variable, and puts back every variable they
@@ -144,8 +146,9 @@ lockstep.
 A server that sends `Retry-After` with its 429 or 503 sets a floor on the next
 wait, jittered upward but never back below what it asked for. A cooldown longer
 than the budget has left ends the fetch rather than coming back early to earn the
-same refusal. `s3://` sources are not retried here, because the AWS SDK already
-retries internally.
+same refusal. `s3://` sources retry 500, 503, and throttling inside envy's S3
+client, up to `AWS_MAX_ATTEMPTS` tries (default 6). From envy 0.8.0 the budget
+above covers their 429, 502, and 504.
 
 Git fetches follow the same rules. From envy 0.5.0 each repository retries on
 its own, so a dropped connection to one [submodule](/concepts/specs/fetch#submodules)
@@ -187,7 +190,31 @@ flag.
 | `HOME`, `XDG_CACHE_HOME`, `LOCALAPPDATA`, `USERPROFILE` | Default cache root, and the `~` in `.luarc.json` paths. |
 | `TERM` | Whether output gets a live TUI or plain lines. |
 | `LANG`, `LC_ALL`, `LC_CTYPE` | Whether the shell hook uses UTF-8 glyphs or ASCII fallbacks. |
-| `AWS_*` | Ambient credentials for `s3://` sources, mirrors, and depots. envy uses the AWS SDK directly. |
+| `AWS_*` | `s3://` sources, mirrors, and depots. See [S3](#s3). |
+| `HTTPS_PROXY`, `HTTP_PROXY`, `NO_PROXY` | Proxies for `s3://` requests. |
+
+## S3
+
+envy has its own S3 client built in, so `s3://` works with no AWS CLI installed.
+It reads the same settings the AWS CLI and SDKs read:
+
+| Variable | Effect |
+| --- | --- |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | Credentials, checked first. |
+| `AWS_PROFILE`, `AWS_DEFAULT_PROFILE` | The profile in `~/.aws/config` and `~/.aws/credentials`. Default `default`. |
+| `AWS_DEFAULT_REGION`, `AWS_REGION` | Region for a request, in that order, then the profile's `region`, then `us-east-1`. |
+| `AWS_ENDPOINT_URL_S3`, `AWS_ENDPOINT_URL` | A different S3 endpoint, such as MinIO. The profile's `endpoint_url` works too. |
+| `AWS_MAX_ATTEMPTS` | Tries per S3 request. `1` disables retries. |
+| `AWS_WEB_IDENTITY_TOKEN_FILE`, `AWS_ROLE_ARN` | Web identity credentials, the form GitHub Actions OIDC uses. |
+
+Credentials come from the environment, then the profile (including
+`credential_process`), then web identity, then AWS SSO. With none of them,
+requests go unsigned and public objects still download. envy does not ask EC2
+instance metadata or ECS for credentials.
+
+For a profile with an `sso-session`, envy renews the cached token near expiry,
+the way the AWS CLI does. Once the session itself has ended, a denied request says to run
+`aws sso login`.
 
 ## CI
 

@@ -50,7 +50,8 @@ PRODUCTS = {
 
 | Field | Meaning |
 | --- | --- |
-| `value` | Required string. A path relative to the package directory, or a raw value for [user-managed](./user-managed.md) packages. |
+| `value` | A path relative to the package directory, or a raw value for [user-managed](./user-managed.md) packages. Required unless the product is a [command](#commands). |
+| `command` | An argv instead of a path. See [Commands](#commands). Requires envy 0.8.0. |
 | `script` | Deploy a wrapper script for it. Defaults to `true`. |
 | `platforms` | Which wrapper flavors to deploy, for example `{ "windows" }` for a `.bat` only. See [Platforms](./platforms.md#how-1-2-and-4-combine). |
 
@@ -104,13 +105,56 @@ PRODUCTS = function(opts)
 end
 ```
 
+### Commands
+
+From envy 0.8.0, a product can be a command line instead of a path. Use it for
+a script that runs under another product's interpreter, or for a tool that
+always needs fixed flags. Each `{{name}}` in the list is another product:
+
+```lua
+DEPENDENCIES = { { product = "node" }, { product = "java" } }
+
+PRODUCTS = {
+  ["yarn.cjs"]   = { value = "lib/yarn.cjs", script = false },
+  yarn           = { command = { "{{node}}", "{{yarn.cjs}}" } },
+  ["gradle.jar"] = { value = "lib/gradle.jar", script = false },
+  gradle         = { command = { "{{java}}", "-Xmx2g", "-jar", "{{gradle.jar}}" } },
+}
+```
+
+`./bin/yarn install` runs `node .../lib/yarn.cjs install`. envy fills in the
+names each time the command runs, so nothing is written into the package.
+
+- A command takes `command` in place of `value`. `script` and `platforms` work
+  the same as for a path.
+- Every `{{name}}` must be a product of this package or of a package it depends
+  on, directly or not. envy checks this when it resolves the graph, so a typo
+  fails early:
+
+  ```text
+  error: Product 'yarn' in spec 'acme.yarn@r0' runs '{{nod}}', but nothing in its dependency closure provides 'nod'
+  ```
+
+- A path product can sit inside an element, as in `--node={{node}}`. A command
+  product must fill a whole element, and its arguments are spliced in. A command
+  that reaches itself is an error.
+- A command's own files are path products of its package, like `yarn.cjs`
+  above. Mark them `script = false` unless they run on their own.
+- The first element is the program. An absolute path runs as is. A bare name is
+  searched on `PATH`.
+
+`envy product yarn` prints the command line, quoted for the platform's shell.
+`envy product --json` lists it as an array. A spec runs it with
+[`envy.product_command`](/reference/lua-api#envyproduct_commandname-shell),
+because `envy.product` only returns paths.
+
 ## The three consumption surfaces
 
 | Surface | How | Who uses it |
 | --- | --- | --- |
 | Deployed wrapper | `cmake` | humans, Makefiles, anything expecting a normal executable |
 | CLI | [`envy product cmake`](../../reference/cli/product.md), `envy product --json` | build-system glue, scripts, `envy run` users |
-| Lua | `envy.product("ninja")` | other specs, during `BUILD` and `INSTALL` |
+| Lua | `envy.product("ninja")`, `envy.product_command("yarn")` | other specs, during `BUILD` and `INSTALL` |
 
 From Lua, the usual shape is a product feeding a generated script:
 
@@ -133,8 +177,8 @@ resolved during `FETCH`. See
 [BUILD](./build.md#function-using-dependency-products).
 
 Asking for a product installs its provider on demand, which is why a deployed
-wrapper works on a machine that has never synced. The four-line script calls
-`envy product`, and the package materializes.
+wrapper works on a machine that has never synced. The wrapper calls
+`envy product --run`, and the package installs before the tool runs.
 
 ## Resolution rules
 

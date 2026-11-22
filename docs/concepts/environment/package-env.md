@@ -7,10 +7,11 @@ title: Package Environment
 
 Some tools need more than a `PATH` entry. Rust reads `RUSTUP_HOME` and
 `CARGO_HOME`. A JDK expects `JAVA_HOME`. From envy 0.6.0 a spec declares those
-variables in its `ENV` global, and envy applies them in two places:
+variables in its `ENV` global, and envy applies them in three places:
 
 - In a shell you [activate](#activation) in the project, with the
   [shell hook](./shell-hooks.md) or [`envy activate`](../../reference/cli/activate.md).
+- In every tool a [product script](./product-scripts.md) runs (envy 0.8.0+).
 - In the verbs of every package that [depends](#in-builds) on this one.
 
 ## Declaring `ENV`
@@ -19,11 +20,12 @@ variables in its `ENV` global, and envy applies them in two places:
 IDENTITY = "acme.rust@r0"
 -- FETCH, INSTALL, ...
 
-ENV = function(pkg_path, root, options)
+ENV = function(pkg_dir, pkg_state_dir, options)
   return {
-    RUSTUP_HOME = envy.path.join(pkg_path, "rustup"),
-    CARGO_HOME  = envy.path.join(root, ".cargo"),
-    PATH        = { prepend = envy.path.join(pkg_path, "bin") },
+    RUSTUP_HOME = envy.path.join(pkg_dir, "rustup"),
+    CARGO_HOME  = pkg_state_dir,
+    PATH        = { prepend = { envy.path.join(pkg_dir, "bin"),
+                                envy.path.join(pkg_state_dir, "bin") } },
   }
 end
 ```
@@ -47,19 +49,24 @@ fetched. The function form is called once per consumer, with three arguments:
 
 | Argument | Value |
 | --- | --- |
-| `pkg_path` | The package's install directory. `nil` for a [user-managed](../specs/user-managed.md) package. |
-| `root` | Where the consumer keeps mutable state. In an activated shell it is the project root. In a build it is the dependent package's temporary directory. |
+| `pkg_dir` | The package's install directory. `nil` for a [user-managed](../specs/user-managed.md) package. |
+| `pkg_state_dir` | A directory for the tool's mutable state, `<root>/.envy/state/<namespace.name>/`. In an activated shell and a product script, `<root>` is the project root. In a build it is the dependent package's temporary directory. Requires envy 0.8.0. |
 | `options` | The package's validated options. |
 
 Both directories arrive with a trailing separator, like every directory envy
 hands to Lua. Build paths with `envy.path.join`. Returning `nil` declares no
 variables.
 
-The example shows why `root` exists. A rustup toolchain is part of the payload,
-so `RUSTUP_HOME` points into `pkg_path`. Cargo's registry cache is state that
-cargo writes to, so `CARGO_HOME` goes under `root`. Each project gets its own,
-and a build gets a private one inside its own work area. Neither writes into the
-shared cache entry.
+The example shows why `pkg_state_dir` exists. A rustup toolchain is part of the
+payload, so `RUSTUP_HOME` points into `pkg_dir`. Cargo's registry cache is state
+that cargo writes to, so `CARGO_HOME` is `pkg_state_dir`. Each project gets its
+own, and a build gets a private one inside its own work area. Neither writes
+into the shared cache entry.
+
+`pkg_state_dir` leaves the revision out of its name, so a spec bump or a version
+change keeps the tool's caches. Every option set of one spec shares it. envy
+does not create the directory. The tool creates it on first write. `envy init`
+already puts `.envy/` in `.gitignore`.
 
 ## Activation
 
@@ -76,7 +83,7 @@ restores your environment when you leave. Without the hook, do the same by hand:
 $ eval "$(envy activate zsh)"
 envy: entering proj — 4 variables set
 $ echo $CARGO_HOME
-/Users/you/work/proj/.cargo
+/Users/you/work/proj/.envy/state/acme.rust/
 $ eval "$(envy deactivate zsh)"
 envy: leaving proj — environment restored
 ```
@@ -104,10 +111,27 @@ Activation follows these rules:
 - **One project at a time.** Activating always deactivates first, from any
   project, so switching projects leaves nothing of the first one behind.
 
-[Product scripts](./product-scripts.md) and a plain [`envy run`](./envy-run.md)
-do not apply `ENV`. They put the bin directory on `PATH` and set
-`ENVY_PROJECT_ROOT`, as before. Where a tool needs its variables outside an
-activated shell, use `envy run --activate`.
+## Product scripts
+
+From envy 0.8.0, a [product script](./product-scripts.md) runs its tool in the
+project's activation. `./bin/cargo` sees `CARGO_HOME` in CI, in an IDE, and in
+another project's shell, the same as in an activated one. The script installs the
+tool first if it has to, so its `ENV` is always there.
+
+- **An activated shell stays as it is.** When the caller is already in this
+  project's activation, the tool gets the caller's environment unchanged, plus
+  any of its own `ENV` that is missing. Edits you made to `PATH` in that shell
+  survive.
+- **Anything else gets a fresh activation.** Another project's activation, or
+  one written by a different envy, is undone first. Then this project's is
+  applied for that one tool.
+- **The tool's own `ENV` must work.** An `ENV` function that fails in the tool's
+  own dependency closure stops the script with an error. Elsewhere it warns, as
+  in a shell.
+
+A plain [`envy run`](./envy-run.md) does not apply `ENV`. It puts the bin
+directory on `PATH` and sets `ENVY_PROJECT_ROOT`. Use `envy run --activate` for
+the full environment.
 
 ## In builds
 
@@ -116,7 +140,7 @@ A package's verbs see the `ENV` of its dependencies. That covers string verbs,
 
 ```lua
 -- A's INSTALL runs B's tool. B's tool runs C's cargo.
--- C sets CARGO_HOME = envy.path.join(root, ".cargo").
+-- C sets CARGO_HOME = pkg_state_dir.
 -- A's INSTALL sees CARGO_HOME inside A's own temporary directory.
 ```
 
@@ -126,8 +150,9 @@ A package's verbs see the `ENV` of its dependencies. That covers string verbs,
   [Phase Ordering](../dependencies/ordering.md).
 - **Nearer wins.** If A depends on B, B depends on C, and both B and C set a
   variable, A's verbs see B's value.
-- **`root` is the dependent's.** It is the dependent package's temporary
-  directory, never a project path.
+- **`pkg_state_dir` is the dependent's.** It sits under the dependent package's
+  temporary directory, never the project's. A SETUP pair gets a scratch
+  directory that goes away when the pair returns.
 - **Not its own.** A package's `ENV` does not apply to its own verbs.
 - **Processes only.** The variables reach processes that `envy.run` and string
   verbs start. Lua's `os.getenv` inside the phase does not see them.
@@ -154,14 +179,13 @@ from envy 0.6.0 on.
 A dependency's `ENV` is computed from that dependency's install path, options,
 and spec. Nothing from the project or your shell reaches it. Keep project layout,
 such as a `CARGO_HOME` under the project's `out/` directory, out of package
-options. In a shell, `root` already points at the project.
+options. In a shell, `pkg_state_dir` already sits under the project.
 
 ## Windows
 
-`ENV` works the same way. `sep` defaults to `;`, and activation emits
-PowerShell, the only shell `envy activate` supports on Windows. Variable names
-are case-insensitive, so an `ENV` that sets `PATH` edits the `Path` variable
-Windows already has.
+`ENV` works the same way. `sep` defaults to `;`. `envy activate` emits
+PowerShell or, from envy 0.8.0, `cmd`. Variable names are case-insensitive, so an
+`ENV` that sets `PATH` edits the `Path` variable Windows already has.
 
 ## See also
 

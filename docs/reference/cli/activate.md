@@ -15,7 +15,7 @@ you `cd` into. Run it yourself where there is no hook.
 ## Usage
 
 ```
-envy activate <bash|zsh|fish|powershell>
+envy activate <bash|zsh|fish|powershell|cmd>
 ```
 
 Load the output with your shell:
@@ -25,6 +25,7 @@ Load the output with your shell:
 | bash, zsh | `eval "$(envy activate zsh)"` |
 | fish | `envy activate fish \| source` |
 | PowerShell | `envy activate powershell \| Out-String \| Invoke-Expression` |
+| cmd | `bin\envy activate cmd`, through the project's `envy.bat` |
 
 ## Behavior
 
@@ -36,7 +37,7 @@ Load the output with your shell:
 | Installs | None. It reads the cache, and never fetches, installs, or waits on a lock. A package that is not installed is skipped without a message. |
 | Lua output | A spec's `envy.stdout` or `io.write` goes to stderr, so it cannot corrupt the script. |
 | Re-exec | Runs as the version the manifest pins. |
-| Windows | `powershell` only. |
+| Windows | `powershell`, or `cmd` from envy 0.8.0. `cmd` is an error on macOS and Linux. |
 | Exit code | 0, even when packages were skipped. |
 
 The status line names the project and how many variables changed:
@@ -62,7 +63,7 @@ The script also exports a set of `ENVY_ACTIVATE_*` variables, the record
 $ eval "$(envy activate zsh)"
 envy: entering proj — 4 variables set
 $ echo $CARGO_HOME
-/Users/you/work/proj/.cargo
+/Users/you/work/proj/.envy/state/acme.rust/
 $ eval "$(envy deactivate zsh)"
 envy: leaving proj — environment restored
 ```
@@ -73,6 +74,20 @@ On Windows:
 envy activate powershell | Out-String | Invoke-Expression
 envy deactivate powershell | Out-String | Invoke-Expression
 ```
+
+### To activate a cmd session
+
+From envy 0.8.0, `envy.bat` changes the calling cmd session in place, so there
+is nothing to evaluate:
+
+```batch
+bin\envy activate cmd
+bin\envy deactivate cmd
+```
+
+cmd has no prompt hook, so run it again after an install. A value that holds a
+line break, or a line longer than 8191 characters, is an error, because cmd
+cannot set it.
 
 ### To pick up packages you just installed
 
@@ -92,9 +107,9 @@ envy activate bash | grep -v '^export ENVY_ACTIVATE_'
 ```
 
 ```text
-export CARGO_HOME='/Users/you/work/proj/.cargo'
+export CARGO_HOME='/Users/you/work/proj/.envy/state/acme.rust/'
 export ENVY_PROJECT_ROOT='/Users/you/work/proj'
-export PATH='/Users/you/work/proj/bin:/Users/you/Library/Caches/envy/packages/acme.rust@r0/darwin-arm64-blake3-a745fbca66556c1f/pkg/bin:/usr/bin:/bin'
+export PATH='/Users/you/work/proj/bin:/Users/you/Library/Caches/envy/packages/acme.rust@r0/darwin-arm64-blake3-a745fbca66556c1f/pkg/bin:/Users/you/work/proj/.envy/state/acme.rust/bin:/usr/bin:/bin'
 export RUSTUP_HOME='/Users/you/Library/Caches/envy/packages/acme.rust@r0/darwin-arm64-blake3-a745fbca66556c1f/pkg/rustup'
 ```
 

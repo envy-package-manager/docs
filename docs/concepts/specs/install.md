@@ -31,8 +31,8 @@ STAGE = { strip = 1 }
 
 Two things can happen, and neither costs a copy of the tree. If extraction
 already went straight into `pkg/`, which is the usual case for a spec with no
-function verbs, envy marks the entry complete. Otherwise it renames the staged
-tree into place.
+`BUILD` and no `STAGE` function, envy marks the entry complete. Otherwise it
+renames the staged tree into place.
 
 ### string
 
@@ -44,6 +44,14 @@ INSTALL = "make install"
 The autotools pair. The script's working directory is `work/stage/`, so
 `make install` finds the tree `BUILD` configured, and the `--prefix` from `BUILD`
 sends the output into `pkg/`.
+
+A string `INSTALL` that leaves `pkg/` empty works like an omitted one: envy
+renames the staged tree into place. So a script that only touches the staged
+files is enough:
+
+```lua
+INSTALL = "chmod +x tool"
+```
 
 ### function for file surgery
 
@@ -82,7 +90,7 @@ end
 Some vendors ship only an installer. Run it, but point it at `install_dir` so
 the result is still a normal cache-managed package. This one packages the AWS
 CLI because a project wants the CLI itself, not because envy needs it: `s3://`
-URLs are handled by the AWS SDK compiled into envy.
+URLs are handled by the S3 client compiled into envy.
 
 ```lua
 INSTALL = function(install_dir, stage_dir, fetch_dir, tmp_dir, opts)
